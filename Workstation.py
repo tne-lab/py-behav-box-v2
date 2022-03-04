@@ -31,8 +31,8 @@ class Workstation:
     # Should this be parallelized?
     def loop(self):
         for key in self.tasks:
-            events = self.tasks[key].main_loop()
-            self.event_loggers[key].log_events(events)
+            self.tasks[key].main_loop()
+            self.event_loggers[key].log_events(self.tasks[key].events)
             self.guis[key].handle_events()
             self.guis[key].draw()
         pygame.display.flip()

@@ -35,6 +35,6 @@ class FoodLightElement(Element):
                        pygame.Rect(self.x - self.h / 8, self.y + self.h / 2 - self.h / 8, self.h / 8 * 2,
                                    self.h / 8 * 2), self.x, self.y + self.h / 2, self.h / 8)
 
-    def mouse_up(self):
+    def mouse_up(self, event):
         self.on = not self.on
         self.lc.toggle(self.on)

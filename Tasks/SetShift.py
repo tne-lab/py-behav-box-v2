@@ -121,7 +121,7 @@ class SetShift(Task):
 
     def is_complete(self):
         return self.cur_trial == self.n_random_start + self.n_random_end + self.correct_to_switch * len(
-            self.rule_sequence) or self.cur_time - self.start_time > self.max_duration
+            self.rule_sequence) or self.cur_time - self.start_time > self.max_duration * 60
 
     def correct(self):
         self.food.dispense()

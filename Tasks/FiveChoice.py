@@ -157,4 +157,4 @@ class FiveChoice(Task):
         }
 
     def is_complete(self):
-        return self.cur_trial == self.max_trials or self.cur_time - self.start_time > self.max_duration
+        return self.cur_trial == self.max_trials or self.cur_time - self.start_time > self.max_duration * 60

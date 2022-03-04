@@ -28,10 +28,10 @@ class NosePokeElement(Element):
         if self.entered:
             pygame.draw.polygon(self.screen, Colors.black, [(cx, cy), (cx-self.radius/2, cy+self.radius), (cx+self.radius/2, cy+self.radius)])
 
-    def mouse_up(self):
+    def mouse_up(self, event):
         self.entered = False
         self.npc.toggle(self.entered)
 
-    def mouse_down(self):
+    def mouse_down(self, event):
         self.entered = True
         self.npc.toggle(self.entered)
