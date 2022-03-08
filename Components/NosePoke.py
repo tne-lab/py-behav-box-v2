@@ -42,3 +42,6 @@ class NosePoke(Component):
 
     def toggle(self, on):
         self.source.write_component(self.id, on)
+
+    def get_type(self):
+        return Component.Type.INPUT

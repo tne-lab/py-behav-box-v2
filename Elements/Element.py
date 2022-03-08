@@ -21,19 +21,18 @@ class Element:
 
     def handle_event(self, event):
         cur_x, cur_y = pygame.mouse.get_pos()
-        match event.type:
-            case pygame.MOUSEBUTTONDOWN:
-                if event.button == 1 and self.rect.collidepoint(cur_x, cur_y):
-                    self.selected = True
-                if self.rect.collidepoint(cur_x, cur_y):
-                    self.mouse_down(event)
-                    return True
-            case pygame.MOUSEBUTTONUP:
-                if event.button == 1 and self.rect.collidepoint(cur_x, cur_y) and self.selected:
-                    self.mouse_up(event)
-                    self.selected = False
-                    return True
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if event.button == 1 and self.rect.collidepoint(cur_x, cur_y):
+                self.selected = True
+            if self.rect.collidepoint(cur_x, cur_y):
+                self.mouse_down(event)
+                return True
+        elif event.type == pygame.MOUSEBUTTONUP:
+            if event.button == 1 and self.rect.collidepoint(cur_x, cur_y) and self.selected:
+                self.mouse_up(event)
                 self.selected = False
+                return True
+            self.selected = False
         return False
 
     @abstractmethod

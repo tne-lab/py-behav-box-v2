@@ -2,6 +2,7 @@ import nidaqmx
 from nidaqmx import system
 from nidaqmx.constants import (LineGrouping)
 
+from Components.Component import Component
 from Sources.Source import Source
 
 
@@ -11,22 +12,28 @@ class DIOSource(Source):
         self.dev = dev
         dev_obj = system.Device(dev)
         dev_obj.reset_device()
+        self.tasks = {}
         self.components = {}
 
     def register_component(self, component):
         task = nidaqmx.Task()
-        task.do_channels.add_do_chan(component.address, line_grouping=LineGrouping.CHAN_FOR_ALL_LINES)
+        if component.get_type() == Component.Type.OUTPUT:
+            task.do_channels.add_do_chan(self.dev + component.address, line_grouping=LineGrouping.CHAN_FOR_ALL_LINES)
+        elif component.get_type() == Component.Type.INPUT:
+            task.di_channels.add_di_chan(self.dev + component.address, line_grouping=LineGrouping.CHAN_FOR_ALL_LINES)
         task.start()
-        self.components[component.id] = component.address
+        self.tasks[component.id] = task
+        self.components[component.id] = component
 
     def close_source(self):
-        for c in self.components:
+        for c in self.tasks:
             c.close()
 
     def read_component(self, component_id):
         # Do I need a stop here as well?
-        self.components[component_id].read()
+        return self.tasks[component_id].read()
 
     def write_component(self, component_id, msg):
-        self.components[component_id].write(msg)
+        if not self.components[component_id].get_type() == Component.Type.INPUT:
+            self.tasks[component_id].write(msg)
         # What do enable and send pulse do?

@@ -21,7 +21,7 @@ class DPALGUI(GUI):
         super().__init__(ws, task)
         self.info_boxes = []
 
-        def feed_mouse_up(self):
+        def feed_mouse_up(self, _):
             self.clicked = False
             task.food.dispense()
 
@@ -31,7 +31,7 @@ class DPALGUI(GUI):
         def trial_count_text(self):
             return [str(task.cur_trial+1)]
 
-        self.touch_screen = TouchScreenElement(self.task_gui, 0, 0, 500, 375, pygame.Rect(0, 101, 500, 152), task.touch_screen)
+        self.touch_screen = TouchScreenElement(self.task_gui, 0, 0, 500, 375, pygame.Rect(0, 0, 500, 152), task.touch_screen)
         self.food_poke = NosePokeElement(self.task_gui, 220, 480, 30, task.init_poke)
         self.feed_button = ButtonElement(self.task_gui, 225, 600, 50, 20, "FEED", task.food)
         self.feed_button.mouse_up = MethodType(feed_mouse_up, self.feed_button)

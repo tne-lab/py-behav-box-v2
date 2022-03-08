@@ -37,28 +37,25 @@ class SetShift(Task):
         for i in range(3):
             pokes.append(self.nose_pokes[i].check())
             if pokes[i] == NosePoke.POKE_ENTERED:
-                match i:
-                    case 0:
-                        self.events.append(InputEvent(self.Inputs.FRONT_ENTERED, self.cur_time - self.start_time))
-                    case 1:
-                        self.events.append(InputEvent(self.Inputs.MIDDLE_ENTERED, self.cur_time - self.start_time))
-                    case 2:
-                        self.events.append(InputEvent(self.Inputs.REAR_ENTERED, self.cur_time - self.start_time))
+                if i == 0:
+                    self.events.append(InputEvent(self.Inputs.FRONT_ENTERED, self.cur_time - self.start_time))
+                elif i == 1:
+                    self.events.append(InputEvent(self.Inputs.MIDDLE_ENTERED, self.cur_time - self.start_time))
+                elif i == 2:
+                    self.events.append(InputEvent(self.Inputs.REAR_ENTERED, self.cur_time - self.start_time))
             elif pokes[i] == NosePoke.POKE_EXIT:
-                match i:
-                    case 0:
-                        self.events.append(InputEvent(self.Inputs.FRONT_EXIT, self.cur_time - self.start_time))
-                    case 1:
-                        self.events.append(InputEvent(self.Inputs.MIDDLE_EXIT, self.cur_time - self.start_time))
-                    case 2:
-                        self.events.append(InputEvent(self.Inputs.REAR_EXIT, self.cur_time - self.start_time))
+                if i == 0:
+                    self.events.append(InputEvent(self.Inputs.FRONT_EXIT, self.cur_time - self.start_time))
+                elif i == 1:
+                    self.events.append(InputEvent(self.Inputs.MIDDLE_EXIT, self.cur_time - self.start_time))
+                elif i == 2:
+                    self.events.append(InputEvent(self.Inputs.REAR_EXIT, self.cur_time - self.start_time))
         trough_entered = self.food_trough.check()
         if trough_entered == NosePoke.POKE_ENTERED:
             self.events.append(InputEvent(self.Inputs.TROUGH_ENTERED, self.cur_time - self.start_time))
         elif trough_entered == NosePoke.POKE_EXIT:
             self.events.append(InputEvent(self.Inputs.TROUGH_EXIT, self.cur_time - self.start_time))
-        match self.state:  # Define behavior for all task states
-            case self.States.INITIATION:  # The rat has not initiated the trial yet
+            if self.state == self.States.INITIATION:  # The rat has not initiated the trial yet
                 if pokes[1] == NosePoke.POKE_ENTERED:
                     self.nose_poke_lights[1].toggle(False)
                     if self.light_sequence[self.cur_trial]:
@@ -66,7 +63,7 @@ class SetShift(Task):
                     else:
                         self.nose_poke_lights[2].toggle(True)
                     self.change_state(self.States.RESPONSE)
-            case self.States.RESPONSE:  # The rat has initiated a trial and must choose the correct option
+            elif self.state == self.States.RESPONSE:  # The rat has initiated a trial and must choose the correct option
                 if pokes[0] == NosePoke.POKE_ENTERED or pokes[2] == NosePoke.POKE_ENTERED:
                     if self.cur_trial < self.n_random_start or self.cur_trial >= self.n_random_start + self.correct_to_switch * len(
                             self.rule_sequence):
@@ -74,26 +71,25 @@ class SetShift(Task):
                             self.food.dispense()
                         self.cur_trial += 1
                     else:
-                        match self.rule_sequence[self.cur_rule]:
-                            case 0:
-                                if (pokes[0] == NosePoke.POKE_ENTERED and self.light_sequence[self.cur_trial]) or (
-                                        pokes[2] == NosePoke.POKE_ENTERED and not self.light_sequence[self.cur_trial]):
-                                    self.correct()
-                                else:
-                                    self.cur_trial -= self.cur_block
-                                    self.cur_block = 0
-                            case 1:
-                                if pokes[0] == NosePoke.POKE_ENTERED:
-                                    self.correct()
-                                else:
-                                    self.cur_trial -= self.cur_block
-                                    self.cur_block = 0
-                            case 2:
-                                if pokes[2] == NosePoke.POKE_ENTERED:
-                                    self.correct()
-                                else:
-                                    self.cur_trial -= self.cur_block
-                                    self.cur_block = 0
+                        if self.rule_sequence[self.cur_rule] == 0:
+                            if (pokes[0] == NosePoke.POKE_ENTERED and self.light_sequence[self.cur_trial]) or (
+                                    pokes[2] == NosePoke.POKE_ENTERED and not self.light_sequence[self.cur_trial]):
+                                self.correct()
+                            else:
+                                self.cur_trial -= self.cur_block
+                                self.cur_block = 0
+                        elif self.rule_sequence[self.cur_rule] == 1:
+                            if pokes[0] == NosePoke.POKE_ENTERED:
+                                self.correct()
+                            else:
+                                self.cur_trial -= self.cur_block
+                                self.cur_block = 0
+                        elif self.rule_sequence[self.cur_rule] == 2:
+                            if pokes[2] == NosePoke.POKE_ENTERED:
+                                self.correct()
+                            else:
+                                self.cur_trial -= self.cur_block
+                                self.cur_block = 0
                     self.nose_poke_lights[0].toggle(False)
                     self.nose_poke_lights[2].toggle(False)
                     self.change_state(self.States.INTER_TRIAL_INTERVAL)
@@ -101,7 +97,7 @@ class SetShift(Task):
                     self.nose_poke_lights[0].toggle(False)
                     self.nose_poke_lights[2].toggle(False)
                     self.change_state(self.States.INTER_TRIAL_INTERVAL)
-            case self.States.INTER_TRIAL_INTERVAL:
+            elif self.state == self.States.INTER_TRIAL_INTERVAL:
                 if self.cur_time - self.entry_time > self.inter_trial_interval:
                     self.nose_poke_lights[1].toggle(True)
                     self.change_state(self.States.INITIATION)

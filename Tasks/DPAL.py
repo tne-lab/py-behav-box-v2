@@ -32,6 +32,7 @@ class DPAL(Task):
         self.cur_trial = 0
         self.state = self.States.INITIATION
         self.init_light.toggle(True)
+        self.fan.toggle(True)
         self.correct_img = None
         self.incorrect_img = None
         self.incorrect_location = None
@@ -61,41 +62,44 @@ class DPAL(Task):
             else:
                 touch_locs.append(0)
                 self.events.append(InputEvent(self.Inputs.ERROR_TOUCH, self.cur_time - self.start_time))
-        match self.state:
-            case self.States.INITIATION:
-                if init_poke == NosePoke.POKE_ENTERED:
-                    self.init_light.toggle(False)
-                    self.change_state(self.States.STIMULUS_PRESENTATION)
-                    self.touch_screen.add_image(self.image_folder + self.images[self.correct_img],
-                                                self.coords[self.correct_img], self.img_dim)
-                    self.touch_screen.add_image(self.image_folder + self.images[self.incorrect_img],
-                                                self.coords[self.incorrect_location], self.img_dim)
-                    self.touch_screen.add_image(self.image_folder + self.blank, self.coords[self.incorrect_img], self.img_dim)
-            case self.States.STIMULUS_PRESENTATION:
-                if len(touch_locs) > 0 and touch_locs[0] == self.correct_img + 1:
-                    self.food.dispense()
-                    self.touch_screen.remove_image(self.image_folder + self.images[self.correct_img])
-                    self.touch_screen.remove_image(self.image_folder + self.images[self.incorrect_img])
-                    self.touch_screen.remove_image(self.image_folder + self.blank)
-                    self.generate_images()
-                    self.cur_trial += 1
-                    self.tone.play_sound(1800, 1, 1)
-                    self.change_state(self.States.INTER_TRIAL_INTERVAL)
-                elif len(touch_locs) > 0 and touch_locs[0] == self.incorrect_location + 1:
-                    self.cage_light.toggle(True)
-                    self.touch_screen.remove_image(self.image_folder + self.images[self.correct_img])
-                    self.touch_screen.remove_image(self.image_folder + self.images[self.incorrect_img])
-                    self.touch_screen.remove_image(self.image_folder + self.blank)
-                    self.tone.play_sound(1200, 1, 1)
-                    self.change_state(self.States.TIMEOUT)
-            case self.States.TIMEOUT:
-                if self.cur_time - self.entry_time > self.timeout_duration:
-                    self.cage_light.toggle(False)
-                    self.change_state(self.States.INTER_TRIAL_INTERVAL)
-            case self.States.INTER_TRIAL_INTERVAL:
-                if self.cur_time - self.entry_time > self.inter_trial_interval:
-                    self.init_light.toggle(True)
-                    self.change_state(self.States.INITIATION)
+        if self.state == self.States.INITIATION:
+            if init_poke == NosePoke.POKE_ENTERED:
+                self.init_light.toggle(False)
+                self.change_state(self.States.STIMULUS_PRESENTATION)
+                self.touch_screen.add_image(self.image_folder + self.images[self.correct_img],
+                                            self.coords[self.correct_img], self.img_dim)
+                self.touch_screen.add_image(self.image_folder + self.images[self.incorrect_img],
+                                            self.coords[self.incorrect_location], self.img_dim)
+                self.touch_screen.add_image(self.image_folder + self.blank, self.coords[self.incorrect_img],
+                                            self.img_dim)
+                self.touch_screen.refresh()
+        elif self.state == self.States.STIMULUS_PRESENTATION:
+            if len(touch_locs) > 0 and touch_locs[0] == self.correct_img + 1:
+                self.food.dispense()
+                self.touch_screen.remove_image(self.image_folder + self.images[self.correct_img])
+                self.touch_screen.remove_image(self.image_folder + self.images[self.incorrect_img])
+                self.touch_screen.remove_image(self.image_folder + self.blank)
+                self.touch_screen.refresh()
+                self.generate_images()
+                self.cur_trial += 1
+                self.tone.play_sound(1800, 1, 1)
+                self.change_state(self.States.INTER_TRIAL_INTERVAL)
+            elif len(touch_locs) > 0 and touch_locs[0] == self.incorrect_location + 1:
+                self.cage_light.toggle(True)
+                self.touch_screen.remove_image(self.image_folder + self.images[self.correct_img])
+                self.touch_screen.remove_image(self.image_folder + self.images[self.incorrect_img])
+                self.touch_screen.remove_image(self.image_folder + self.blank)
+                self.touch_screen.refresh()
+                self.tone.play_sound(1200, 1, 1)
+                self.change_state(self.States.TIMEOUT)
+        elif self.state == self.States.TIMEOUT:
+            if self.cur_time - self.entry_time > self.timeout_duration:
+                self.cage_light.toggle(False)
+                self.change_state(self.States.INTER_TRIAL_INTERVAL)
+        elif self.state == self.States.INTER_TRIAL_INTERVAL:
+            if self.cur_time - self.entry_time > self.inter_trial_interval:
+                self.init_light.toggle(True)
+                self.change_state(self.States.INITIATION)
 
     def get_variables(self):
         return {
@@ -107,7 +111,7 @@ class DPAL(Task):
             'images': ['6B.bmp', '6A.bmp', '2A.bmp'],
             'coords': [(61, 10), (371, 10), (681, 10)],
             'img_dim': (290, 290),
-            'dead_height': 250
+            'dead_height': 0
         }
 
     def is_complete(self):

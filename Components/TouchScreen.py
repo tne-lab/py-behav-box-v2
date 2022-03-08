@@ -8,13 +8,15 @@ class TouchScreen(Component):
         self.handled_touches = []
         super().__init__(source, component_id, component_address)
         self.display_size = source.display_size
+        self.refresh()
 
     def add_image(self, path, coords, dim):
         self.image_containers[path] = {"coords": coords, "dim": dim}
-        self.source.write_component(self.id, self.image_containers)
 
     def remove_image(self, path):
         del self.image_containers[path]
+
+    def refresh(self):
         self.source.write_component(self.id, self.image_containers)
 
     def get_touches(self):
@@ -34,3 +36,6 @@ class TouchScreen(Component):
 
     def add_touch(self, coords):
         self.touches.append(coords)
+
+    def get_type(self):
+        return Component.Type.BOTH

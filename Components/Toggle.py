@@ -1,16 +1,16 @@
 from Components.Component import Component
 
 
-class Light(Component):
+class Toggle(Component):
     """
-        Class defining a Light component in the operant chamber.
+        Class defining a Toggle component in the operant chamber.
 
         Methods
         -------
         get_state()
-            Returns True if the light is currently lit
+            Returns True if the Component is currently active
         toggle(on)
-            Sets the light state with the Source
+            Sets the Toggle state with the Source
     """
 
     def __init__(self, source, component_id, component_address):
@@ -23,3 +23,6 @@ class Light(Component):
 
     def get_state(self):
         return self.state
+
+    def get_type(self):
+        return Component.Type.OUTPUT

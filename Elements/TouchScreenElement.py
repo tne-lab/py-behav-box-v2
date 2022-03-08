@@ -22,17 +22,16 @@ class TouchScreenElement(Element):
             img = pygame.transform.scale(img, (self.tsc.image_containers[ic]["dim"][0] * self.sf, self.tsc.image_containers[ic]["dim"][1] * self.sf))
             img_rect = img.get_rect()
             coords = self.tsc.image_containers[ic]["coords"]
-            img_rect = img_rect.move((coords[0] * self.sf, (self.tsc.display_size[1] - coords[1] - self.tsc.image_containers[ic]["dim"][1]) * self.sf))
+            img_rect = img_rect.move((coords[0] * self.sf, coords[1] * self.sf))
             self.screen.blit(img, img_rect)
         pygame.draw.rect(self.screen, Colors.black, self.rect, 3)
 
     def draw_plus_sign(self, coords, w, color):
         x = coords[0]
-        y = self.tsc.display_size[1] - coords[1]
+        y = coords[1]
         pygame.draw.line(self.screen, color, (x*self.sf - w, y*self.sf), (x*self.sf + w, y*self.sf), 1)
         pygame.draw.line(self.screen, color, (x*self.sf, y*self.sf - w), (x*self.sf, y*self.sf + w), 1)
 
     def mouse_up(self, event):
         cur_x, cur_y = pygame.mouse.get_pos()
-        cur_y = self.h - cur_y
         self.tsc.add_touch((cur_x / self.sf, cur_y / self.sf))

@@ -42,8 +42,8 @@ class ButtonElement(Element):
         msg_y = (self.rect.height - msg_ht) / 2
         self.screen.blit(msg_in_font, self.rect.move(msg_x, msg_y))
 
-    def mouse_up(self):
+    def mouse_up(self, _):
         self.clicked = False
 
-    def mouse_down(self):
+    def mouse_down(self, _):
         self.clicked = True

@@ -39,6 +39,7 @@ class FiveChoice(Task):
         is_complete()
             Abstract method that returns True if the task is complete
         """
+
     class States(Enum):
         INITIATION = 0
         INTER_TRIAL_INTERVAL = 1
@@ -74,47 +75,44 @@ class FiveChoice(Task):
         for i in range(5):
             pokes.append(self.nose_pokes[i].check())
             if pokes[i] == NosePoke.POKE_ENTERED:
-                match i:
-                    case 0:
-                        self.events.append(InputEvent(self.Inputs.NP1_ENTERED, self.cur_time - self.start_time))
-                    case 1:
-                        self.events.append(InputEvent(self.Inputs.NP2_ENTERED, self.cur_time - self.start_time))
-                    case 2:
-                        self.events.append(InputEvent(self.Inputs.NP3_ENTERED, self.cur_time - self.start_time))
-                    case 3:
-                        self.events.append(InputEvent(self.Inputs.NP4_ENTERED, self.cur_time - self.start_time))
-                    case 4:
-                        self.events.append(InputEvent(self.Inputs.NP5_ENTERED, self.cur_time - self.start_time))
+                if i == 0:
+                    self.events.append(InputEvent(self.Inputs.NP1_ENTERED, self.cur_time - self.start_time))
+                elif i == 1:
+                    self.events.append(InputEvent(self.Inputs.NP2_ENTERED, self.cur_time - self.start_time))
+                elif i == 2:
+                    self.events.append(InputEvent(self.Inputs.NP3_ENTERED, self.cur_time - self.start_time))
+                elif i == 3:
+                    self.events.append(InputEvent(self.Inputs.NP4_ENTERED, self.cur_time - self.start_time))
+                elif i == 4:
+                    self.events.append(InputEvent(self.Inputs.NP5_ENTERED, self.cur_time - self.start_time))
             elif pokes[i] == NosePoke.POKE_EXIT:
-                match i:
-                    case 0:
-                        self.events.append(InputEvent(self.Inputs.NP1_EXIT, self.cur_time - self.start_time))
-                    case 1:
-                        self.events.append(InputEvent(self.Inputs.NP2_EXIT, self.cur_time - self.start_time))
-                    case 2:
-                        self.events.append(InputEvent(self.Inputs.NP3_EXIT, self.cur_time - self.start_time))
-                    case 3:
-                        self.events.append(InputEvent(self.Inputs.NP4_EXIT, self.cur_time - self.start_time))
-                    case 4:
-                        self.events.append(InputEvent(self.Inputs.NP5_EXIT, self.cur_time - self.start_time))
+                if i == 0:
+                    self.events.append(InputEvent(self.Inputs.NP1_EXIT, self.cur_time - self.start_time))
+                elif i == 1:
+                    self.events.append(InputEvent(self.Inputs.NP2_EXIT, self.cur_time - self.start_time))
+                elif i == 2:
+                    self.events.append(InputEvent(self.Inputs.NP3_EXIT, self.cur_time - self.start_time))
+                elif i == 3:
+                    self.events.append(InputEvent(self.Inputs.NP4_EXIT, self.cur_time - self.start_time))
+                elif i == 4:
+                    self.events.append(InputEvent(self.Inputs.NP5_EXIT, self.cur_time - self.start_time))
         # Output if the food trough was entered/exited
         trough_entered = self.food_trough.check()
         if trough_entered == NosePoke.POKE_ENTERED:
-            self.events.append(InputEvent(self.Inputs.TROUGH_ENTERED, self.cur_time-self.start_time))
+            self.events.append(InputEvent(self.Inputs.TROUGH_ENTERED, self.cur_time - self.start_time))
         elif trough_entered == NosePoke.POKE_EXIT:
-            self.events.append(InputEvent(self.Inputs.TROUGH_EXIT, self.cur_time-self.start_time))
-        match self.state:  # Define behavior for all task states
-            case self.States.INITIATION:  # The rat has not initiated the trial yet
+            self.events.append(InputEvent(self.Inputs.TROUGH_EXIT, self.cur_time - self.start_time))
+            if self.state == self.States.INITIATION:  # The rat has not initiated the trial yet
                 if trough_entered == NosePoke.POKE_ENTERED:  # Trial is initiated when the rat nosepokes the trough
                     self.food_light.toggle(False)  # Turn the food light off
                     self.change_state(self.States.INTER_TRIAL_INTERVAL)
-            case self.States.INTER_TRIAL_INTERVAL:  # The rat has initiated a trial and must wait before nose poking
+            elif self.state == self.States.INTER_TRIAL_INTERVAL:  # The rat has initiated a trial and must wait before nose poking
                 if any(map(lambda x: x == NosePoke.POKE_ENTERED, pokes)):  # The rat failed to withold a response
                     self.change_state(self.States.POST_RESPONSE_INTERVAL, {"response": "premature"})
                 elif self.cur_time - self.entry_time > self.inter_trial_interval:  # The rat waited the necessary time
                     self.nose_poke_lights[self.sequence[self.cur_trial]].toggle(True)  # Turn the stimulus light on
                     self.change_state(self.States.STIMULUS_ON)
-            case self.States.STIMULUS_ON:  # The correct stimulus lights up
+            elif self.state == self.States.STIMULUS_ON:  # The correct stimulus lights up
                 if any(map(lambda x: x == NosePoke.POKE_ENTERED, pokes)):  # The rat made a selection
                     selection = next(i for i in range(5) if pokes[i] == NosePoke.POKE_ENTERED)
                     if selection == self.sequence[self.cur_trial]:  # If the selection was correct, provide a reward
@@ -127,7 +125,7 @@ class FiveChoice(Task):
                 elif self.cur_time - self.entry_time > self.stimulus_duration:  # The stimulus was shown for the allotted time
                     self.nose_poke_lights[self.sequence[self.cur_trial]].toggle(False)  # Turn the stimulus light off
                     self.change_state(self.States.LIMITED_HOLD)
-            case self.States.LIMITED_HOLD:  # The correct stimulus is turned off and the rat has time to decide
+            elif self.state == self.States.LIMITED_HOLD:  # The correct stimulus is turned off and the rat has time to decide
                 if any(map(lambda x: x == NosePoke.POKE_ENTERED, pokes)):  # The rat made a selection
                     selection = next(i for i in range(5) if pokes[i] == NosePoke.POKE_ENTERED)
                     if selection == self.sequence[self.cur_trial]:  # If the selection was correct, provide a reward
@@ -138,7 +136,7 @@ class FiveChoice(Task):
                     self.change_state(self.States.POST_RESPONSE_INTERVAL, metadata)
                 elif self.cur_time - self.entry_time > self.limited_hold_duration:  # The rat failed to respond
                     self.change_state(self.States.POST_RESPONSE_INTERVAL, {"response", "none"})
-            case self.States.POST_RESPONSE_INTERVAL:  # The rat has responded and an initiation lockout begins
+            elif self.state == self.States.POST_RESPONSE_INTERVAL:  # The rat has responded and an initiation lockout begins
                 if self.cur_time - self.entry_time > self.post_response_interval:  # The post response period has ended
                     self.change_state(self.States.INITIATION)
                     self.food_light.toggle(True)  # Turn the food light on
