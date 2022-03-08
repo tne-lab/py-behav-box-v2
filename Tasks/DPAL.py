@@ -79,12 +79,14 @@ class DPAL(Task):
                     self.touch_screen.remove_image(self.image_folder + self.blank)
                     self.generate_images()
                     self.cur_trial += 1
+                    self.tone.play_sound(1800, 1, 1)
                     self.change_state(self.States.INTER_TRIAL_INTERVAL)
                 elif len(touch_locs) > 0 and touch_locs[0] == self.incorrect_location + 1:
                     self.cage_light.toggle(True)
                     self.touch_screen.remove_image(self.image_folder + self.images[self.correct_img])
                     self.touch_screen.remove_image(self.image_folder + self.images[self.incorrect_img])
                     self.touch_screen.remove_image(self.image_folder + self.blank)
+                    self.tone.play_sound(1200, 1, 1)
                     self.change_state(self.States.TIMEOUT)
             case self.States.TIMEOUT:
                 if self.cur_time - self.entry_time > self.timeout_duration:

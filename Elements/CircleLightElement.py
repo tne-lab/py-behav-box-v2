@@ -1,4 +1,4 @@
-import pygame as pygame
+import pygame
 
 from Elements.draw_light import draw_light
 from Elements.Element import Element

@@ -53,6 +53,8 @@ class Task:
         self.entry_time = 0  # Time when the current state began
         self.start_time = 0  # Time the task started
         self.cur_time = time.time()  # The time for the current task loop
+        self.paused = False
+        self.time_into_trial = 0
         # Files related to the task are stored on the Desktop in a task-specific folder
         desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
         task_folder = "{}/py-behav/{}/".format(desktop, type(self).__name__)
@@ -99,7 +101,12 @@ class Task:
         self.start_time = time.time()
 
     def pause(self):
-        pass
+        self.paused = True
+        self.time_into_trial = time.time() - self.entry_time
+
+    def resume(self):
+        self.paused = False
+        self.entry_time = time.time() - self.time_into_trial
 
     def stop(self):
         pass

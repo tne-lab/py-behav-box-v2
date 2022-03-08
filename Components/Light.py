@@ -3,7 +3,7 @@ from Components.Component import Component
 
 class Light(Component):
     """
-        Class defining a NosePoke component in the operant chamber.
+        Class defining a Light component in the operant chamber.
 
         Methods
         -------
