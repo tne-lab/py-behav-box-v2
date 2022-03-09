@@ -21,7 +21,7 @@ class EmptyTouchScreenSource(Source):
         self.components = {}
         self.display_size = display_size
 
-    def register_component(self, component):
+    def register_component(self, _, component):
         self.components[component.id] = component.address
 
     def close_source(self):

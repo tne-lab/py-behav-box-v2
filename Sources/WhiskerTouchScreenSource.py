@@ -130,7 +130,7 @@ class WhiskerTouchScreenSource(Source, WhiskerTwistedTask):
             event, x, y = event.split(' ')
             self.back_q.put((int(x), int(y)))
 
-    def register_component(self, _):
+    def register_component(self, _, __):
         pass
 
     def main(self):

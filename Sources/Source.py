@@ -9,8 +9,8 @@ class Source:
     
     Methods
     -------
-    register_component(component)
-        Registers a component with the Source.
+    register_component(task, component)
+        Registers a Component from a specified Task with the Source.
     close_source()
         Safely closes any connections the Source or its components may have
     read_component(component_id)
@@ -20,7 +20,7 @@ class Source:
     """
 
     @abstractmethod
-    def register_component(self, component): raise NotImplementedError
+    def register_component(self, task, component): raise NotImplementedError
 
     @abstractmethod
     def close_source(self): raise NotImplementedError

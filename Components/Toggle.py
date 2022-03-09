@@ -13,7 +13,7 @@ class Toggle(Component):
             Sets the Toggle state with the Source
     """
 
-    def __init__(self, source, component_id, component_address):
+    def __init__(self, source, component_id, component_address, _):
         self.state = False
         super().__init__(source, component_id, component_address)
 

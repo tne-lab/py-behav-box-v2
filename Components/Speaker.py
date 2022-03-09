@@ -9,7 +9,7 @@ from Components.Component import Component
 
 class Speaker(Component):
 
-    def __init__(self, source, component_id, component_address):
+    def __init__(self, source, component_id, component_address, _):
         self.state = False
         super().__init__(source, component_id, component_address)
 

@@ -65,7 +65,8 @@ class Task:
             for row in address_reader:
                 # Import and instantiate the indicated Component with the provided ID and address
                 component_type = getattr(importlib.import_module("Components." + row[1]), row[1])
-                component = component_type(sources[row[2]], row[0] + str(row[4]), row[3])
+                component = component_type(sources[row[2]], row[0] + str(row[4]), row[3], row[6])
+                sources[row[2]].register_component(self, component)
                 # If the ID has yet to be registered
                 if not hasattr(self, row[0]):
                     # If the Component is part of a list

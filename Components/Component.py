@@ -18,11 +18,15 @@ class Component:
         OUTPUT = 1
         BOTH = 2
 
-    def __init__(self, source, component_id, component_address):
+    def __init__(self, source, component_id, component_address, metadata=""):
         self.id = component_id  # The unique identifier for the component or set of related components
         self.address = component_address  # The platform-specific address for the component
         self.source = source  # The source that is used to identify the component
-        source.register_component(self)
+        c_vars = metadata.split("|")
+        if len(c_vars[0]) > 0:
+            for v in c_vars:
+                vals = v.split("=")
+                setattr(self, vals[0], vals[1])
 
     @abstractmethod
     def get_state(self): raise NotImplementedError

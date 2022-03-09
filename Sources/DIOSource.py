@@ -15,7 +15,7 @@ class DIOSource(Source):
         self.tasks = {}
         self.components = {}
 
-    def register_component(self, component):
+    def register_component(self, _, component):
         task = nidaqmx.Task()
         if component.get_type() == Component.Type.OUTPUT:
             task.do_channels.add_do_chan(self.dev + component.address, line_grouping=LineGrouping.CHAN_FOR_ALL_LINES)
