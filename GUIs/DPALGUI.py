@@ -11,6 +11,7 @@ from Elements.NosePokeElement import NosePokeElement
 from Elements.ButtonElement import ButtonElement
 from Elements.InfoBoxElement import InfoBoxElement
 from Elements.SoundElement import SoundElement
+from Elements.FanElement import FanElement
 from GUIs import Colors
 from GUIs.GUI import GUI
 
@@ -43,7 +44,8 @@ class DPALGUI(GUI):
         self.info_boxes.append(trial_count)
         self.food_light = CircleLightElement(self.task_gui, 220, 410, 30, Colors.lightgray, Colors.darkgray, task.init_light)
         self.cage_light = RectangleLightElement(self.task_gui, 350, 440, 80, 80, Colors.lightgray, Colors.darkgray, task.cage_light)
-        self.tone = SoundElement(self.task_gui, 70, 440, 40, task.tone)
+        self.tone = SoundElement(self.task_gui, 70, 430, 40, task.tone)
+        self.fan = FanElement(self.task_gui, 70, 530, 40, task.fan)
 
     def draw(self):
         self.task_gui.fill(Colors.darkgray)
@@ -54,4 +56,4 @@ class DPALGUI(GUI):
         pygame.display.flip()
 
     def get_elements(self) -> List[Element]:
-        return [self.food_poke, self.food_light, self.touch_screen, self.feed_button, *self.info_boxes, self.tone, self.cage_light]
+        return [self.food_poke, self.food_light, self.touch_screen, self.feed_button, *self.info_boxes, self.tone, self.cage_light, self.fan]
