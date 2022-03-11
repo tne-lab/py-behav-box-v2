@@ -46,14 +46,15 @@ class Task:
             Abstract method that returns True if the task is complete
     """
 
-    def __init__(self, ws, sources, address_file, protocol=None):
-        self.ws = ws  # Reference to the Workstation
+    def __init__(self, chamber, sources, address_file, protocol=None):
+        self.chamber = chamber  # Reference to the Workstation
         self.events = []  # List of Events from the current task loop
         self.state = None  # The current task state
         self.entry_time = 0  # Time when the current state began
         self.start_time = 0  # Time the task started
         self.cur_time = time.time()  # The time for the current task loop
         self.paused = False
+        self.started = False
         self.time_into_trial = 0
         # Files related to the task are stored on the Desktop in a task-specific folder
         desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
@@ -65,7 +66,10 @@ class Task:
             for row in address_reader:
                 # Import and instantiate the indicated Component with the provided ID and address
                 component_type = getattr(importlib.import_module("Components." + row[1]), row[1])
-                component = component_type(sources[row[2]], row[0] + str(row[4]), row[3], row[6])
+                if len(row) > 6:
+                    component = component_type(sources[row[2]], row[0] + "-" + str(chamber) + "-" + str(row[4]), row[3], row[6])
+                else:
+                    component = component_type(sources[row[2]], row[0] + "-" + str(chamber) + "-" + str(row[4]), row[3])
                 sources[row[2]].register_component(self, component)
                 # If the ID has yet to be registered
                 if not hasattr(self, row[0]):
@@ -99,6 +103,7 @@ class Task:
         self.state = new_state
 
     def start(self):
+        self.started = True
         self.start_time = time.time()
 
     def pause(self):
@@ -110,7 +115,7 @@ class Task:
         self.entry_time = time.time() - self.time_into_trial
 
     def stop(self):
-        pass
+        self.started = False
 
     def main_loop(self):
         self.cur_time = time.time()

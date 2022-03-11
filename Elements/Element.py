@@ -21,6 +21,10 @@ class Element:
 
     def handle_event(self, event):
         cur_x, cur_y = pygame.mouse.get_pos()
+        offset = self.screen.get_offset()
+        cur_x -= offset[0]
+        cur_y -= offset[1]
+
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1 and self.rect.collidepoint(cur_x, cur_y):
                 self.selected = True

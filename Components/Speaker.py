@@ -9,9 +9,9 @@ from Components.Component import Component
 
 class Speaker(Component):
 
-    def __init__(self, source, component_id, component_address, _):
+    def __init__(self, source, component_id, component_address, metadata=""):
         self.state = False
-        super().__init__(source, component_id, component_address)
+        super().__init__(source, component_id, component_address, metadata)
 
     def play_sound(self, frequency, volume, duration):
         th = threading.Thread(target=self._play_sound, args=(frequency, volume, duration))

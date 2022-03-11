@@ -15,9 +15,9 @@ class FoodDispenser(Component):
         get_state()
             Returns a boolean indicating if the dispenser is actively dispensing food
     """
-    def __init__(self, source, component_id, component_address, _):
+    def __init__(self, source, component_id, component_address, metadata=""):
         self.state = False
-        super().__init__(source, component_id, component_address)
+        super().__init__(source, component_id, component_address, metadata)
         self.pellets = 0
 
     def dispense(self):

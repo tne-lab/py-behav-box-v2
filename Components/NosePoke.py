@@ -19,9 +19,9 @@ class NosePoke(Component):
     POKE_ENTERED = 1
     POKE_EXIT = 2
 
-    def __init__(self, source, component_id, component_address, _):
+    def __init__(self, source, component_id, component_address, metadata=""):
         self.state = False
-        super().__init__(source, component_id, component_address)
+        super().__init__(source, component_id, component_address, metadata)
 
     def check(self):
         poked = self.source.read_component(self.id)

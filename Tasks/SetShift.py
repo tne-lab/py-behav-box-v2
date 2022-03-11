@@ -22,8 +22,8 @@ class SetShift(Task):
         REAR_ENTERED = 6
         REAR_EXIT = 7
 
-    def __init__(self, ws, source, address_file, protocol):
-        super().__init__(ws, source, address_file, protocol)
+    def __init__(self, chamber, source, address_file, protocol):
+        super().__init__(chamber, source, address_file, protocol)
         self.cur_trial = 0
         self.cur_rule = 0
         self.cur_block = 0
@@ -55,52 +55,52 @@ class SetShift(Task):
             self.events.append(InputEvent(self.Inputs.TROUGH_ENTERED, self.cur_time - self.start_time))
         elif trough_entered == NosePoke.POKE_EXIT:
             self.events.append(InputEvent(self.Inputs.TROUGH_EXIT, self.cur_time - self.start_time))
-            if self.state == self.States.INITIATION:  # The rat has not initiated the trial yet
-                if pokes[1] == NosePoke.POKE_ENTERED:
-                    self.nose_poke_lights[1].toggle(False)
-                    if self.light_sequence[self.cur_trial]:
-                        self.nose_poke_lights[0].toggle(True)
-                    else:
-                        self.nose_poke_lights[2].toggle(True)
-                    self.change_state(self.States.RESPONSE)
-            elif self.state == self.States.RESPONSE:  # The rat has initiated a trial and must choose the correct option
-                if pokes[0] == NosePoke.POKE_ENTERED or pokes[2] == NosePoke.POKE_ENTERED:
-                    if self.cur_trial < self.n_random_start or self.cur_trial >= self.n_random_start + self.correct_to_switch * len(
-                            self.rule_sequence):
-                        if random.random() < 0.5:
-                            self.food.dispense()
-                        self.cur_trial += 1
-                    else:
-                        if self.rule_sequence[self.cur_rule] == 0:
-                            if (pokes[0] == NosePoke.POKE_ENTERED and self.light_sequence[self.cur_trial]) or (
-                                    pokes[2] == NosePoke.POKE_ENTERED and not self.light_sequence[self.cur_trial]):
-                                self.correct()
-                            else:
-                                self.cur_trial -= self.cur_block
-                                self.cur_block = 0
-                        elif self.rule_sequence[self.cur_rule] == 1:
-                            if pokes[0] == NosePoke.POKE_ENTERED:
-                                self.correct()
-                            else:
-                                self.cur_trial -= self.cur_block
-                                self.cur_block = 0
-                        elif self.rule_sequence[self.cur_rule] == 2:
-                            if pokes[2] == NosePoke.POKE_ENTERED:
-                                self.correct()
-                            else:
-                                self.cur_trial -= self.cur_block
-                                self.cur_block = 0
-                    self.nose_poke_lights[0].toggle(False)
-                    self.nose_poke_lights[2].toggle(False)
-                    self.change_state(self.States.INTER_TRIAL_INTERVAL)
-                elif self.cur_time - self.entry_time > self.response_duration:
-                    self.nose_poke_lights[0].toggle(False)
-                    self.nose_poke_lights[2].toggle(False)
-                    self.change_state(self.States.INTER_TRIAL_INTERVAL)
-            elif self.state == self.States.INTER_TRIAL_INTERVAL:
-                if self.cur_time - self.entry_time > self.inter_trial_interval:
-                    self.nose_poke_lights[1].toggle(True)
-                    self.change_state(self.States.INITIATION)
+        if self.state == self.States.INITIATION:  # The rat has not initiated the trial yet
+            if pokes[1] == NosePoke.POKE_ENTERED:
+                self.nose_poke_lights[1].toggle(False)
+                if self.light_sequence[self.cur_trial]:
+                    self.nose_poke_lights[0].toggle(True)
+                else:
+                    self.nose_poke_lights[2].toggle(True)
+                self.change_state(self.States.RESPONSE)
+        elif self.state == self.States.RESPONSE:  # The rat has initiated a trial and must choose the correct option
+            if pokes[0] == NosePoke.POKE_ENTERED or pokes[2] == NosePoke.POKE_ENTERED:
+                if self.cur_trial < self.n_random_start or self.cur_trial >= self.n_random_start + self.correct_to_switch * len(
+                        self.rule_sequence):
+                    if random.random() < 0.5:
+                        self.food.dispense()
+                    self.cur_trial += 1
+                else:
+                    if self.rule_sequence[self.cur_rule] == 0:
+                        if (pokes[0] == NosePoke.POKE_ENTERED and self.light_sequence[self.cur_trial]) or (
+                                pokes[2] == NosePoke.POKE_ENTERED and not self.light_sequence[self.cur_trial]):
+                            self.correct()
+                        else:
+                            self.cur_trial -= self.cur_block
+                            self.cur_block = 0
+                    elif self.rule_sequence[self.cur_rule] == 1:
+                        if pokes[0] == NosePoke.POKE_ENTERED:
+                            self.correct()
+                        else:
+                            self.cur_trial -= self.cur_block
+                            self.cur_block = 0
+                    elif self.rule_sequence[self.cur_rule] == 2:
+                        if pokes[2] == NosePoke.POKE_ENTERED:
+                            self.correct()
+                        else:
+                            self.cur_trial -= self.cur_block
+                            self.cur_block = 0
+                self.nose_poke_lights[0].toggle(False)
+                self.nose_poke_lights[2].toggle(False)
+                self.change_state(self.States.INTER_TRIAL_INTERVAL)
+            elif self.cur_time - self.entry_time > self.response_duration:
+                self.nose_poke_lights[0].toggle(False)
+                self.nose_poke_lights[2].toggle(False)
+                self.change_state(self.States.INTER_TRIAL_INTERVAL)
+        elif self.state == self.States.INTER_TRIAL_INTERVAL:
+            if self.cur_time - self.entry_time > self.inter_trial_interval:
+                self.nose_poke_lights[1].toggle(True)
+                self.change_state(self.States.INITIATION)
         return self.events
 
     def get_variables(self):

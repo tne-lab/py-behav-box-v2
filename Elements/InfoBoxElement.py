@@ -5,7 +5,7 @@ from Elements.Element import Element
 
 class InfoBoxElement(Element):
 
-    def __init__(self, screen, x, y, w, h, label, label_pos, text, f_size=14):
+    def __init__(self, screen, x, y, w, h, label, label_pos, text, f_size=14, SF=1):  # passing SF is undesirable here
         super().__init__(screen, x, y, pygame.Rect(x, y, w, h))
         self.label_pos = label_pos  # 'TOP','LEFT','RIGHT', or 'BOTTOM'
         self.surface_color = (255, 255, 255)
@@ -18,6 +18,7 @@ class InfoBoxElement(Element):
         self.pt2 = x+w, y
         self.pt3 = x+w, y+h
         self.pt4 = x, y+h
+        self.SF = SF
 
     def get_text(self):
         return self.text
@@ -36,15 +37,15 @@ class InfoBoxElement(Element):
         lbl_wd = lbl_in_font.get_width()
         if self.label_pos == 'BOTTOM':
             lbl_x = (self.rect.width - lbl_wd)/2  # Center in box
-            lbl_y = + 20  # Below Box
+            lbl_y = + 20 * self.SF  # Below Box
         elif self.label_pos == 'TOP':
             lbl_x = (self.rect.width - lbl_wd)/2  # Center in box
-            lbl_y = - 20  # Above box
+            lbl_y = - 20 * self.SF  # Above box
         elif self.label_pos == 'LEFT':
-            lbl_x = - lbl_wd - 5
+            lbl_x = - lbl_wd - 5 * self.SF
             lbl_y = (self.rect.height - lbl_ht)/2
         else:
-            lbl_x = self.w + 5
+            lbl_x = self.w + 5 * self.SF
             lbl_y = (self.rect.height - lbl_ht)/2
 
         self.screen.blit(lbl_in_font, self.rect.move(lbl_x,  lbl_y+1))

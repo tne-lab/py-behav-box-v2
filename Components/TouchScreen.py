@@ -2,11 +2,11 @@ from Components.Component import Component
 
 
 class TouchScreen(Component):
-    def __init__(self, source, component_id, component_address, _):
+    def __init__(self, source, component_id, component_address, metadata=""):
         self.image_containers = {}
         self.touches = []
         self.handled_touches = []
-        super().__init__(source, component_id, component_address)
+        super().__init__(source, component_id, component_address, metadata)
         self.display_size = source.display_size
         self.refresh()
 

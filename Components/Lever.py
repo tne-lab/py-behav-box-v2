@@ -19,9 +19,9 @@ class Lever(Component):
     LEVER_PRESSED = 1
     LEVER_DEPRESSED = 2
 
-    def __init__(self, source, component_id, component_address, _):
+    def __init__(self, source, component_id, component_address, metadata=""):
         self.state = False
-        super().__init__(source, component_id, component_address)
+        super().__init__(source, component_id, component_address, metadata)
 
     def check(self):
         pressed = self.source.read_component(self.id)
