@@ -27,6 +27,9 @@ class SetShift(Task):
         self.cur_trial = 0
         self.cur_rule = 0
         self.cur_block = 0
+
+    def start(self):
+        super(SetShift, self).start()
         self.state = self.States.INITIATION
         self.nose_poke_lights[1].toggle(True)
 
