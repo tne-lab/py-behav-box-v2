@@ -6,6 +6,7 @@ from Events.StateChangeEvent import StateChangeEvent
 class ConsoleLogger(EventLogger):
 
     def __init__(self):
+        super().__init__()
         self.event_count = 0
 
     def log_events(self, events):

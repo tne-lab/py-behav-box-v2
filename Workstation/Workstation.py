@@ -65,21 +65,28 @@ class Workstation:
                                  self.tasks[chamber])
 
     def remove_task(self, chamber):
-        self.tasks[chamber].stop()
-        self.event_loggers[chamber].close()
+        if self.tasks[chamber].started:
+            self.tasks[chamber].stop()
+        for el in self.event_loggers[chamber]:
+            el.close()
         del self.tasks[chamber]
         del self.event_loggers[chamber]
 
     def start_task(self, chamber):
         self.tasks[chamber].start()
+        for el in self.event_loggers[chamber]:
+            el.reset()
+            el.log_events(self.tasks[chamber].events)
 
     # Should this be parallelized?
     def loop(self):
+        self.task_gui.fill(Colors.black)
         events = pygame.event.get()
         for key in self.tasks:
             if self.tasks[key].started and not self.tasks[key].paused:
                 self.tasks[key].main_loop()
-                self.event_loggers[key].log_events(self.tasks[key].events)
+                for el in self.event_loggers[key]:
+                    el.log_events(self.tasks[key].events)
                 self.guis[key].handle_events(events)
             self.guis[key].draw()
             col = key % self.n_col

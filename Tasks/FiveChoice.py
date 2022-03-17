@@ -64,8 +64,12 @@ class FiveChoice(Task):
     def __init__(self, chamber, source, address_file, protocol=None):
         super().__init__(chamber, source, address_file, protocol)
         self.cur_trial = 0
+
+    def start(self):
+        self.cur_trial = 0
         self.state = self.States.INITIATION
         self.food_light.toggle(True)
+        super(FiveChoice, self).start()
 
     def main_loop(self):
         super().main_loop()

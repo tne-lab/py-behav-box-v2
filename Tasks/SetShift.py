@@ -3,6 +3,7 @@ from enum import Enum
 
 from Components.NosePoke import NosePoke
 from Events.InputEvent import InputEvent
+
 from Tasks.Task import Task
 
 
@@ -29,9 +30,12 @@ class SetShift(Task):
         self.cur_block = 0
 
     def start(self):
-        super(SetShift, self).start()
+        self.cur_trial = 0
+        self.cur_rule = 0
+        self.cur_block = 0
         self.state = self.States.INITIATION
         self.nose_poke_lights[1].toggle(True)
+        super(SetShift, self).start()
 
     def main_loop(self):
         super().main_loop()

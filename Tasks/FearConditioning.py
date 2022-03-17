@@ -20,10 +20,17 @@ class FearConditioning(Task):
     def __init__(self, chamber, source, address_file, protocol):
         super().__init__(chamber, source, address_file, protocol)
         self.cur_trial = 0
+        self.reward_available = False
+        self.prev_reward_time = 0
+        self.reward_lockout = 0
+
+    def start(self):
+        self.cur_trial = 0
         self.reward_available = True
         self.prev_reward_time = 0
         self.reward_lockout = 0
         self.state = self.States.INTER_TONE_INTERVAL
+        super(FearConditioning, self).start()
 
     def main_loop(self):
         super().main_loop()

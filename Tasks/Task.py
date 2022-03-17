@@ -6,6 +6,7 @@ import importlib
 
 from Components import *
 from Events.StateChangeEvent import StateChangeEvent
+from Events.InitialStateEvent import InitialStateEvent
 from Utilities.read_protocol_variable import read_protocol_variable
 
 
@@ -52,7 +53,7 @@ class Task:
         self.state = None  # The current task state
         self.entry_time = 0  # Time when the current state began
         self.start_time = 0  # Time the task started
-        self.cur_time = time.time()  # The time for the current task loop
+        self.cur_time = 0  # The time for the current task loop
         self.paused = False
         self.started = False
         self.time_into_trial = 0
@@ -101,7 +102,8 @@ class Task:
 
     def start(self):
         self.started = True
-        self.start_time = time.time()
+        self.start_time = self.cur_time = time.time()
+        self.events.append(InitialStateEvent(self.state, self.cur_time - self.start_time))
 
     def pause(self):
         self.paused = True

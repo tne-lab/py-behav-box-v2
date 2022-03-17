@@ -28,5 +28,7 @@ class IconButton(QPushButton):
         self.disabled = not enabled
         if self.disabled:
             self.setIcon(QIcon(self.disabled_icon))
+            self.setCursor(QCursor(QtCore.Qt.ArrowCursor))
         else:
             self.setIcon(QIcon(self.icon))
+            self.setCursor(QCursor(QtCore.Qt.PointingHandCursor))

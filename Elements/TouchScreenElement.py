@@ -34,4 +34,7 @@ class TouchScreenElement(Element):
 
     def mouse_up(self, event):
         cur_x, cur_y = pygame.mouse.get_pos()
+        offset = self.screen.get_offset()
+        cur_x -= offset[0]
+        cur_y -= offset[1]
         self.tsc.add_touch((cur_x / self.sf, cur_y / self.sf))

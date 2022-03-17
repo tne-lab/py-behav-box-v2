@@ -36,3 +36,6 @@ class ScrollLabel(QScrollArea):
     def setText(self, text):
         # setting text to the label
         self.label.setText(text)
+
+    def text(self):
+        return self.label.text()
