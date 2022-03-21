@@ -65,7 +65,7 @@ class DPAL(Task):
         if self.state == self.States.INITIATION:
             if init_poke == NosePoke.POKE_ENTERED:
                 self.init_light.toggle(False)
-                self.change_state(self.States.STIMULUS_PRESENTATION)
+                self.change_state(self.States.STIMULUS_PRESENTATION, {"correct_img": self.correct_img, "incorrect_img": self.incorrect_img, "incorrect_location": self.incorrect_location})
                 self.touch_screen.add_image(self.image_folder + self.images[self.correct_img],
                                             self.coords[self.correct_img], self.img_dim)
                 self.touch_screen.add_image(self.image_folder + self.images[self.incorrect_img],
@@ -83,7 +83,7 @@ class DPAL(Task):
                 self.generate_images()
                 self.cur_trial += 1
                 self.tone.play_sound(1800, 1, 1)
-                self.change_state(self.States.INTER_TRIAL_INTERVAL)
+                self.change_state(self.States.INTER_TRIAL_INTERVAL, {"response": "correct"})
             elif len(touch_locs) > 0 and touch_locs[0] == self.incorrect_location + 1:
                 self.cage_light.toggle(True)
                 self.touch_screen.remove_image(self.image_folder + self.images[self.correct_img])
@@ -91,7 +91,7 @@ class DPAL(Task):
                 self.touch_screen.remove_image(self.image_folder + self.blank)
                 self.touch_screen.refresh()
                 self.tone.play_sound(1200, 1, 1)
-                self.change_state(self.States.TIMEOUT)
+                self.change_state(self.States.TIMEOUT, {"response": "incorrect"})
         elif self.state == self.States.TIMEOUT:
             if self.cur_time - self.entry_time > self.timeout_duration:
                 self.cage_light.toggle(False)

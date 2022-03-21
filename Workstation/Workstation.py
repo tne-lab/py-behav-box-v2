@@ -2,6 +2,7 @@ import importlib
 import threading
 import math
 import time
+import atexit
 
 from GUIs import *
 from GUIs import Colors
@@ -20,36 +21,76 @@ from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 import sys
 import os
+import ast
 from screeninfo import get_monitors
 
 
 class Workstation:
 
     def __init__(self):
-        self.sources = {"es": EmptySource(), "etss": EmptyTouchScreenSource((1024, 768))}
         self.tasks = {}
         self.event_loggers = {}
-        self.n_chamber = 5
-        m = get_monitors()[0]
-        os.environ['SDL_VIDEO_WINDOW_POS'] = '%i,%i' % (m.width / 6, 30)
+
+        QCoreApplication.setOrganizationName("TNEL")
+        QCoreApplication.setOrganizationDomain("tnelab.org")
+        QCoreApplication.setApplicationName("Pybehav")
+        settings = QSettings()
+        if settings.contains("sources"):
+            self.sources = eval(settings.value("sources"))
+        else:
+            self.sources = {"es": EmptySource(), "etss": EmptyTouchScreenSource("(1024, 768)")}
+            settings.setValue("sources", '{"es": EmptySource(), "etss": EmptyTouchScreenSource("(1024, 768)")}')
+
+        if settings.contains("n_chamber"):
+            self.n_chamber = int(settings.value("n_chamber"))
+        else:
+            self.n_chamber = 1
+            settings.setValue("n_chamber", self.n_chamber)
+
+        if settings.contains("pygame/offset"):
+            offset = ast.literal_eval(settings.value("pygame/offset"))
+        else:
+            m = get_monitors()[0]
+            offset = (m.width / 6, 30)
+            settings.setValue("pygame/offset", str(offset))
+
+        os.environ['SDL_VIDEO_WINDOW_POS'] = '%i,%i' % offset
         pygame.init()
         pygame.display.set_caption("Pybehav")
-        szo = pygame.display.get_desktop_sizes()
-        szo = szo[0]
-        sz = (int(szo[0] * 5 / 6), int(szo[1] - 70))
-        self.n_row = 1
-        self.n_col = self.n_chamber
-        self.w = sz[0] / self.n_chamber
-        self.h = sz[0] / self.n_chamber * 2
-        while self.h < sz[1] / (self.n_row + 1) or self.n_col * self.w > sz[0]:
-            self.n_row += 1
-            self.h = sz[1] / self.n_row
-            self.w = self.h / 2
-            self.n_col = math.ceil(self.n_chamber / self.n_row)
-        self.task_gui = pygame.display.set_mode((self.w * self.n_col, self.h * self.n_row), pygame.SHOWN, 32)
+
+        if settings.contains("pygame/n_row"):
+            self.n_row = int(settings.value("pygame/n_row"))
+            self.n_col = int(settings.value("pygame/n_col"))
+            self.w = int(settings.value("pygame/w"))
+            self.h = int(settings.value("pygame/h"))
+        else:
+            szo = pygame.display.get_desktop_sizes()
+            szo = szo[0]
+            sz = (int(szo[0] * 5 / 6), int(szo[1] - 70))
+            self.n_row = 1
+            self.n_col = self.n_chamber
+            self.w = sz[0] / self.n_chamber
+            self.h = sz[0] / self.n_chamber * 2
+            if self.h > sz[1]:
+                self.h = sz[1]
+                self.w = sz[1] / 2
+            while self.h < sz[1] / (self.n_row + 1) or self.n_col * self.w > sz[0]:
+                self.n_row += 1
+                self.h = sz[1] / self.n_row
+                self.w = self.h / 2
+                self.n_col = math.ceil(self.n_chamber / self.n_row)
+            settings.setValue("pygame/n_row", self.n_row)
+            settings.setValue("pygame/n_col", self.n_col)
+            settings.setValue("pygame/w", self.w)
+            settings.setValue("pygame/h", self.h)
+            settings.setValue("pyqt/w", int(szo[0] / 6))
+            settings.setValue("pyqt/h", int(szo[1] - 70))
+
+        self.task_gui = pygame.display.set_mode((self.w * self.n_col, self.h * self.n_row), pygame.RESIZABLE, 32)
         self.guis = {}
         app = QApplication(sys.argv)
-        self.wsg = WorkstationGUI(self, szo)
+        self.wsg = WorkstationGUI(self)
+        atexit.register(self.exit_handler)
         sys.exit(app.exec())
 
     def add_task(self, chamber, task_name, sources, address_file, protocol, task_event_loggers):
@@ -65,18 +106,20 @@ class Workstation:
                                  self.tasks[chamber])
 
     def remove_task(self, chamber):
-        if self.tasks[chamber].started:
-            self.tasks[chamber].stop()
-        for el in self.event_loggers[chamber]:
-            el.close()
+        self.stop_task(chamber)
         del self.tasks[chamber]
         del self.event_loggers[chamber]
 
     def start_task(self, chamber):
         self.tasks[chamber].start()
         for el in self.event_loggers[chamber]:
-            el.reset()
+            el.start()
             el.log_events(self.tasks[chamber].events)
+
+    def stop_task(self, chamber):
+        self.tasks[chamber].stop()
+        for el in self.event_loggers[chamber]:
+            el.close()
 
     # Should this be parallelized?
     def loop(self):
@@ -88,6 +131,8 @@ class Workstation:
                 for el in self.event_loggers[key]:
                     el.log_events(self.tasks[key].events)
                 self.guis[key].handle_events(events)
+                if self.tasks[key].is_complete():
+                    self.stop_task(key)
             self.guis[key].draw()
             col = key % self.n_col
             row = math.floor(key / self.n_col)
@@ -95,3 +140,8 @@ class Workstation:
             LabelElement(self.task_gui, col * self.w + 10, (row + 1) * self.h - 30, self.w, 20, self.tasks[key].metadata["subject"]).draw()
         pygame.display.flip()
 
+    def exit_handler(self):
+        for key in self.tasks:
+            self.stop_task(key)
+        for src in self.sources:
+            self.sources[src].close_source()

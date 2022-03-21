@@ -38,7 +38,11 @@ class AddLoggerDialog(QDialog):
             if lpd.exec():
                 for p in lpd.params:
                     self.params.append(p.text())
-        self.accept()
+                self.accept()
+            else:
+                self.reject()
+        else:
+            self.accept()
 
 
 class LoggerParametersDialog(QDialog):
@@ -62,7 +66,7 @@ class LoggerParametersDialog(QDialog):
             param_box_layout = QHBoxLayout(self)
             param_box.setLayout(param_box_layout)
             param = QLineEdit()
-            if len(self.param_names) - i <= len(param_defaults):
+            if param_defaults is not None and len(self.param_names) - i <= len(param_defaults):
                 param.setText(str(param_defaults[-(len(self.param_names) - i)]))
             param_box_layout.addWidget(param)
             self.layout.addWidget(param_box)

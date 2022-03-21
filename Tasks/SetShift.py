@@ -69,41 +69,60 @@ class SetShift(Task):
                     self.nose_poke_lights[0].toggle(True)
                 else:
                     self.nose_poke_lights[2].toggle(True)
-                self.change_state(self.States.RESPONSE)
+                self.change_state(self.States.RESPONSE, {"light_location": self.light_sequence[self.cur_trial]})
         elif self.state == self.States.RESPONSE:  # The rat has initiated a trial and must choose the correct option
+            metadata = {}
             if pokes[0] == NosePoke.POKE_ENTERED or pokes[2] == NosePoke.POKE_ENTERED:
                 if self.cur_trial < self.n_random_start or self.cur_trial >= self.n_random_start + self.correct_to_switch * len(
                         self.rule_sequence):
                     if random.random() < 0.5:
                         self.food.dispense()
+                        metadata["accuracy"] = "correct"
+                    else:
+                        metadata["accuracy"] = "incorrect"
                     self.cur_trial += 1
+                    metadata["rule_index"] = -1
                 else:
+                    metadata["rule"] = self.rule_sequence[self.cur_rule]
+                    metadata["cur_block"] = self.cur_block
+                    metadata["rule_index"] = self.cur_rule
                     if self.rule_sequence[self.cur_rule] == 0:
                         if (pokes[0] == NosePoke.POKE_ENTERED and self.light_sequence[self.cur_trial]) or (
                                 pokes[2] == NosePoke.POKE_ENTERED and not self.light_sequence[self.cur_trial]):
                             self.correct()
+                            metadata["accuracy"] = "correct"
                         else:
                             self.cur_trial -= self.cur_block
                             self.cur_block = 0
+                            metadata["accuracy"] = "incorrect"
                     elif self.rule_sequence[self.cur_rule] == 1:
                         if pokes[0] == NosePoke.POKE_ENTERED:
                             self.correct()
+                            metadata["accuracy"] = "correct"
                         else:
                             self.cur_trial -= self.cur_block
                             self.cur_block = 0
+                            metadata["accuracy"] = "incorrect"
                     elif self.rule_sequence[self.cur_rule] == 2:
                         if pokes[2] == NosePoke.POKE_ENTERED:
                             self.correct()
+                            metadata["accuracy"] = "correct"
                         else:
                             self.cur_trial -= self.cur_block
                             self.cur_block = 0
+                            metadata["accuracy"] = "incorrect"
                 self.nose_poke_lights[0].toggle(False)
                 self.nose_poke_lights[2].toggle(False)
-                self.change_state(self.States.INTER_TRIAL_INTERVAL)
+                self.change_state(self.States.INTER_TRIAL_INTERVAL, metadata)
             elif self.cur_time - self.entry_time > self.response_duration:
+                metadata["rule"] = self.rule_sequence[self.cur_rule]
+                metadata["cur_block"] = self.cur_block
+                metadata["rule_index"] = self.cur_rule
+                metadata["accuracy"] = "incorrect"
+                metadata["response"] = "none"
                 self.nose_poke_lights[0].toggle(False)
                 self.nose_poke_lights[2].toggle(False)
-                self.change_state(self.States.INTER_TRIAL_INTERVAL)
+                self.change_state(self.States.INTER_TRIAL_INTERVAL, metadata)
         elif self.state == self.States.INTER_TRIAL_INTERVAL:
             if self.cur_time - self.entry_time > self.inter_trial_interval:
                 self.nose_poke_lights[1].toggle(True)

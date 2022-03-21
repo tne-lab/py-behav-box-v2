@@ -9,6 +9,7 @@ from Events.InitialStateEvent import InitialStateEvent
 class OENetworkLogger(EventLogger):
 
     def __init__(self, address, port, nbits=8):
+        super().__init__()
         context = zmq.Context()
         self.event_count = 0
         self.socket = context.socket(zmq.REQ)

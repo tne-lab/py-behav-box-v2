@@ -11,6 +11,7 @@ from Workstation.IconButton import IconButton
 from Workstation.ScrollLabel import ScrollLabel
 from Workstation.AddLoggerDialog import AddLoggerDialog
 from Events.GUIEventLogger import GUIEventLogger
+from Events.FileEventLogger import FileEventLogger
 
 
 class ChamberWidget(QGroupBox):
@@ -92,6 +93,7 @@ class ChamberWidget(QGroupBox):
         self.output_file_path = QLineEdit(
             "{}/py-behav/{}/Data/{}/{}/".format(desktop, self.task_name.currentText(), self.subject.text(),
                                                 datetime.now().strftime("%m-%d-%Y")))
+        self.output_file_path.textChanged.connect(self.output_file_changed)
         output_file_layout.addWidget(self.output_file_path)
         row3.addWidget(output_file)
 
@@ -130,6 +132,7 @@ class ChamberWidget(QGroupBox):
                                   self.workstation.sources, self.address_file_path.text(),
                                   self.protocol_path.text(), self.event_loggers)
         self.task = self.workstation.tasks[int(chamber_index) - 1]
+        self.output_file_changed()
 
     def refresh(self):
         self.workstation.remove_task(int(self.chamber_id.text()) - 1)
@@ -181,7 +184,7 @@ class ChamberWidget(QGroupBox):
         self.address_file_browse.setEnabled(True)
         self.protocol_file_browse.setEnabled(True)
         self.output_file_path.setEnabled(True)
-        self.task.stop()
+        self.workstation.stop_task(int(self.chamber_id.text()) - 1)
 
     def subject_changed(self):
         self.task.metadata["subject"] = self.subject.text()
@@ -189,6 +192,11 @@ class ChamberWidget(QGroupBox):
         self.output_file_path.setText(
             "{}/py-behav/{}/Data/{}/{}/".format(desktop, self.task_name.currentText(), self.subject.text(),
                                                 datetime.now().strftime("%m-%d-%Y")))
+
+    def output_file_changed(self):
+        for el in self.event_loggers:
+            if isinstance(el, FileEventLogger):
+                el.output_folder = self.output_file_path.text()
 
     def contextMenuEvent(self, event):
         if not self.task.started:
@@ -226,3 +234,4 @@ class ChamberWidget(QGroupBox):
                     logger_type = getattr(importlib.import_module("Events." + ld.logger.currentText()), ld.logger.currentText())
                     self.logger_params.append(ld.params)
                     self.event_loggers.append(logger_type(*ld.params))
+                    self.output_file_changed()

@@ -8,17 +8,19 @@ import csv
 import re
 import importlib
 from Workstation.AddTaskDialog import AddTaskDialog
+from Workstation.SettingsDialog import SettingsDialog
 from Workstation.ChamberWidget import ChamberWidget
 
 
 class WorkstationGUI(QWidget):
-    def __init__(self, workstation, szo):
+    def __init__(self, workstation):
         QWidget.__init__(self)
         self.n_active = 0
         self.workstation = workstation
+        settings = QSettings()
 
         self.setWindowTitle("Pybehav")
-        self.setGeometry(0, 0, int(szo[0] / 6), int(szo[1] - 70))  # Position GUI to the left sixth of the screen
+        self.setGeometry(0, 0, int(settings.value("pyqt/w")), int(settings.value("pyqt/h")))  # Position GUI to the left sixth of the screen
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)  # Remove GUI margins so it is flush with screen
         # Make the GUI background white
@@ -33,8 +35,8 @@ class WorkstationGUI(QWidget):
         action_file = menubar.addMenu("File")
         add_task = action_file.addAction("Add Task")  # Action for adding a new task to a chamber
         add_task.triggered.connect(self.task_dialog)
-        action_file.addAction("Load Configuration")
-        action_file.addAction("Save Configuration")
+        settings = action_file.addAction("Settings")
+        settings.triggered.connect(self.settings_dialog)
         action_file.addSeparator()
         action_file.addAction("Quit")  # Quits py-behav
         menubar.addMenu("View")
@@ -63,6 +65,11 @@ class WorkstationGUI(QWidget):
         self.setLayout(self.chamber_container)
         self.move(0, 0)
         self.show()
+
+    def settings_dialog(self):
+        sd = SettingsDialog(self.workstation)
+        if sd.exec():
+            pass
 
     def task_dialog(self):
         td = AddTaskDialog(self.workstation)

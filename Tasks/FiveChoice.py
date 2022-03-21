@@ -71,6 +71,12 @@ class FiveChoice(Task):
         self.food_light.toggle(True)
         super(FiveChoice, self).start()
 
+    def stop(self):
+        super(FiveChoice, self).stop()
+        self.food_light.toggle(False)
+        for light in self.nose_poke_lights:
+            light.toggle(False)
+
     def main_loop(self):
         super().main_loop()
         self.events = []
@@ -139,7 +145,7 @@ class FiveChoice(Task):
                     metadata = {"response": "incorrect"}
                 self.change_state(self.States.POST_RESPONSE_INTERVAL, metadata)
             elif self.cur_time - self.entry_time > self.limited_hold_duration:  # The rat failed to respond
-                self.change_state(self.States.POST_RESPONSE_INTERVAL, {"response", "none"})
+                self.change_state(self.States.POST_RESPONSE_INTERVAL, {"response": "none"})
         elif self.state == self.States.POST_RESPONSE_INTERVAL:  # The rat has responded and an initiation lockout begins
             if self.cur_time - self.entry_time > self.post_response_interval:  # The post response period has ended
                 self.change_state(self.States.INITIATION)

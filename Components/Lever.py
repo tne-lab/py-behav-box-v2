@@ -8,12 +8,12 @@ class Lever(Component):
         Methods
         -------
         check()
-            Queries the current state of the nosepoke and outputs POKE_ENTERED if the poke was just entered, POKE_EXIT if
-            the poke was just exited, or NO_CHANGE if there was no change from the prior state.
+            Queries the current state of the lever and outputs LEVER_PRESSED if the lever was pressed, LEVER_DEPRESSED if
+            the lever was just released, or NO_CHANGE if there was no change from the prior state.
         get_state()
-            Returns True if the nosepoke is currently entered
+            Returns True if the lever is currently pressed
         toggle(on)
-            Sets the nosepoke state with the Source (if writing is allowed)
+            Sets the lever state with the Source (if writing is allowed)
     """
     NO_CHANGE = 0
     LEVER_PRESSED = 1
