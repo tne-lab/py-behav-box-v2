@@ -1,8 +1,10 @@
 import importlib
-import threading
+from pkgutil import iter_modules
+from inspect import isclass
+
 import math
-import time
 import atexit
+import time
 
 from GUIs import *
 from GUIs import Colors
@@ -10,14 +12,7 @@ from Elements.LabelElement import LabelElement
 import pygame
 from Workstation.WorkstationGUI import WorkstationGUI
 
-from Sources.DIOSource import DIOSource
-from Sources.EmptySource import EmptySource
-from Sources.WhiskerTouchScreenSource import WhiskerTouchScreenSource
-from Sources.EmptyTouchScreenSource import EmptyTouchScreenSource
-
 from PyQt5.QtWidgets import *
-from PyQt5 import QtCore, QtGui
-from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 import sys
 import os
@@ -39,12 +34,20 @@ class Workstation:
         # Load information from settings or set defaults
         settings = QSettings()
         # Store information on the available sources
+        package_dir = "Sources/"
+        for (_, module_name, _) in iter_modules([package_dir]):
+            # import the module and iterate through its attributes
+            module = importlib.import_module(f"Sources.{module_name}")
+            for attribute_name in dir(module):
+                attribute = getattr(module, attribute_name)
+                if isclass(attribute):
+                    # Add the class to this package's variables
+                    globals()[attribute_name] = attribute
         if settings.contains("sources"):
             self.sources = eval(settings.value("sources"))
         else:
             self.sources = {"es": EmptySource(), "etss": EmptyTouchScreenSource("(1024, 768)")}
             settings.setValue("sources", '{"es": EmptySource(), "etss": EmptyTouchScreenSource("(1024, 768)")}')
-
         # Store the number of available chambers
         if settings.contains("n_chamber"):
             self.n_chamber = int(settings.value("n_chamber"))

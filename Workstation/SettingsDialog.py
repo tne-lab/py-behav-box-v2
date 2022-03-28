@@ -63,17 +63,17 @@ class SettingsDialog(QDialog):
         st_name = st.split(" (")[0]
         settings = QSettings()
         source_string = settings.value("sources")
-        print(source_string)
         si = source_string.find(st_name)
         if si - 3 > 0:
             si -= 3
         else:
             si -= 1
         se = source_string.find(")", si)
-        print("{} {}".format(si, se))
         del self.workstation.sources[st_name]
         self.source_list.takeItem(self.source_list.currentRow())
         self.remove_button.setDisabled(False)
+        settings = QSettings()
+        settings.setValue("sources", source_string[0:si] + source_string[se+1:])
 
     def add_source(self):
         sd = AddSourceDialog()
@@ -88,7 +88,7 @@ class SettingsDialog(QDialog):
                         params.append(p.text())
             settings = QSettings()
             source_string = settings.value("sources")
-            source_string = source_string[:-1] + ', "{}": {}({})'.format(sd.name.text(), sd.source.currentText(), ''.join(f'"{w}"' for w in params)) + "}"
+            source_string = source_string[:-1] + ', "{}": {}({})'.format(sd.name.text(), sd.source.currentText(), ','.join(f'"{w}"' for w in params)) + "}"
             settings.setValue("sources", source_string)
             self.workstation.sources[sd.name.text()] = source_type(*params)
             QListWidgetItem("{} ({})".format(sd.name.text(), sd.source.currentText()), self.source_list)
