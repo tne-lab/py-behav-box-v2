@@ -7,16 +7,38 @@ class Component:
     """
         Abstract class defining the base requirements for a feature that receives input from or outputs to a Source
 
+        Parameters
+        ----------
+        source : Source
+            The Source related to this Component
+        component_id : str
+            The ID of this Component
+        component_address : str
+            The location of this Component for its Source
+        metadata : str
+            String containing any metadata associated with this Component
+        
+        Attributes
+        ----------
+        id : str
+            The ID of this Component
+        address : str
+            The location of this Component for its Source
+        source : Source
+            The Source related to this Component
+        
         Methods
         -------
         get_state()
             Returns the current state the component is in (no type restrictions)
+        get_type()
+            Returns the Type of this Component
     """
 
     class Type(Enum):
-        INPUT = 0
-        OUTPUT = 1
-        BOTH = 2
+        INPUT = 0  # The Component solely provides input
+        OUTPUT = 1  # The Component solely receives output
+        BOTH = 2  # The Component both inputs and outputs
 
     def __init__(self, source, component_id, component_address, metadata=""):
         self.id = component_id  # The unique identifier for the component or set of related components

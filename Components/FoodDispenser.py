@@ -8,12 +8,32 @@ class FoodDispenser(Component):
     """
         Class defining a FoodDispenser component in the operant chamber.
 
+        Parameters
+        ----------
+        source : Source
+            The Source related to this Component
+        component_id : str
+            The ID of this Component
+        component_address : str
+            The location of this Component for its Source
+        metadata : str
+            String containing any metadata associated with this Component
+
+        Attributes
+        ----------
+        state : boolean
+            Boolean indicating if the dispenser is actively dispensing pellets
+        pellets : int
+            Count of the number of pellets that have been dispensed
+
         Methods
         -------
         dispense()
             Dispenses a single pellet
         get_state()
-            Returns a boolean indicating if the dispenser is actively dispensing food
+            Returns state
+        get_type()
+            Returns Component.Type.OUTPUT
     """
     def __init__(self, source, component_id, component_address, metadata=""):
         self.state = False

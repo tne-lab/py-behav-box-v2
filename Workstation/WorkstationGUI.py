@@ -20,7 +20,7 @@ class WorkstationGUI(QWidget):
         settings = QSettings()
 
         self.setWindowTitle("Pybehav")
-        self.setGeometry(0, 0, int(settings.value("pyqt/w")), int(settings.value("pyqt/h")))  # Position GUI to the left sixth of the screen
+        self.setGeometry(0, 0, int(settings.value("pyqt/w")), int(settings.value("pyqt/h")))  # Position GUI
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)  # Remove GUI margins so it is flush with screen
         # Make the GUI background white
@@ -32,11 +32,11 @@ class WorkstationGUI(QWidget):
         # Main menu bar
         menubar = QMenuBar()
         main_layout.addWidget(menubar)
-        action_file = menubar.addMenu("File")
+        action_file = menubar.addMenu("File")  # File section of menu
         add_task = action_file.addAction("Add Task")  # Action for adding a new task to a chamber
-        add_task.triggered.connect(self.task_dialog)
-        settings = action_file.addAction("Settings")
-        settings.triggered.connect(self.settings_dialog)
+        add_task.triggered.connect(self.task_dialog)  # Call task_dialog method when clicked
+        settings = action_file.addAction("Settings")  # Action for adjusting py-behav settings
+        settings.triggered.connect(self.settings_dialog)  # Call settings_dialog method when clicked
         action_file.addSeparator()
         action_file.addAction("Quit")  # Quits py-behav
         menubar.addMenu("View")
@@ -67,15 +67,17 @@ class WorkstationGUI(QWidget):
         self.show()
 
     def settings_dialog(self):
+        # Opens the SettingsDialog for adjusting py-behav settings
         sd = SettingsDialog(self.workstation)
         if sd.exec():
             pass
 
     def task_dialog(self):
+        # Opens the AddTaskDialog for adding a new task to a chamber
         td = AddTaskDialog(self.workstation)
         if td.exec():
-            if td.configuration_path is not None:
-                with open(td.configuration_path, newline='') as csvfile:
+            if td.configuration_path is not None:  # If a configuration file was provided
+                with open(td.configuration_path, newline='') as csvfile:  # Open the configuration file
                     config_reader = csv.reader(csvfile, delimiter=',', quotechar='|')
                     # Default task values
                     chamber = task = subject = afp = pfp = ""
@@ -107,11 +109,29 @@ class WorkstationGUI(QWidget):
                 self.add_task(td.chamber.currentText(), td.task.currentIndex())
 
     def add_task(self, chamber_index, task_index, subject="default", afp="", pfp="", event_loggers=([], [])):
+        """
+        Adds a ChamberWidget to the GUI corresponding to a new task
+
+        Parameters
+        ----------
+        chamber_index : str
+            The index of the chamber the task is being added to
+        task_index : int
+            The index of the task in the list of possible tasks
+        subject : str
+            The name of the subject
+        afp : str
+            The path to the address file
+        pfp : str
+            The path to the protocol file
+        event_loggers : list
+            The EventLoggers used by this task
+        """
         if int(chamber_index) - 1 not in self.chambers:
             self.chambers[int(chamber_index) - 1] = ChamberWidget(self, chamber_index, task_index, subject, afp, pfp, event_loggers)
             self.chamber_container.insertWidget(self.n_active, self.chambers[int(chamber_index) - 1])
-            self.n_active += 1
-        else:
+            self.n_active += 1  # Increment the number of active chambers
+        else:  # The chamber is already in use
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Critical)
             msg.setText('Chamber already occupied, clear before adding a new task')
@@ -119,8 +139,16 @@ class WorkstationGUI(QWidget):
             msg.exec_()
 
     def remove_task(self, chamber_index):
-        self.workstation.remove_task(int(chamber_index) - 1)
-        self.chamber_container.removeWidget(self.chambers[int(chamber_index) - 1])
+        """
+        Removes a task
+
+        Parameters
+        ----------
+        chamber_index : str
+            The index of the task
+        """
+        self.workstation.remove_task(int(chamber_index) - 1)  # Remove the task from the main Workstation
+        self.chamber_container.removeWidget(self.chambers[int(chamber_index) - 1])  # Remove the widget
         self.chambers[int(chamber_index) - 1].deleteLater()
         del self.chambers[int(chamber_index) - 1]
-        self.n_active -= 1
+        self.n_active -= 1  # Decrement the number of active tasks

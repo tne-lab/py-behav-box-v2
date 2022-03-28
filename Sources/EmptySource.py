@@ -5,6 +5,13 @@ class EmptySource(Source):
     """
         Class defining a Source without an external connection.
 
+        Attributes
+        ----------
+        components : Dictionary
+            Links Component IDs to Component objects
+        values : Dictionary
+            Links Component IDs to stored value for each Component
+
         Methods
         -------
         register_component(component)

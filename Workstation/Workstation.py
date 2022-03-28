@@ -31,22 +31,28 @@ class Workstation:
         self.tasks = {}
         self.event_loggers = {}
 
+        # Core application details
         QCoreApplication.setOrganizationName("TNEL")
         QCoreApplication.setOrganizationDomain("tnelab.org")
         QCoreApplication.setApplicationName("Pybehav")
+
+        # Load information from settings or set defaults
         settings = QSettings()
+        # Store information on the available sources
         if settings.contains("sources"):
             self.sources = eval(settings.value("sources"))
         else:
             self.sources = {"es": EmptySource(), "etss": EmptyTouchScreenSource("(1024, 768)")}
             settings.setValue("sources", '{"es": EmptySource(), "etss": EmptyTouchScreenSource("(1024, 768)")}')
 
+        # Store the number of available chambers
         if settings.contains("n_chamber"):
             self.n_chamber = int(settings.value("n_chamber"))
         else:
             self.n_chamber = 1
             settings.setValue("n_chamber", self.n_chamber)
 
+        # Store the position of the pygame window
         if settings.contains("pygame/offset"):
             offset = ast.literal_eval(settings.value("pygame/offset"))
         else:
@@ -54,10 +60,11 @@ class Workstation:
             offset = (m.width / 6, 30)
             settings.setValue("pygame/offset", str(offset))
 
-        os.environ['SDL_VIDEO_WINDOW_POS'] = '%i,%i' % offset
+        os.environ['SDL_VIDEO_WINDOW_POS'] = '%i,%i' % offset  # Position the pygame window
         pygame.init()
         pygame.display.set_caption("Pybehav")
 
+        # Compute the arrangement of chambers in the pygame window
         if settings.contains("pygame/n_row"):
             self.n_row = int(settings.value("pygame/n_row"))
             self.n_col = int(settings.value("pygame/n_col"))
