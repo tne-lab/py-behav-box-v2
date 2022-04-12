@@ -2,6 +2,7 @@ from Events.EventLogger import EventLogger
 from Events.InputEvent import InputEvent
 from Events.StateChangeEvent import StateChangeEvent
 from Events.InitialStateEvent import InitialStateEvent
+from Events.FinalStateEvent import FinalStateEvent
 
 
 class GUIEventLogger(EventLogger):
@@ -20,6 +21,9 @@ class GUIEventLogger(EventLogger):
             if isinstance(e, InitialStateEvent):
                 cur_text += "{},{},Entry,{},{},{}".format(self.event_count, e.entry_time,
                                                           e.initial_state.value, e.initial_state.name, str(e.metadata))
+            elif isinstance(e, FinalStateEvent):
+                cur_text += "{},{},Exit,{},{},{}".format(self.event_count, e.entry_time,
+                                                         e.final_state.value, e.final_state.name, str(e.metadata))
             elif isinstance(e, StateChangeEvent):
                 cur_text += "{},{},Exit,{},{},{}\n".format(self.event_count, e.entry_time,
                                                            e.initial_state.value, e.initial_state.name, str(e.metadata))

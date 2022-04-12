@@ -1,6 +1,7 @@
 import os
 from random import randrange
 from enum import Enum
+from statistics import mode
 
 from Components.NosePoke import NosePoke
 from Events.InputEvent import InputEvent
@@ -8,7 +9,7 @@ from Tasks.Task import Task
 from Utilities.touch_in_region import touch_in_region
 
 
-class DPAL(Task):
+class DPALMustInit(Task):
     class States(Enum):
         INITIATION = 0
         STIMULUS_PRESENTATION = 1
@@ -31,13 +32,13 @@ class DPAL(Task):
         self.image_folder = "{}/py-behav/DPAL/Images/".format(desktop)
         self.cur_trial = 0
         self.state = self.States.INITIATION
-        self.init_light.toggle(True)
         self.fan.toggle(True)
-        self.cage_light.toggle(True)
-        self.correct_img = None
-        self.incorrect_img = None
-        self.incorrect_location = None
+        self.correct_locations = [None] * self.max_repeats
         self.generate_images()
+
+    def start(self):
+        self.init_light.toggle(True)
+        super(DPALMustInit, self).start()
 
     def main_loop(self):
         super().main_loop()
@@ -66,27 +67,24 @@ class DPAL(Task):
         if self.state == self.States.INITIATION:
             if init_poke == NosePoke.POKE_ENTERED:
                 self.init_light.toggle(False)
-                self.change_state(self.States.STIMULUS_PRESENTATION, {"correct_img": self.correct_img, "incorrect_img": self.incorrect_img, "incorrect_location": self.incorrect_location})
-                self.touch_screen.add_image(self.image_folder + self.images[self.correct_img],
-                                            self.coords[self.correct_img], self.img_dim)
-                self.touch_screen.add_image(self.image_folder + self.images[self.incorrect_img],
-                                            self.coords[self.incorrect_location], self.img_dim)
+                self.change_state(self.States.STIMULUS_PRESENTATION, {"correct_location": self.correct_locations[-1]})
+                self.touch_screen.add_image(self.image_folder + self.blank, self.coords[self.correct_locations[-1]],
+                                            self.img_dim)
                 self.touch_screen.refresh()
         elif self.state == self.States.STIMULUS_PRESENTATION:
-            if len(touch_locs) > 0 and touch_locs[0] == self.correct_img + 1:
+            if len(touch_locs) > 0 and touch_locs[0] == self.correct_locations[-1] + 1:
                 self.food.dispense()
-                self.touch_screen.remove_image(self.image_folder + self.images[self.correct_img])
-                self.touch_screen.remove_image(self.image_folder + self.images[self.incorrect_img])
+                self.touch_screen.remove_image(self.image_folder + self.blank)
                 self.touch_screen.refresh()
                 self.generate_images()
                 self.cur_trial += 1
                 self.tone.play_sound(1800, 1, 1)
                 self.change_state(self.States.INTER_TRIAL_INTERVAL, {"response": "correct"})
-            elif len(touch_locs) > 0 and touch_locs[0] == self.incorrect_location + 1:
-                self.cage_light.toggle(True)
-                self.touch_screen.remove_image(self.image_folder + self.images[self.correct_img])
-                self.touch_screen.remove_image(self.image_folder + self.images[self.incorrect_img])
+            elif self.punish_incorrect and len(touch_locs) > 0 and not touch_locs[0] == self.correct_locations[-1] + 1:
+                self.touch_screen.remove_image(self.image_folder + self.blank)
                 self.touch_screen.refresh()
+                self.generate_images()
+                self.cage_light.toggle(True)
                 self.tone.play_sound(1200, 1, 1)
                 self.change_state(self.States.TIMEOUT, {"response": "incorrect"})
         elif self.state == self.States.TIMEOUT:
@@ -101,23 +99,25 @@ class DPAL(Task):
     def get_variables(self):
         return {
             'max_duration': 60,
-            'max_correct': 100,
+            'max_correct': 30,
             'inter_trial_interval': 10,
-            'timeout_duration': 5,
-            'images': ['6B.bmp', '6A.bmp', '2A.bmp'],
+            'blank': 'BLANK.bmp',
             'coords': [(61, 10), (371, 10), (681, 10)],
             'img_dim': (290, 290),
-            'dead_height': 0
+            'dead_height': 0,
+            'max_repeats': 3,
+            'punish_incorrect': True,
+            'timeout_duration': 5
         }
 
     def is_complete(self):
         return self.cur_trial >= self.max_correct or self.cur_time - self.start_time > self.max_duration * 60
 
     def generate_images(self):
-        locs = list(range(len(self.images)))
-        self.correct_img = randrange(len(self.images))
-        del locs[self.correct_img]
-        ind = randrange(len(self.images) - 1)
-        self.incorrect_img = locs[ind]
-        del locs[ind]
-        self.incorrect_location = locs[0]
+        locs = list(range(len(self.coords)))
+        most_common = mode(self.correct_locations)
+        count = self.correct_locations.count(most_common)
+        if most_common is not None and count == self.max_repeats:
+            del locs[most_common]
+        self.correct_locations.pop(0)
+        self.correct_locations.append(locs[randrange(len(locs))])

@@ -129,6 +129,7 @@ class Workstation:
     def stop_task(self, chamber):
         self.tasks[chamber].stop()
         for el in self.event_loggers[chamber]:
+            el.log_events(self.tasks[chamber].events)
             el.close()
 
     # Should this be parallelized?
@@ -152,6 +153,7 @@ class Workstation:
 
     def exit_handler(self):
         for key in self.tasks:
-            self.stop_task(key)
+            if self.tasks[key].started:
+                self.stop_task(key)
         for src in self.sources:
             self.sources[src].close_source()

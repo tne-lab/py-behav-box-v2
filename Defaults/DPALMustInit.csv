@@ -1,0 +1,8 @@
+init_poke,NosePoke,es,10,0,0
+init_light,Toggle,es,11,0,0
+cage_light,Toggle,es,12,0,0
+food,FoodDispenser,es,13,0,0
+touch_screen,TouchScreen,etss,0,0,0
+tone,Speaker,es,14,0,0
+fan,Toggle,es,15,0,0
+video,Video,es,16,0,0

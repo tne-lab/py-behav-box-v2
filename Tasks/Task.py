@@ -7,6 +7,7 @@ import importlib
 from Components import *
 from Events.StateChangeEvent import StateChangeEvent
 from Events.InitialStateEvent import InitialStateEvent
+from Events.FinalStateEvent import FinalStateEvent
 from Utilities.read_protocol_variable import read_protocol_variable
 
 
@@ -102,7 +103,7 @@ class Task:
 
     def start(self):
         self.started = True
-        self.start_time = self.cur_time = time.time()
+        self.entry_time = self.start_time = self.cur_time = time.time()
         self.events.append(InitialStateEvent(self.state, self.cur_time - self.start_time))
 
     def pause(self):
@@ -115,6 +116,8 @@ class Task:
 
     def stop(self):
         self.started = False
+        self.events = []
+        self.events.append(FinalStateEvent(self.state, self.cur_time - self.start_time))
 
     def main_loop(self):
         self.cur_time = time.time()

@@ -70,7 +70,8 @@ class WorkstationGUI(QWidget):
         # Opens the SettingsDialog for adjusting py-behav settings
         sd = SettingsDialog(self.workstation)
         if sd.exec():
-            pass
+            settings = QSettings()
+            settings.setValue("n_chamber", sd.n_chamber.text())
 
     def task_dialog(self):
         # Opens the AddTaskDialog for adding a new task to a chamber
