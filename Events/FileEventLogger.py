@@ -41,4 +41,5 @@ class FileEventLogger(EventLogger):
         self.log_file = open(self.get_file_path(), "w")
 
     def close(self):
-        self.log_file.close()
+        if self.log_file is not None:
+            self.log_file.close()

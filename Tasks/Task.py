@@ -102,6 +102,7 @@ class Task:
         self.state = new_state
 
     def start(self):
+        self.events = []
         self.started = True
         self.entry_time = self.start_time = self.cur_time = time.time()
         self.events.append(InitialStateEvent(self.state, self.cur_time - self.start_time))

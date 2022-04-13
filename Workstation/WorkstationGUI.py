@@ -96,6 +96,8 @@ class WorkstationGUI(QWidget):
                             afp = row[1]
                         elif row[0] == "Protocol":
                             pfp = row[1]
+                        elif row[0] == "Prompt":
+                            prompt = row[1]
                         elif row[0] == "EventLoggers":
                             types = list(map(lambda x: x.split("))")[-1], row[1].split("((")))  # Get the type of each logger
                             params = list(map(lambda x: x.split("((")[-1], row[1].split("))")))  # Get the parameters for each logger
@@ -105,11 +107,11 @@ class WorkstationGUI(QWidget):
                                 event_loggers.append(logger_type(*param_vals))  # Instantiate the logger
                                 logger_params.append(param_vals)
 
-                    self.add_task(chamber, task, subject, afp, pfp, (event_loggers, logger_params))
+                    self.add_task(chamber, task, subject, afp, pfp, prompt, (event_loggers, logger_params))
             else:
                 self.add_task(td.chamber.currentText(), td.task.currentIndex())
 
-    def add_task(self, chamber_index, task_index, subject="default", afp="", pfp="", event_loggers=([], [])):
+    def add_task(self, chamber_index, task_index, subject="default", afp="", pfp="", prompt="", event_loggers=([], [])):
         """
         Adds a ChamberWidget to the GUI corresponding to a new task
 
@@ -125,11 +127,13 @@ class WorkstationGUI(QWidget):
             The path to the address file
         pfp : str
             The path to the protocol file
+        prompt : str
+            Message to display before task starts
         event_loggers : list
             The EventLoggers used by this task
         """
         if int(chamber_index) - 1 not in self.chambers:
-            self.chambers[int(chamber_index) - 1] = ChamberWidget(self, chamber_index, task_index, subject, afp, pfp, event_loggers)
+            self.chambers[int(chamber_index) - 1] = ChamberWidget(self, chamber_index, task_index, subject, afp, pfp, prompt, event_loggers)
             self.chamber_container.insertWidget(self.n_active, self.chambers[int(chamber_index) - 1])
             self.n_active += 1  # Increment the number of active chambers
         else:  # The chamber is already in use

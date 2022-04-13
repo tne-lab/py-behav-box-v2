@@ -9,13 +9,13 @@ import importlib
 from datetime import datetime
 from Workstation.IconButton import IconButton
 from Workstation.ScrollLabel import ScrollLabel
-from Workstation.AddLoggerDialog import AddLoggerDialog
+from Workstation.ConfigurationDialog import ConfigurationDialog
 from Events.GUIEventLogger import GUIEventLogger
 from Events.FileEventLogger import FileEventLogger
 
 
 class ChamberWidget(QGroupBox):
-    def __init__(self, wsg, chamber_index, task_index, sn="default", afp="", pfp="", event_loggers=([], []), parent=None):
+    def __init__(self, wsg, chamber_index, task_index, sn="default", afp="", pfp="", prompt="", event_loggers=([], []), parent=None):
         super(ChamberWidget, self).__init__(parent)
         self.workstation = wsg.workstation
         self.wsg = wsg
@@ -124,6 +124,9 @@ class ChamberWidget(QGroupBox):
             lambda: self.event_log.verticalScrollBar().setValue(self.event_log.verticalScrollBar().maximum()))
         chamber.addWidget(self.event_log)
 
+        # Message to display before starting task
+        self.prompt = prompt
+
         self.setLayout(chamber)
 
         self.event_loggers = [GUIEventLogger(self.event_log)] + event_loggers[0]
@@ -152,6 +155,15 @@ class ChamberWidget(QGroupBox):
 
     def play_pause(self):
         if not self.task.started:
+            if len(self.prompt) > 0:
+                msg = QMessageBox()
+                msg.setIcon(QMessageBox.Warning)
+                msg.setText(self.prompt)
+                msg.setWindowTitle("Wait")
+                msg.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+                msg.setDefaultButton(QMessageBox.Cancel)
+                if msg.exec_() == QMessageBox.Cancel:
+                    return
             self.play_button.icon = 'Workstation/icons/pause.svg'
             self.play_button.hover_icon = 'Workstation/icons/pause_hover.svg'
             self.play_button.setIcon(QIcon(self.play_button.icon))
@@ -203,7 +215,7 @@ class ChamberWidget(QGroupBox):
             menu = QMenu(self)
             save_config = menu.addAction("Save Configuration")
             clear_chamber = menu.addAction("Clear Chamber")
-            add_logger = menu.addAction("Add Event Logger")
+            edit_config = menu.addAction("Edit Configuration")
             action = menu.exec_(self.mapToGlobal(event.pos()))
             if action == save_config:
                 desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
@@ -222,16 +234,15 @@ class ChamberWidget(QGroupBox):
                     w.writerow(["Task", self.task_name.currentText()])
                     w.writerow(["Address File", self.address_file_path.text()])
                     w.writerow(["Protocol", self.protocol_path.text()])
+                    w.writerow(["Prompt", self.prompt])
                     el_text = ""
                     for i in range(1, len(self.event_loggers)):
                         el_text += type(self.event_loggers[i]).__name__ + "((" + ''.join(f"||{w}||" for w in self.logger_params[i-1]) + "))"
                     w.writerow(["EventLoggers", el_text])
             elif action == clear_chamber:
                 self.wsg.remove_task(self.chamber_id.text())
-            elif action == add_logger:
-                ld = AddLoggerDialog()
-                if ld.exec():
-                    logger_type = getattr(importlib.import_module("Events." + ld.logger.currentText()), ld.logger.currentText())
-                    self.logger_params.append(ld.params)
-                    self.event_loggers.append(logger_type(*ld.params))
-                    self.output_file_changed()
+            elif action == edit_config:
+                ld = ConfigurationDialog(self)
+                ld.exec()
+                self.prompt = ld.prompt.text()
+                self.refresh()

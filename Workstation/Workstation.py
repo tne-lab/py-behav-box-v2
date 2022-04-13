@@ -116,7 +116,8 @@ class Workstation:
                                  self.tasks[chamber])
 
     def remove_task(self, chamber):
-        self.stop_task(chamber)
+        for el in self.event_loggers[chamber]:
+            el.close()
         del self.tasks[chamber]
         del self.event_loggers[chamber]
 
@@ -143,7 +144,7 @@ class Workstation:
                     el.log_events(self.tasks[key].events)
                 self.guis[key].handle_events(events)
                 if self.tasks[key].is_complete():
-                    self.stop_task(key)
+                    self.wsg.chambers[key].stop()
             self.guis[key].draw()
             col = key % self.n_col
             row = math.floor(key / self.n_col)

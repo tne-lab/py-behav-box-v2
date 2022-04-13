@@ -84,8 +84,8 @@ class DPALInitTouch(Task):
         return {
             'max_duration': 60,
             'max_correct': 30,
-            'inter_trial_interval': 5,
-            'stimulus_duration': 5,
+            'inter_trial_interval': 10,
+            'stimulus_duration': 30,
             'blank': 'BLANK.bmp',
             'coords': [(61, 10), (371, 10), (681, 10)],
             'img_dim': (290, 290),
