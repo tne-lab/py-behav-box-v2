@@ -12,8 +12,7 @@ class Bandit(Task):
     class States(Enum):
         INITIATION = 0
         STIMULUS_PRESENTATION = 1
-        TIMEOUT = 2
-        INTER_TRIAL_INTERVAL = 3
+        INTER_TRIAL_INTERVAL = 2
 
     class Inputs(Enum):
         INIT_ENTERED = 0
@@ -103,13 +102,12 @@ class Bandit(Task):
 
     def get_variables(self):
         return {
-            'max_duration': 60,
-            'max_correct': 100,
+            'max_duration': 180,
+            'max_correct': 151,
             'history_length': 20,
             'reversal_criterion': 0.7,
             'init_probabilities': [0.1, 0.3, 0.8],
             'inter_trial_interval': 10,
-            'timeout_duration': 5,
             'images': ['6B.bmp', '6A.bmp', '2A.bmp'],
             'coords': [(61, 10), (371, 10), (681, 10)],
             'img_dim': (290, 290),

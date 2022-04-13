@@ -8,10 +8,10 @@ import csv
 import importlib
 from datetime import datetime
 from Workstation.IconButton import IconButton
-from Workstation.ScrollLabel import ScrollLabel
 from Workstation.ConfigurationDialog import ConfigurationDialog
-from Events.GUIEventLogger import GUIEventLogger
+from Events.TextEventLogger import TextEventLogger
 from Events.FileEventLogger import FileEventLogger
+from Events.GUIEventLogger import GUIEventLogger
 
 
 class ChamberWidget(QGroupBox):
@@ -19,8 +19,7 @@ class ChamberWidget(QGroupBox):
         super(ChamberWidget, self).__init__(parent)
         self.workstation = wsg.workstation
         self.wsg = wsg
-        chamber = QVBoxLayout(self)
-        chamber_bar = QVBoxLayout(self)
+        self.chamber = QVBoxLayout(self)
         row1 = QHBoxLayout(self)
 
         # Widget corresponding to the chamber number that contains this task
@@ -51,7 +50,7 @@ class ChamberWidget(QGroupBox):
         task_box_layout.addWidget(self.task_name)
         row1.addWidget(task_box)
 
-        chamber_bar.addLayout(row1)
+        self.chamber.addLayout(row1)
         row2 = QHBoxLayout(self)
 
         # Widget corresponding to the path to the address file. A blank path indicates the default is being used
@@ -82,7 +81,7 @@ class ChamberWidget(QGroupBox):
         protocol_file_layout.addWidget(self.protocol_file_browse)
         row2.addWidget(protocol_file)
 
-        chamber_bar.addLayout(row2)
+        self.chamber.addLayout(row2)
         row3 = QHBoxLayout(self)
 
         # Widget corresponding to the path for the output folder for any file event loggers
@@ -113,23 +112,18 @@ class ChamberWidget(QGroupBox):
         session_layout.addWidget(self.stop_button)
         row3.addWidget(session_box)
 
-        chamber_bar.addLayout(row3)
-        chamber.addLayout(chamber_bar)
-
-        # Widget corresponding to a log of task events
-        self.event_log = ScrollLabel()
-        self.event_log.setMaximumHeight(100)
-        self.event_log.setMinimumHeight(100)
-        self.event_log.verticalScrollBar().rangeChanged.connect(
-            lambda: self.event_log.verticalScrollBar().setValue(self.event_log.verticalScrollBar().maximum()))
-        chamber.addWidget(self.event_log)
+        self.chamber.addLayout(row3)
 
         # Message to display before starting task
         self.prompt = prompt
 
-        self.setLayout(chamber)
+        # Widget corresponding to event loggers
+        self.event_loggers = [TextEventLogger()] + event_loggers[0]
+        for el in self.event_loggers:
+            if isinstance(el, GUIEventLogger):
+                self.chamber.addWidget(el.get_widget())
 
-        self.event_loggers = [GUIEventLogger(self.event_log)] + event_loggers[0]
+        self.setLayout(self.chamber)
         self.logger_params = event_loggers[1]
         self.workstation.add_task(int(chamber_index) - 1, self.task_name.currentText(),
                                   self.workstation.sources, self.address_file_path.text(),
@@ -173,7 +167,6 @@ class ChamberWidget(QGroupBox):
             self.address_file_browse.setEnabled(False)
             self.protocol_file_browse.setEnabled(False)
             self.output_file_path.setEnabled(False)
-            self.event_log.setText("")
             self.workstation.start_task(int(self.chamber_id.text()) - 1)
         elif self.task.paused:
             self.play_button.icon = 'Workstation/icons/pause.svg'

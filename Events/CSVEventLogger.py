@@ -5,6 +5,7 @@ from Events.FileEventLogger import FileEventLogger
 from Events.InitialStateEvent import InitialStateEvent
 from Events.InputEvent import InputEvent
 from Events.StateChangeEvent import StateChangeEvent
+from Events.FinalStateEvent import FinalStateEvent
 from Utilities.dictionary_to_save_string import dictionary_to_save_string
 
 
@@ -27,6 +28,10 @@ class CSVEventLogger(FileEventLogger):
                 self.log_file.write("{},{},Entry,{},{},{}\n".format(self.event_count, e.entry_time,
                                                                     e.initial_state.value, e.initial_state.name,
                                                                     str(e.metadata)))
+            elif isinstance(e, FinalStateEvent):
+                self.log_file.write("{},{},Exit,{},{},{}\n".format(self.event_count, e.entry_time,
+                                                                   e.final_state.value, e.final_state.name,
+                                                                   str(e.metadata)))
             elif isinstance(e, StateChangeEvent):
                 self.log_file.write("{},{},Exit,{},{},{}\n".format(self.event_count, e.entry_time,
                                                                    e.initial_state.value, e.initial_state.name,

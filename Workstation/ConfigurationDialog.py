@@ -1,3 +1,4 @@
+from Events.GUIEventLogger import GUIEventLogger
 from PyQt5.QtWidgets import *
 from PyQt5 import QtCore, QtGui
 from PyQt5.QtGui import *
@@ -33,7 +34,7 @@ class ConfigurationDialog(QDialog):
         logger_box_layout = QVBoxLayout(self)
         self.logger_list = QListWidget()
         for logger in cw.event_loggers:
-            if not type(logger).__name__ == "GUIEventLogger":
+            if not type(logger).__name__ == "TextEventLogger":
                 QListWidgetItem(type(logger).__name__, self.logger_list)
         self.logger_list.itemClicked.connect(self.on_logger_clicked)
         logger_box_layout.addWidget(self.logger_list)
@@ -70,8 +71,11 @@ class ConfigurationDialog(QDialog):
         if ld.exec():
             logger_type = getattr(importlib.import_module("Events." + ld.logger.currentText()), ld.logger.currentText())
             self.cw.logger_params.append(ld.params)
-            self.cw.event_loggers.append(logger_type(*ld.params))
+            new_logger = logger_type(*ld.params)
+            self.cw.event_loggers.append(new_logger)
             QListWidgetItem(ld.logger.currentText(), self.logger_list)
+            if isinstance(new_logger, GUIEventLogger):
+                self.cw.chamber.addWidget(new_logger.get_widget())
 
 
 class AddLoggerDialog(QDialog):
@@ -90,7 +94,7 @@ class AddLoggerDialog(QDialog):
         self.logger = QComboBox()
         self.loggers = []
         for f in pkgutil.iter_modules(['Events']):
-            if f.name.endswith("Logger") and not f.name == "EventLogger" and not f.name == "GUIEventLogger":
+            if f.name.endswith("Logger") and not f.name == "EventLogger" and not f.name == "TextEventLogger":
                 self.loggers.append(f.name)
         self.logger.addItems(self.loggers)
         self.layout.addWidget(self.logger)
