@@ -5,6 +5,10 @@ from Events.EventLogger import EventLogger
 class GUIEventLogger(EventLogger):
     __metaclass__ = ABCMeta
 
+    def __init__(self):
+        super().__init__()
+        self.cw = None
+
     @abstractmethod
     def close(self): raise NotImplementedError
 
@@ -13,4 +17,7 @@ class GUIEventLogger(EventLogger):
 
     @abstractmethod
     def get_widget(self): raise NotImplementedError
+
+    def set_chamber(self, cw):
+        self.cw = cw
 

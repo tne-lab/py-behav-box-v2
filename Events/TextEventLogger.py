@@ -9,7 +9,7 @@ from Workstation.ScrollLabel import ScrollLabel
 class TextEventLogger(GUIEventLogger):
 
     def __init__(self):
-        super(TextEventLogger, self).__init__()
+        super().__init__()
         self.event_log = ScrollLabel()
         self.event_log.setMaximumHeight(100)
         self.event_log.setMinimumHeight(100)

@@ -121,6 +121,7 @@ class ChamberWidget(QGroupBox):
         self.event_loggers = [TextEventLogger()] + event_loggers[0]
         for el in self.event_loggers:
             if isinstance(el, GUIEventLogger):
+                el.set_chamber(self)
                 self.chamber.addWidget(el.get_widget())
 
         self.setLayout(self.chamber)
