@@ -22,6 +22,7 @@ class FearConditioning(Task):
         self.reward_available = False
         self.prev_reward_time = 0
         self.reward_lockout = 0
+        self.cage_light.toggle(True)
 
     def start(self):
         self.cur_trial = 0

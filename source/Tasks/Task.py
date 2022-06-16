@@ -90,7 +90,7 @@ class Task:
         # If a Protocol is provided, replace all indicated variables with the values from the Protocol
         if len(protocol) > 0:
             with open(protocol, newline='') as csvfile:
-                protocol_reader = csv.reader(csvfile, delimiter=' ', quotechar='|')
+                protocol_reader = csv.reader(csvfile, delimiter=',', quotechar='|')
                 for row in protocol_reader:
                     setattr(self, row[0], read_protocol_variable(row))
 
