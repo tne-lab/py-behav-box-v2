@@ -145,6 +145,8 @@ class Workstation:
         """
         for el in self.event_loggers[chamber]:  # Close all associated EventLoggers
             el.close()
+        for c in self.tasks[chamber].components:
+            c.close()
         del self.tasks[chamber]
         del self.event_loggers[chamber]
 

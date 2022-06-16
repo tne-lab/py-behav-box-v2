@@ -26,6 +26,10 @@ class Source:
     def close_source(self): raise NotImplementedError
 
     @abstractmethod
+    def close_component(self, component_id):
+        pass
+
+    @abstractmethod
     def read_component(self, component_id): raise NotImplementedError
 
     @abstractmethod

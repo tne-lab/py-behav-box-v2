@@ -57,6 +57,7 @@ class Task:
         self.paused = False
         self.started = False
         self.time_into_trial = 0
+        self.components = []
         # Open the provided AddressFile
         with open(address_file if len(address_file) > 0 else "Defaults/{}.csv".format(type(self).__name__), newline='') as csvfile:
             address_reader = csv.reader(csvfile, delimiter=',', quotechar='|')
@@ -84,6 +85,7 @@ class Task:
                     component_list = getattr(self, row[0])
                     component_list[int(row[4])] = component
                     setattr(self, row[0], component_list)
+                self.component_ids.append(component)
         # Get all default values for task variables
         for key, value in self.get_variables().items():
             setattr(self, key, value)

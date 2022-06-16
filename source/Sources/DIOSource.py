@@ -29,6 +29,9 @@ class DIOSource(Source):
         for c in self.tasks:
             c.close()
 
+    def close_component(self, component_id):
+        self.tasks[component_id].close()
+
     def read_component(self, component_id):
         # Do I need a stop here as well?
         return self.tasks[component_id].read()

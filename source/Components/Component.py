@@ -56,3 +56,6 @@ class Component:
     @abstractmethod
     def get_type(self): raise NotImplementedError
 
+    def close(self):
+        self.source.close_component(self.id)
+
