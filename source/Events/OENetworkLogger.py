@@ -157,7 +157,7 @@ class OENetworkLogger(GUIEventLogger):
                     self.send_string("stopAcquisition")
                 elif e.event_type == 'startRecord':
                     self.send_string("startRecord RecDir={} prependText={} appendText={}".format(self.rec_dir.text(),
-                                                                                                 self.pre.text(),
+                                                                                                 self.pre.text() + e.metadata.pre if "pre" in e.metadata else self.pre.text(),
                                                                                                  self.app.text()))
                 elif e.event_type == 'stopRecord':
                     self.send_string("stopRecord")
@@ -186,7 +186,7 @@ class OENetworkLogger(GUIEventLogger):
                                                                str(e.metadata)))
 
     def close(self):
-        pass
+        self.socket.close()
 
     def get_widget(self):
         return self.oe_group

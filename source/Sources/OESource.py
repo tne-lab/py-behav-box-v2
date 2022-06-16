@@ -20,7 +20,7 @@ class OESource(Source):
         self.components[component.id] = component
 
     def close_source(self):
-        pass
+        self.socket.close()
 
     def read_component(self, component_id):
         sockets = self.poller.poll(self.delay)

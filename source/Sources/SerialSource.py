@@ -21,4 +21,4 @@ class SerialSource(Source):
         return self.coms[component_id].readline()
 
     def write_component(self, component_id, msg):
-        self.coms[component_id].write(bytes(msg, 'utf-8'))
+        self.coms[component_id].write(bytes(str(msg), 'utf-8'))
