@@ -36,7 +36,6 @@ class ClosedLoop(Task):
 
     def main_loop(self):
         super().main_loop()
-        self.events = []
         thr = self.threshold.check()
         if self.state == self.States.START_RECORD:
             if not self.recording_started:

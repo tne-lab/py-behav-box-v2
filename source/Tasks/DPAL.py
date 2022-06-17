@@ -43,7 +43,6 @@ class DPAL(Task):
 
     def main_loop(self):
         super().main_loop()
-        self.events = []
         init_poke = self.init_poke.check()
         if init_poke == BinaryInput.ENTERED:
             self.events.append(InputEvent(self.Inputs.INIT_ENTERED, self.cur_time - self.start_time))

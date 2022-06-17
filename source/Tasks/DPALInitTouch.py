@@ -39,7 +39,6 @@ class DPALInitTouch(Task):
 
     def main_loop(self):
         super().main_loop()
-        self.events = []
         self.touch_screen.get_touches()
         touches = self.touch_screen.handle()
         touch_locs = []

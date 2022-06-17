@@ -163,6 +163,7 @@ class Workstation:
         for el in self.event_loggers[chamber]:  # Start all EventLoggers and log initial events
             el.start()
             el.log_events(self.tasks[chamber].events)
+        self.tasks[chamber].events = []
 
     def stop_task(self, chamber):
         """
@@ -187,9 +188,10 @@ class Workstation:
         for key in self.tasks:  # For each Task
             if self.tasks[key].started and not self.tasks[key].paused:  # If the Task has been started and is not paused
                 self.tasks[key].main_loop()  # Run the Task's logic loop
+                self.guis[key].handle_events(events)  # Handle mouse/keyboard events with the Task GUI
                 for el in self.event_loggers[key]:  # Log Events with all associated EventLoggers
                     el.log_events(self.tasks[key].events)
-                self.guis[key].handle_events(events)  # Handle mouse/keyboard events with the Task GUI
+                self.tasks[key].events = []
                 if self.tasks[key].is_complete():  # Stop the Task if it is complete
                     self.wsg.chambers[key].stop()
             self.guis[key].draw()  # Update the GUI

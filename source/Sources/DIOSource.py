@@ -31,6 +31,8 @@ class DIOSource(Source):
 
     def close_component(self, component_id):
         self.tasks[component_id].close()
+        del self.tasks[component_id]
+        del self.components[component_id]
 
     def read_component(self, component_id):
         # Do I need a stop here as well?

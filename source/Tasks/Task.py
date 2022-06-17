@@ -85,7 +85,7 @@ class Task:
                     component_list = getattr(self, row[0])
                     component_list[int(row[4])] = component
                     setattr(self, row[0], component_list)
-                self.component_ids.append(component)
+                self.components.append(component)
         # Get all default values for task variables
         for key, value in self.get_variables().items():
             setattr(self, key, value)

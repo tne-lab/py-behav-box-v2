@@ -20,10 +20,6 @@ class DPALHabituation1(Task):
         self.fan.toggle(True)
         self.state = self.States.ACTIVE
 
-    def main_loop(self):
-        super().main_loop()
-        self.events = []
-
     def get_variables(self):
         return {
             'duration': 10

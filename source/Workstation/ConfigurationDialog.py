@@ -90,7 +90,7 @@ class AddLoggerDialog(QDialog):
         self.logger = QComboBox()
         self.loggers = []
         for f in pkgutil.iter_modules(['Events']):
-            if f.name.endswith("Logger") and not f.name == "EventLogger" and not f.name == "TextEventLogger":
+            if f.name.endswith("Logger") and not f.name == "EventLogger" and not f.name == "TextEventLogger" and not f.name == "FileEventLogger":
                 self.loggers.append(f.name)
         self.logger.addItems(self.loggers)
         self.layout.addWidget(self.logger)

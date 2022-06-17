@@ -137,6 +137,7 @@ class ChamberWidget(QGroupBox):
         self.workstation.add_task(int(self.chamber_id.text()) - 1, self.task_name.currentText(),
                                   self.address_file_path.text(),
                                   self.protocol_path.text(), self.event_loggers)
+        self.output_file_changed()
 
     def get_file_path(self, le, dir_type):
         """
@@ -260,20 +261,21 @@ class ChamberWidget(QGroupBox):
                                                                                                          self.subject.text(),
                                                                                                          self.task_name.currentText()),
                                                         '*.csv')
-                with open(file_name[0], "w", newline='') as out:  # Save all configuration variables
-                    w = csv.writer(out)
-                    w.writerow(["Chamber", self.chamber_id.text()])  # Index of the chamber
-                    w.writerow(["Subject", self.subject.text()])  # The name of the subject
-                    w.writerow(["Task", self.task_name.currentText()])  # The current Task
-                    w.writerow(["Address File", self.address_file_path.text()])  # The Address File used
-                    w.writerow(["Protocol", self.protocol_path.text()])  # The Protocol used
-                    w.writerow(["Prompt", self.prompt])  # The prompt to show before the task starts
-                    el_text = ""
-                    for i in range(1,
-                                   len(self.event_loggers)):  # Save the necessary information for each associated EventLogger
-                        el_text += type(self.event_loggers[i]).__name__ + "((" + ''.join(
-                            f"||{w}||" for w in self.logger_params[i - 1]) + "))"
-                    w.writerow(["EventLoggers", el_text])
+                if len(file_name[0]) > 1:
+                    with open(file_name[0], "w", newline='') as out:  # Save all configuration variables
+                        w = csv.writer(out)
+                        w.writerow(["Chamber", self.chamber_id.text()])  # Index of the chamber
+                        w.writerow(["Subject", self.subject.text()])  # The name of the subject
+                        w.writerow(["Task", self.task_name.currentText()])  # The current Task
+                        w.writerow(["Address File", self.address_file_path.text()])  # The Address File used
+                        w.writerow(["Protocol", self.protocol_path.text()])  # The Protocol used
+                        w.writerow(["Prompt", self.prompt])  # The prompt to show before the task starts
+                        el_text = ""
+                        for i in range(1,
+                                       len(self.event_loggers)):  # Save the necessary information for each associated EventLogger
+                            el_text += type(self.event_loggers[i]).__name__ + "((" + ''.join(
+                                f"||{w}||" for w in self.logger_params[i - 1]) + "))"
+                        w.writerow(["EventLoggers", el_text])
             elif action == clear_chamber:  # Alert the Workstation to remove the task
                 self.wsg.remove_task(self.chamber_id.text())
             elif action == edit_config:  # Create a dialog to edit the configuration

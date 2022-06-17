@@ -34,7 +34,6 @@ class FearConditioning(Task):
 
     def main_loop(self):
         super().main_loop()
-        self.events = []
         if self.cur_time - self.prev_reward_time > self.reward_lockout:
             self.reward_available = True
         food_lever = self.food_lever.check()

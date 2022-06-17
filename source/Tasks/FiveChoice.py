@@ -79,7 +79,6 @@ class FiveChoice(Task):
 
     def main_loop(self):
         super().main_loop()
-        self.events = []
         pokes = []
         # Output events for pokes that were entered/exited
         for i in range(5):

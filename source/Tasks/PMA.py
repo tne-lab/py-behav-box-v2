@@ -1,4 +1,3 @@
-import random
 import time
 from enum import Enum
 
@@ -22,14 +21,13 @@ class PMA(Task):
         self.cur_trial = 0
         self.interval_start = 0
         self.reward_available = False
-#        self.camera.toggle(True)
-#        self.record.toggle(True)
 
     def start(self):
         self.cur_trial = 0
         self.interval_start = time.time()
         self.state = self.States.INTER_TONE_INTERVAL
         self.cage_light.toggle(True)
+        self.cam.start()
         self.fan.toggle(True)
         if self.type == 'low':
             self.lever_out.send(3)
@@ -43,15 +41,14 @@ class PMA(Task):
         self.fan.toggle(False)
         self.lever_out.send(0)
         self.shocker.toggle(False)
+        self.cam.stop()
 
     def main_loop(self):
         super().main_loop()
-        self.events = []
         food_lever = self.food_lever.check()
         if food_lever == BinaryInput.ENTERED:
             self.events.append(InputEvent(self.Inputs.LEVER_PRESSED, self.cur_time - self.start_time))
             self.food.dispense()
-            # self.events.append(InputEvent(self.Inputs.FOOD_PELLET, self.cur_time - self.start_time))
         elif food_lever == BinaryInput.EXIT:
             self.events.append(InputEvent(self.Inputs.LEVER_DEPRESSED, self.cur_time - self.start_time))
         if self.state == self.States.INTER_TONE_INTERVAL:

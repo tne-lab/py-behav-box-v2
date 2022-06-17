@@ -39,7 +39,6 @@ class SetShift(Task):
 
     def main_loop(self):
         super().main_loop()
-        self.events = []
         pokes = []
         for i in range(3):
             pokes.append(self.nose_pokes[i].check())

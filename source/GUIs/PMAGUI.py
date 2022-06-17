@@ -1,6 +1,7 @@
 from typing import List
 from types import MethodType
 import math
+from enum import Enum
 
 from source.Elements.BarPressElement import BarPressElement
 from source.Elements.IndicatorElement import IndicatorElement
@@ -9,12 +10,15 @@ from source.Elements.SoundElement import SoundElement
 from source.Elements.ShockElement import ShockElement
 from source.Elements.ButtonElement import ButtonElement
 from source.Elements.InfoBoxElement import InfoBoxElement
+from source.Events.InputEvent import InputEvent
 from source.GUIs import Colors
 from source.GUIs.GUI import GUI
 from Tasks.PMA import PMA
 
 
 class PMAGUI(GUI):
+    class Inputs(Enum):
+        GUI_PELLET = 0
 
     def __init__(self, task_gui, task):
         super().__init__(task_gui, task)
@@ -23,6 +27,7 @@ class PMAGUI(GUI):
         def feed_mouse_up(self, _):
             self.clicked = False
             task.food.dispense()
+            task.events.append(InputEvent(PMAGUI.Inputs.GUI_PELLET, task.cur_time - task.start_time))
 
         def pellets_text(self):
             return [str(task.food.pellets)]
