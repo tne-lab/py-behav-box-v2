@@ -137,6 +137,7 @@ class ChamberWidget(QGroupBox):
         self.workstation.add_task(int(self.chamber_id.text()) - 1, self.task_name.currentText(),
                                   self.address_file_path.text(),
                                   self.protocol_path.text(), self.event_loggers)
+        self.task = self.workstation.tasks[int(self.chamber_id.text()) - 1]
         self.output_file_changed()
 
     def get_file_path(self, le, dir_type):

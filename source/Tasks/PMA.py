@@ -83,7 +83,7 @@ class PMA(Task):
             'type': 'low',
             'inter_tone_interval': 10,
             'tone_duration': 30,
-            'time_sequence': [10],
+            'time_sequence': [96, 75, 79, 90, 80, 97, 88, 104, 77, 99, 102, 88, 101, 100, 96, 87, 78, 93, 89, 98],
             'shock_duration': 2,
             'post_session_time': 45,
         }

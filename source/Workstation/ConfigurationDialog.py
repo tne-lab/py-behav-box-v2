@@ -71,6 +71,7 @@ class ConfigurationDialog(QDialog):
             self.cw.event_loggers.append(new_logger)
             QListWidgetItem(ld.logger.currentText(), self.logger_list)
             if isinstance(new_logger, GUIEventLogger):
+                new_logger.set_chamber(self.cw)
                 self.cw.chamber.addWidget(new_logger.get_widget())
 
 
@@ -90,7 +91,7 @@ class AddLoggerDialog(QDialog):
         self.logger = QComboBox()
         self.loggers = []
         for f in pkgutil.iter_modules(['Events']):
-            if f.name.endswith("Logger") and not f.name == "EventLogger" and not f.name == "TextEventLogger" and not f.name == "FileEventLogger":
+            if f.name.endswith("Logger") and not f.name == "EventLogger" and not f.name == "TextEventLogger" and not f.name == "FileEventLogger" and not f.name == "GUIEventLogger":
                 self.loggers.append(f.name)
         self.logger.addItems(self.loggers)
         self.layout.addWidget(self.logger)
