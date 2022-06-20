@@ -1,9 +1,9 @@
 from enum import Enum
 import time
 from Tasks.Task import Task
-from source.Components.BinaryInput import BinaryInput
-from source.Events.InputEvent import InputEvent
-from source.Events.OEEvent import OEEvent
+from Components.BinaryInput import BinaryInput
+from Events.InputEvent import InputEvent
+from Events.OEEvent import OEEvent
 
 
 class ClosedLoop(Task):

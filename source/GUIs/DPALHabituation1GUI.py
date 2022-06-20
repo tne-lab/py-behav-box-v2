@@ -1,9 +1,9 @@
 from typing import List
 
-from source.Elements.Element import Element
-from source.Elements.FanElement import FanElement
-from source.GUIs import Colors
-from source.GUIs.GUI import GUI
+from Elements.Element import Element
+from Elements.FanElement import FanElement
+from GUIs import Colors
+from GUIs.GUI import GUI
 
 
 class DPALHabituation1GUI(GUI):

@@ -1,6 +1,5 @@
 import zmq
 import json
-from source.Components.Component import Component
 from Sources.Source import Source
 
 

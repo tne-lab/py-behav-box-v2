@@ -1,6 +1,5 @@
 import serial
 
-from source.Components.Component import Component
 from Sources.Source import Source
 
 

@@ -1,8 +1,7 @@
-from source.Events.GUIEventLogger import GUIEventLogger
-from source.Events.InputEvent import InputEvent
+from Events.GUIEventLogger import GUIEventLogger
+from Events.InputEvent import InputEvent
 from enum import Enum
 from PyQt5.QtWidgets import *
-from PyQt5.QtGui import *
 
 
 class ManualEventLogger(GUIEventLogger):

@@ -1,9 +1,9 @@
 import pygame
 import math
 
-from source.Elements.Element import Element
-from source.Elements.draw_filled_arc import draw_filled_arc
-from source.GUIs import Colors
+from Elements.Element import Element
+from Elements.draw_filled_arc import draw_filled_arc
+from GUIs import Colors
 
 
 class FanElement(Element):

@@ -4,7 +4,7 @@ import numpy
 import threading
 import time
 
-from source.Components.Component import Component
+from Components.Component import Component
 
 
 class Speaker(Component):

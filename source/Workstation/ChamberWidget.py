@@ -6,9 +6,9 @@ import csv
 from datetime import datetime
 from Workstation.IconButton import IconButton
 from Workstation.ConfigurationDialog import ConfigurationDialog
-from source.Events.TextEventLogger import TextEventLogger
-from source.Events.FileEventLogger import FileEventLogger
-from source.Events.GUIEventLogger import GUIEventLogger
+from Events.TextEventLogger import TextEventLogger
+from Events.FileEventLogger import FileEventLogger
+from Events.GUIEventLogger import GUIEventLogger
 
 
 class ChamberWidget(QGroupBox):

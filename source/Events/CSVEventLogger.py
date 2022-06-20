@@ -1,11 +1,11 @@
 import time
 import math
 
-from source.Events.FileEventLogger import FileEventLogger
-from source.Events.InitialStateEvent import InitialStateEvent
-from source.Events.InputEvent import InputEvent
-from source.Events.StateChangeEvent import StateChangeEvent
-from source.Events.FinalStateEvent import FinalStateEvent
+from Events.FileEventLogger import FileEventLogger
+from Events.InitialStateEvent import InitialStateEvent
+from Events.InputEvent import InputEvent
+from Events.StateChangeEvent import StateChangeEvent
+from Events.FinalStateEvent import FinalStateEvent
 from Utilities.dictionary_to_save_string import dictionary_to_save_string
 
 

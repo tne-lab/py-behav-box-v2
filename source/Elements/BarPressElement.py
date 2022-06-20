@@ -1,8 +1,8 @@
 import pygame as pygame
 import math
 
-from source.Elements.Element import Element
-from source.GUIs import Colors
+from Elements.Element import Element
+from GUIs import Colors
 
 
 class BarPressElement(Element):

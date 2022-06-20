@@ -1,3 +1,3 @@
-from source.Workstation.Workstation import Workstation
+from Workstation.Workstation import Workstation
 
 ws = Workstation()

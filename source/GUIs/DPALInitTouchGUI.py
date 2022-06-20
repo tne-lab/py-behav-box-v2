@@ -3,14 +3,14 @@ from types import MethodType
 
 import pygame
 
-from source.Elements.TouchScreenElement import TouchScreenElement
-from source.Elements.Element import Element
-from source.Elements.ButtonElement import ButtonElement
-from source.Elements.InfoBoxElement import InfoBoxElement
-from source.Elements.SoundElement import SoundElement
-from source.Elements.FanElement import FanElement
-from source.GUIs import Colors
-from source.GUIs.GUI import GUI
+from Elements.TouchScreenElement import TouchScreenElement
+from Elements.Element import Element
+from Elements.ButtonElement import ButtonElement
+from Elements.InfoBoxElement import InfoBoxElement
+from Elements.SoundElement import SoundElement
+from Elements.FanElement import FanElement
+from GUIs import Colors
+from GUIs.GUI import GUI
 
 
 class DPALInitTouchGUI(GUI):

@@ -1,7 +1,7 @@
 import pygame
 
-from source.Elements.Element import Element
-from source.GUIs import Colors
+from Elements.Element import Element
+from GUIs import Colors
 
 
 class ButtonElement(Element):

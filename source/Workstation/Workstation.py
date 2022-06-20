@@ -6,8 +6,8 @@ import math
 import atexit
 
 from GUIs import *
-from source.GUIs import Colors
-from source.Elements.LabelElement import LabelElement
+from GUIs import Colors
+from Elements.LabelElement import LabelElement
 import pygame
 from Workstation.WorkstationGUI import WorkstationGUI
 

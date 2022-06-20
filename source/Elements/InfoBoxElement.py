@@ -1,6 +1,6 @@
 import pygame
 
-from source.Elements.Element import Element
+from Elements.Element import Element
 
 
 class InfoBoxElement(Element):

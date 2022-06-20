@@ -1,8 +1,8 @@
-from source.Events.GUIEventLogger import GUIEventLogger
-from source.Events.InputEvent import InputEvent
-from source.Events.StateChangeEvent import StateChangeEvent
-from source.Events.InitialStateEvent import InitialStateEvent
-from source.Events.FinalStateEvent import FinalStateEvent
+from Events.GUIEventLogger import GUIEventLogger
+from Events.InputEvent import InputEvent
+from Events.StateChangeEvent import StateChangeEvent
+from Events.InitialStateEvent import InitialStateEvent
+from Events.FinalStateEvent import FinalStateEvent
 from Workstation.ScrollLabel import ScrollLabel
 
 

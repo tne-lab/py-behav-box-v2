@@ -1,4 +1,4 @@
-from source.Events.GUIEventLogger import GUIEventLogger
+from Events.GUIEventLogger import GUIEventLogger
 from PyQt5.QtWidgets import *
 import pkgutil
 import importlib

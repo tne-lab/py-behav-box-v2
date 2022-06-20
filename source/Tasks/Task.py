@@ -5,9 +5,9 @@ import importlib
 from enum import Enum
 
 from Components import *
-from source.Events.StateChangeEvent import StateChangeEvent
-from source.Events.InitialStateEvent import InitialStateEvent
-from source.Events.FinalStateEvent import FinalStateEvent
+from Events.StateChangeEvent import StateChangeEvent
+from Events.InitialStateEvent import InitialStateEvent
+from Events.FinalStateEvent import FinalStateEvent
 from Utilities.read_protocol_variable import read_protocol_variable
 
 

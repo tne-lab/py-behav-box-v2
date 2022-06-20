@@ -2,8 +2,8 @@ import os
 from random import randrange
 from enum import Enum
 
-from source.Components.BinaryInput import BinaryInput
-from source.Events.InputEvent import InputEvent
+from Components.BinaryInput import BinaryInput
+from Events.InputEvent import InputEvent
 from Tasks.Task import Task
 from Utilities.touch_in_region import touch_in_region
 

@@ -2,7 +2,7 @@ import nidaqmx
 from nidaqmx import system
 from nidaqmx.constants import (LineGrouping)
 
-from source.Components.Component import Component
+from Components.Component import Component
 from Sources.Source import Source
 
 

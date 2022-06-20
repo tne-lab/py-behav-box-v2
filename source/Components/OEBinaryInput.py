@@ -1,4 +1,4 @@
-from source.Components.BinaryInput import BinaryInput
+from Components.BinaryInput import BinaryInput
 
 
 class OEBinaryInput(BinaryInput):

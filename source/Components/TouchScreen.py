@@ -1,4 +1,4 @@
-from source.Components.Component import Component
+from Components.Component import Component
 
 
 class TouchScreen(Component):

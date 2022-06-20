@@ -2,12 +2,12 @@ import zmq
 from datetime import datetime
 import os
 import time
-from source.Events.GUIEventLogger import GUIEventLogger
-from source.Events.InputEvent import InputEvent
-from source.Events.StateChangeEvent import StateChangeEvent
-from source.Events.InitialStateEvent import InitialStateEvent
-from source.Events.FinalStateEvent import FinalStateEvent
-from source.Events.OEEvent import OEEvent
+from Events.GUIEventLogger import GUIEventLogger
+from Events.InputEvent import InputEvent
+from Events.StateChangeEvent import StateChangeEvent
+from Events.InitialStateEvent import InitialStateEvent
+from Events.FinalStateEvent import FinalStateEvent
+from Events.OEEvent import OEEvent
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from Workstation.IconButton import IconButton

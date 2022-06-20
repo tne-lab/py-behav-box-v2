@@ -2,15 +2,15 @@ from typing import List
 from types import MethodType
 import math
 
-from source.Elements.BarPressElement import BarPressElement
-from source.Elements.IndicatorElement import IndicatorElement
-from source.Elements.Element import Element
-from source.Elements.SoundElement import SoundElement
-from source.Elements.ShockElement import ShockElement
-from source.Elements.ButtonElement import ButtonElement
-from source.Elements.InfoBoxElement import InfoBoxElement
-from source.GUIs import Colors
-from source.GUIs.GUI import GUI
+from Elements.BarPressElement import BarPressElement
+from Elements.IndicatorElement import IndicatorElement
+from Elements.Element import Element
+from Elements.SoundElement import SoundElement
+from Elements.ShockElement import ShockElement
+from Elements.ButtonElement import ButtonElement
+from Elements.InfoBoxElement import InfoBoxElement
+from GUIs import Colors
+from GUIs.GUI import GUI
 from Tasks.FearConditioning import FearConditioning
 
 

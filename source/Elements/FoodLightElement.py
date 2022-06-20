@@ -1,8 +1,8 @@
 import pygame as pygame
 
-from source.Elements.Element import Element
-from source.Elements.draw_light import draw_light
-from source.GUIs import Colors
+from Elements.Element import Element
+from Elements.draw_light import draw_light
+from GUIs import Colors
 
 
 class FoodLightElement(Element):

@@ -1,4 +1,4 @@
-from source.Events.Event import Event
+from Events.Event import Event
 
 
 class InputEvent(Event):

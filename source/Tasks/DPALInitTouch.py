@@ -3,7 +3,7 @@ from random import randrange
 from enum import Enum
 from statistics import mode
 
-from source.Events.InputEvent import InputEvent
+from Events.InputEvent import InputEvent
 from Tasks.Task import Task
 from Utilities.touch_in_region import touch_in_region
 

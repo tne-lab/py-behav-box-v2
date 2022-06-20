@@ -1,5 +1,5 @@
 from abc import ABCMeta, abstractmethod
-from source.Events.EventLogger import EventLogger
+from Events.EventLogger import EventLogger
 
 
 class GUIEventLogger(EventLogger):

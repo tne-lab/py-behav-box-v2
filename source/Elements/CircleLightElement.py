@@ -1,7 +1,7 @@
 import pygame
 
-from source.Elements.draw_light import draw_light
-from source.Elements.Element import Element
+from Elements.draw_light import draw_light
+from Elements.Element import Element
 
 
 class CircleLightElement(Element):

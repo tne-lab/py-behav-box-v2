@@ -1,11 +1,11 @@
 from typing import List
 from types import MethodType
 
-from source.Elements.Element import Element
-from source.Elements.FanElement import FanElement
-from source.Elements.IndicatorElement import IndicatorElement
-from source.GUIs import Colors
-from source.GUIs.GUI import GUI
+from Elements.Element import Element
+from Elements.FanElement import FanElement
+from Elements.IndicatorElement import IndicatorElement
+from GUIs import Colors
+from GUIs.GUI import GUI
 
 
 class ClosedLoopGUI(GUI):
