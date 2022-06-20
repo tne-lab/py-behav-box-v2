@@ -11,20 +11,19 @@ class PMA(Task):
         INTER_TONE_INTERVAL = 0
         TONE = 1
         SHOCK = 2
+        POST_SESSION = 3
 
     class Inputs(Enum):
         LEVER_PRESSED = 0
         LEVER_DEPRESSED = 1
 
-    def __init__(self, chamber, source, address_file, protocol):
-        super().__init__(chamber, source, address_file, protocol)
+    def __init__(self, ws, chamber, source, address_file, protocol):
+        super().__init__(ws, chamber, source, address_file, protocol)
         self.cur_trial = 0
-        self.interval_start = 0
         self.reward_available = False
 
     def start(self):
         self.cur_trial = 0
-        self.interval_start = time.time()
         self.state = self.States.INTER_TONE_INTERVAL
         self.cage_light.toggle(True)
         self.cam.start()
@@ -52,7 +51,7 @@ class PMA(Task):
         elif food_lever == BinaryInput.EXIT:
             self.events.append(InputEvent(self.Inputs.LEVER_DEPRESSED, self.cur_time - self.start_time))
         if self.state == self.States.INTER_TONE_INTERVAL:
-            if self.cur_trial < len(self.time_sequence) and self.cur_time - self.interval_start > self.time_sequence[self.cur_trial]:
+            if self.cur_trial < len(self.time_sequence) and self.cur_time - self.entry_time > self.time_sequence[self.cur_trial]:
                 self.change_state(self.States.TONE)
                 self.reward_available = True
                 self.tone.toggle(True)
@@ -67,22 +66,24 @@ class PMA(Task):
         elif self.state == self.States.SHOCK:
             if self.cur_time - self.entry_time > self.shock_duration:
                 self.shocker.toggle(False)
-                self.change_state(self.States.INTER_TONE_INTERVAL)
-                self.interval_start = time.time()
+                if self.cur_trial < len(self.time_sequence):
+                    self.change_state(self.States.INTER_TONE_INTERVAL)
+                else:
+                    self.change_state(self.States.POST_SESSION)
                 self.tone.toggle(False)
                 if not self.type == 'low':
                     self.lever_out.send(0)
                     self.food_light.toggle(False)
 
     def is_complete(self):
-        return self.cur_time - self.start_time > self.time_sequence[-1] + self.post_session_time
+        return self.cur_trial == len(self.time_sequence) and self.cur_time - self.entry_time > self.post_session_time
 
     def get_variables(self):
         return {
             'type': 'low',
             'inter_tone_interval': 10,
             'tone_duration': 30,
-            'time_sequence': [96, 75, 79, 90, 80, 97, 88, 104, 77, 99, 102, 88, 101, 100, 96, 87, 78, 93, 89, 98],
+            'time_sequence': [10],
             'shock_duration': 2,
             'post_session_time': 45,
         }

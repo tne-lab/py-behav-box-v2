@@ -2,6 +2,7 @@ import time
 from abc import ABCMeta, abstractmethod
 import csv
 import importlib
+from enum import Enum
 
 from Components import *
 from source.Events.StateChangeEvent import StateChangeEvent
@@ -46,8 +47,11 @@ class Task:
         is_complete()
             Abstract method that returns True if the task is complete
     """
+    class SessionStates(Enum):
+        PAUSED = 0
 
-    def __init__(self, metadata, sources, address_file="", protocol=""):
+    def __init__(self, ws, metadata, sources, address_file="", protocol=""):
+        self.ws = ws
         self.metadata = metadata
         self.events = []  # List of Events from the current task loop
         self.state = None  # The current task state
@@ -111,10 +115,13 @@ class Task:
     def pause(self):
         self.paused = True
         self.time_into_trial = time.time() - self.entry_time
+        self.events.append(StateChangeEvent(self.state, self.SessionStates.PAUSED, time.time() - self.start_time, None))
+        self.ws.log_events(self.metadata["chamber"])
 
     def resume(self):
         self.paused = False
         self.entry_time = time.time() - self.time_into_trial
+        self.events.append(StateChangeEvent(self.SessionStates.PAUSED, self.state, time.time() - self.start_time, None))
 
     def stop(self):
         self.started = False

@@ -15,8 +15,8 @@ class DPALHabituation1(Task):
         REAR_TOUCH = 4
         ERROR_TOUCH = 5
 
-    def __init__(self, chamber, source, address_file, protocol):
-        super().__init__(chamber, source, address_file, protocol)
+    def __init__(self, ws, chamber, source, address_file, protocol):
+        super().__init__(ws, chamber, source, address_file, protocol)
         self.fan.toggle(True)
         self.state = self.States.ACTIVE
 

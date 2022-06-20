@@ -13,8 +13,8 @@ class DPALHabituation2(Task):
         INIT_ENTERED = 0
         INIT_EXIT = 1
 
-    def __init__(self, chamber, source, address_file, protocol):
-        super().__init__(chamber, source, address_file, protocol)
+    def __init__(self, ws, chamber, source, address_file, protocol):
+        super().__init__(ws, chamber, source, address_file, protocol)
         self.fan.toggle(True)
 
     def start(self):

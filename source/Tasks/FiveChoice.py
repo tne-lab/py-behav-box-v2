@@ -61,8 +61,8 @@ class FiveChoice(Task):
         NP5_ENTERED = 10
         NP5_EXIT = 11
 
-    def __init__(self, chamber, source, address_file, protocol=None):
-        super().__init__(chamber, source, address_file, protocol)
+    def __init__(self, ws, chamber, source, address_file, protocol=None):
+        super().__init__(ws, chamber, source, address_file, protocol)
         self.cur_trial = 0
 
     def start(self):

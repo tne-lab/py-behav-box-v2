@@ -20,8 +20,8 @@ class ClosedLoop(Task):
         STIM = 0
         SHAM = 1
 
-    def __init__(self, chamber, source, address_file, protocol):
-        super().__init__(chamber, source, address_file, protocol)
+    def __init__(self, ws, chamber, source, address_file, protocol):
+        super().__init__(ws, chamber, source, address_file, protocol)
         self.state = self.States.START_RECORD
         self.next_state = self.States.PRE_RAW
         self.last_pulse_time = 0

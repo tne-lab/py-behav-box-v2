@@ -23,8 +23,8 @@ class SetShift(Task):
         REAR_ENTERED = 6
         REAR_EXIT = 7
 
-    def __init__(self, chamber, source, address_file, protocol):
-        super().__init__(chamber, source, address_file, protocol)
+    def __init__(self, ws, chamber, source, address_file, protocol):
+        super().__init__(ws, chamber, source, address_file, protocol)
         self.cur_trial = 0
         self.cur_rule = 0
         self.cur_block = 0

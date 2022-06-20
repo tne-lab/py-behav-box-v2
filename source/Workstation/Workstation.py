@@ -123,7 +123,7 @@ class Workstation:
         task_module = importlib.import_module("Tasks." + task_name)
         task = getattr(task_module, task_name)
         metadata = {"chamber": chamber, "subject": "default"}
-        self.tasks[chamber] = task(metadata, self.sources, address_file, protocol)  # Create the task
+        self.tasks[chamber] = task(self, metadata, self.sources, address_file, protocol)  # Create the task
         self.event_loggers[chamber] = task_event_loggers
         # Import the Task GUI
         gui = getattr(importlib.import_module("GUIs." + task_name + "GUI"), task_name + "GUI")
@@ -189,9 +189,7 @@ class Workstation:
             if self.tasks[key].started and not self.tasks[key].paused:  # If the Task has been started and is not paused
                 self.tasks[key].main_loop()  # Run the Task's logic loop
                 self.guis[key].handle_events(events)  # Handle mouse/keyboard events with the Task GUI
-                for el in self.event_loggers[key]:  # Log Events with all associated EventLoggers
-                    el.log_events(self.tasks[key].events)
-                self.tasks[key].events = []
+                self.log_events(key)  # Log Events with all associated EventLoggers
                 if self.tasks[key].is_complete():  # Stop the Task if it is complete
                     self.wsg.chambers[key].stop()
             self.guis[key].draw()  # Update the GUI
@@ -201,6 +199,11 @@ class Workstation:
             pygame.draw.rect(self.task_gui, Colors.white, pygame.Rect(col * self.w, row * self.h, self.w, self.h), 1)
             LabelElement(self.task_gui, col * self.w + 10, (row + 1) * self.h - 30, self.w, 20, self.tasks[key].metadata["subject"]).draw()
         pygame.display.flip()  # Signal to pygame that the whole GUI has updated
+
+    def log_events(self, chamber):
+        for el in self.event_loggers[chamber]:
+            el.log_events(self.tasks[chamber].events)
+        self.tasks[chamber].events = []
 
     def exit_handler(self):
         """
