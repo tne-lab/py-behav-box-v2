@@ -29,7 +29,8 @@ class FileEventLogger(EventLogger):
     def get_file_path(self): raise NotImplementedError
 
     @abstractmethod
-    def log_events(self, events): raise NotImplementedError
+    def log_events(self, events):
+        self.log_file.flush()
 
     def start(self):
         super(FileEventLogger, self).start()

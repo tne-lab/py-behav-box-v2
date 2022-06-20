@@ -43,3 +43,4 @@ class CSVEventLogger(FileEventLogger):
                 self.log_file.write("{},{},Input,{},{},{}\n".format(self.event_count, e.entry_time,
                                                                     e.input_event.value, e.input_event.name,
                                                                     dictionary_to_save_string(e.metadata)))
+        super().log_events(events)

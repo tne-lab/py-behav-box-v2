@@ -39,6 +39,7 @@ class PMA(Task):
         self.fan.toggle(False)
         self.lever_out.send(0)
         self.shocker.toggle(False)
+        self.tone.toggle(False)
         self.cam.stop()
 
     def main_loop(self):

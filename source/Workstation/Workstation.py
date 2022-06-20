@@ -1,6 +1,7 @@
 import importlib
 from pkgutil import iter_modules
 from inspect import isclass
+import signal
 
 import math
 import atexit
@@ -100,6 +101,8 @@ class Workstation:
         app = QApplication(sys.argv)
         self.wsg = WorkstationGUI(self)
         atexit.register(self.exit_handler)
+        signal.signal(signal.SIGTERM, self.exit_handler)
+        signal.signal(signal.SIGINT, self.exit_handler)
         sys.exit(app.exec())
 
     def add_task(self, chamber, task_name, address_file, protocol, task_event_loggers):

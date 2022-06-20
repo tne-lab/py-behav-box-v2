@@ -41,4 +41,3 @@ class DIOSource(Source):
     def write_component(self, component_id, msg):
         if not self.components[component_id].get_type() == Component.Type.INPUT:
             self.tasks[component_id].write(msg)
-        # What do enable and send pulse do?
