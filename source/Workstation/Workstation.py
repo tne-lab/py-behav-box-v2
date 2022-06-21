@@ -137,17 +137,19 @@ class Workstation:
         self.guis[chamber] = gui(self.task_gui.subsurface(col * self.w, row * self.h, self.w, self.h),
                                  self.tasks[chamber])
 
-    def remove_task(self, chamber):
+    def remove_task(self, chamber, del_loggers=True):
         """
         Remove the Task from the specified chamber.
 
         Parameters
         ----------
+        del_loggers
         chamber : int
             The chamber from which a Task should be removed
         """
-        for el in self.event_loggers[chamber]:  # Close all associated EventLoggers
-            el.close()
+        if del_loggers:
+            for el in self.event_loggers[chamber]:  # Close all associated EventLoggers
+                el.close()
         for c in self.tasks[chamber].components:
             c.close()
         del self.tasks[chamber]
@@ -208,7 +210,7 @@ class Workstation:
             el.log_events(self.tasks[chamber].events)
         self.tasks[chamber].events = []
 
-    def exit_handler(self):
+    def exit_handler(self, *args):
         """
         Callback for when py-behav is closed.
         """

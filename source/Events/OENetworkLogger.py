@@ -20,6 +20,7 @@ class OENetworkLogger(GUIEventLogger):
         context = zmq.Context()
         self.event_count = 0
         self.socket = context.socket(zmq.REQ)
+        self.socket.set(zmq.REQ_RELAXED, True)
         self.socket.connect("tcp://" + address + ":" + str(port))
         self.nbits = nbits
 
@@ -134,20 +135,26 @@ class OENetworkLogger(GUIEventLogger):
         for i in range(len(bc)):
             self.socket.send(
                 b"".join([b'TTL Channel=', str(i + 1).encode('ascii'), b' on=', str(bc[i]).encode('ascii')]))
-            self.socket.recv()
+            self.receive()
         # Deactivate remaining TTL channels
         for i in range(self.nbits - len(bc)):
-            self.socket.send(b"".join([b'TTL Channel=', str(i + len(binA) + 1).encode('ascii'), b' on=0']))
-            self.socket.recv()
+            self.socket.send(b"".join([b'TTL Channel=', str(i + len(bc) + 1).encode('ascii'), b' on=0']))
+            self.receive()
         # Wait and send TTL OFF on all channels
         time.sleep(0.005)
         for i in range(self.nbits):
             self.socket.send(b"".join([b'TTL Channel=', str(i + 1).encode('ascii'), b' on=0']))
-            self.socket.recv()
+            self.receive()
 
     def send_string(self, msg):
         self.socket.send(msg.encode("utf-8"))
-        self.socket.recv()
+        self.receive()
+
+    def receive(self):
+        try:
+            self.socket.recv(flags=zmq.NOBLOCK)
+        except zmq.ZMQError:
+            pass
 
     def log_events(self, events):
         for e in events:

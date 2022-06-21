@@ -133,7 +133,7 @@ class ChamberWidget(QGroupBox):
         """
         Updates the representation of the Task with the Workstation based on any changes made in the GUI.
         """
-        self.workstation.remove_task(int(self.chamber_id.text()) - 1)
+        self.workstation.remove_task(int(self.chamber_id.text()) - 1, False)
         self.workstation.add_task(int(self.chamber_id.text()) - 1, self.task_name.currentText(),
                                   self.address_file_path.text(),
                                   self.protocol_path.text(), self.event_loggers)

@@ -29,8 +29,10 @@ class ConfigurationDialog(QDialog):
         logger_box = QGroupBox('Event Loggers')
         logger_box_layout = QVBoxLayout(self)
         self.logger_list = QListWidget()
-        for logger in cw.event_loggers:
+        self.logger_inds = []
+        for i, logger in enumerate(cw.event_loggers):
             if not type(logger).__name__ == "TextEventLogger":
+                self.logger_inds.append(i)
                 QListWidgetItem(type(logger).__name__, self.logger_list)
         self.logger_list.itemClicked.connect(self.on_logger_clicked)
         logger_box_layout.addWidget(self.logger_list)
@@ -57,8 +59,12 @@ class ConfigurationDialog(QDialog):
         self.remove_button.setDisabled(False)
 
     def remove_logger(self):
+        ind = self.logger_inds[self.logger_list.currentRow()]
+        if isinstance(self.cw.event_loggers[ind], GUIEventLogger):
+            self.cw.chamber.removeWidget(self.cw.event_loggers[ind].get_widget())
+            self.cw.event_loggers[ind].get_widget().deleteLater()
         del self.cw.logger_params[self.logger_list.currentRow()]
-        del self.cw.event_loggers[self.logger_list.currentRow()]
+        del self.cw.event_loggers[ind]
         self.logger_list.takeItem(self.logger_list.currentRow())
         self.remove_button.setDisabled(False)
 
@@ -69,6 +75,7 @@ class ConfigurationDialog(QDialog):
             self.cw.logger_params.append(ld.params)
             new_logger = logger_type(*ld.params)
             self.cw.event_loggers.append(new_logger)
+            self.logger_inds.append(len(self.cw.event_loggers) - 1)
             QListWidgetItem(ld.logger.currentText(), self.logger_list)
             if isinstance(new_logger, GUIEventLogger):
                 new_logger.set_chamber(self.cw)
