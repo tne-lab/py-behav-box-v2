@@ -5,7 +5,7 @@ from Sources.Source import Source
 
 class OESource(Source):
 
-    def __init__(self, address, port, delay=1):
+    def __init__(self, address, port, delay=0):
         context = zmq.Context()
         self.socket = context.socket(zmq.SUB)
         self.socket.connect("tcp://" + address + ":" + str(port))

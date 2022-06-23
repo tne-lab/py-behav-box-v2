@@ -35,10 +35,6 @@ class VideoSource(Source):
 
     def close_source(self):
         self.available = False
-        cv2.destroyAllWindows()
-        for vid in self.caps.keys():
-            self.caps[vid].release()
-            self.outs[vid].release()
 
     def close_component(self, component_id):
         self.do_close[component_id] = True
@@ -91,3 +87,8 @@ class VideoSource(Source):
                                 self.outs[vid].release()
                             except:
                                 pass
+        cv2.destroyAllWindows()
+        for vid in self.caps.keys():
+            self.caps[vid].release()
+            if self.outs[vid] is not None:
+                self.outs[vid].release()
