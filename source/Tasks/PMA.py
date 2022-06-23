@@ -4,6 +4,8 @@ from Components.BinaryInput import BinaryInput
 from Events.InputEvent import InputEvent
 from Tasks.Task import Task
 
+from source.Events.OEEvent import OEEvent
+
 
 class PMA(Task):
     class States(Enum):
@@ -20,13 +22,17 @@ class PMA(Task):
         super().__init__(ws, chamber, source, address_file, protocol)
         self.cur_trial = 0
         self.reward_available = False
+        self.presses = 0
 
     def start(self):
+        if self.ephys:
+            self.log_events([OEEvent("startRecord", 0)])
         self.cur_trial = 0
         self.state = self.States.INTER_TONE_INTERVAL
         self.cage_light.toggle(True)
         self.cam.start()
         self.fan.toggle(True)
+        self.presses = 0
         if self.type == 'low':
             self.lever_out.send(3)
             self.food_light.toggle(True)
@@ -34,6 +40,8 @@ class PMA(Task):
 
     def stop(self):
         super(PMA, self).stop()
+        if self.ephys:
+            self.log_events([OEEvent("stopRecord", 0)])
         self.food_light.toggle(False)
         self.cage_light.toggle(False)
         self.fan.toggle(False)
@@ -48,6 +56,7 @@ class PMA(Task):
         if food_lever == BinaryInput.ENTERED:
             self.events.append(InputEvent(self.Inputs.LEVER_PRESSED, self.cur_time - self.start_time))
             self.food.dispense()
+            self.presses += 1
         elif food_lever == BinaryInput.EXIT:
             self.events.append(InputEvent(self.Inputs.LEVER_DEPRESSED, self.cur_time - self.start_time))
         if self.state == self.States.INTER_TONE_INTERVAL:
@@ -80,6 +89,7 @@ class PMA(Task):
 
     def get_variables(self):
         return {
+            'ephys': False,
             'type': 'low',
             'inter_tone_interval': 10,
             'tone_duration': 30,

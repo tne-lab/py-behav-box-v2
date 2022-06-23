@@ -32,6 +32,9 @@ class PMAGUI(GUI):
         def pellets_text(self):
             return [str(task.food.pellets)]
 
+        def presses_text(self):
+            return [str(task.presses)]
+
         def tone_count_text(self):
             return [str(task.cur_trial)]
 
@@ -56,6 +59,10 @@ class PMAGUI(GUI):
         self.lever = BarPressElement(self.task_gui, self.SF * 77, self.SF * 25, self.SF * 100, self.SF * 90, task.food_lever)
         self.feed_button = ButtonElement(self.task_gui, self.SF * 129, self.SF * 170, self.SF * 50, self.SF * 20, "FEED", task.food, int(self.SF * 12))
         self.feed_button.mouse_up = MethodType(feed_mouse_up, self.feed_button)
+        presses = InfoBoxElement(self.task_gui, self.SF * 69, self.SF * 125, self.SF * 50, self.SF * 15, "PRESSES",
+                                 'BOTTOM', ['0'], int(self.SF * 14), self.SF)
+        presses.get_text = MethodType(presses_text, presses)
+        self.info_boxes.append(presses)
         pellets = InfoBoxElement(self.task_gui, self.SF * 129, self.SF * 125, self.SF * 50, self.SF * 15, "PELLETS", 'BOTTOM', ['0'], int(self.SF * 14), self.SF)
         pellets.get_text = MethodType(pellets_text, pellets)
         self.info_boxes.append(pellets)
