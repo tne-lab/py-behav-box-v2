@@ -1,19 +1,43 @@
 import nidaqmx
 from nidaqmx import system
 from nidaqmx.constants import (LineGrouping)
+import win32gui
+import subprocess
+import time
 
 from Components.Component import Component
 from Sources.Source import Source
 
 
-class DIOSource(Source):
+IsWhiskerRunning = False
 
-    def __init__(self, dev):
+
+class NIWhiskerSource(Source):
+
+    def __init__(self, dev, whisker_path=r"C:\Program Files (x86)\WhiskerControl\WhiskerServer.exe"):
         self.dev = dev
         dev_obj = system.Device(dev)
         dev_obj.reset_device()
         self.tasks = {}
         self.components = {}
+        self.path = whisker_path
+        win32gui.EnumWindows(self.lookForProgram, 'WhiskerServer')
+        if not IsWhiskerRunning:
+            try:
+                ws = r"C:\Program Files (x86)\WhiskerControl\WhiskerServer.exe"
+                window = subprocess.Popen(ws)# # doesn't capture output
+                time.sleep(2)
+                print("WHISKER server started", window)
+                win32gui.EnumWindows(self.lookForProgram, None)
+            except:
+                print("Could not start WHISKER server")
+
+    def lookForProgram(self, hwnd, programName):
+        global IsWhiskerRunning
+        if programName in win32gui.GetWindowText(hwnd):
+            if 'Whisker' in programName:
+                win32gui.CloseWindow(hwnd)  # Minimize Window
+                IsWhiskerRunning = True
 
     def register_component(self, _, component):
         task = nidaqmx.Task()
