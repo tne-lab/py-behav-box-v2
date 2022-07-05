@@ -8,8 +8,14 @@ import time
 from Components.Component import Component
 from Sources.Source import Source
 
-
 IsWhiskerRunning = False
+
+
+def look_for_program(hwnd, program_name):
+    global IsWhiskerRunning
+    if program_name in win32gui.GetWindowText(hwnd):
+        win32gui.CloseWindow(hwnd)  # Minimize Window
+        IsWhiskerRunning = True
 
 
 class NIWhiskerSource(Source):
@@ -21,23 +27,16 @@ class NIWhiskerSource(Source):
         self.tasks = {}
         self.components = {}
         self.path = whisker_path
-        win32gui.EnumWindows(self.lookForProgram, 'WhiskerServer')
+        win32gui.EnumWindows(look_for_program, 'WhiskerServer')
         if not IsWhiskerRunning:
             try:
                 ws = r"C:\Program Files (x86)\WhiskerControl\WhiskerServer.exe"
-                window = subprocess.Popen(ws)# # doesn't capture output
+                window = subprocess.Popen(ws)
                 time.sleep(2)
                 print("WHISKER server started", window)
                 win32gui.EnumWindows(self.lookForProgram, None)
             except:
                 print("Could not start WHISKER server")
-
-    def lookForProgram(self, hwnd, programName):
-        global IsWhiskerRunning
-        if programName in win32gui.GetWindowText(hwnd):
-            if 'Whisker' in programName:
-                win32gui.CloseWindow(hwnd)  # Minimize Window
-                IsWhiskerRunning = True
 
     def register_component(self, _, component):
         task = nidaqmx.Task()
