@@ -43,7 +43,10 @@ class PMAGUI(GUI):
 
         def next_event(self):
             if task.state == PMA.States.INTER_TONE_INTERVAL:
-                return [str(math.ceil(task.time_sequence[task.cur_trial] - (task.cur_time - task.entry_time)))]
+                if task.random:
+                    return [str(math.ceil(task.iti - (task.cur_time - task.entry_time)))]
+                else:
+                    return [str(math.ceil(task.time_sequence[task.cur_trial] - (task.cur_time - task.entry_time)))]
             elif task.state == PMA.States.TONE:
                 return [str(math.ceil(task.tone_duration - (task.cur_time - task.entry_time)))]
             elif task.state == PMA.States.SHOCK:

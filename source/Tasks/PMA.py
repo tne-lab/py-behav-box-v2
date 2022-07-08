@@ -1,3 +1,4 @@
+import random
 from enum import Enum
 
 from Components.BinaryInput import BinaryInput
@@ -23,12 +24,14 @@ class PMA(Task):
         self.cur_trial = 0
         self.reward_available = False
         self.presses = 0
+        self.iti = 0
 
     def start(self):
         if self.ephys:
             self.log_events([OEEvent("startRecord", 0)])
         self.cur_trial = 0
         self.state = self.States.INTER_TONE_INTERVAL
+        self.iti = self.iti_min + (self.iti_max - self.iti_min) * random.random()
         self.cage_light.toggle(True)
         self.cam.start()
         self.fan.toggle(True)
@@ -60,7 +63,9 @@ class PMA(Task):
         elif food_lever == BinaryInput.EXIT:
             self.events.append(InputEvent(self.Inputs.LEVER_DEPRESSED, self.cur_time - self.start_time))
         if self.state == self.States.INTER_TONE_INTERVAL:
-            if self.cur_trial < len(self.time_sequence) and self.cur_time - self.entry_time > self.time_sequence[self.cur_trial]:
+            if (not self.random and self.cur_trial < len(self.time_sequence) and self.cur_time - self.entry_time > self.time_sequence[
+                self.cur_trial]) or (
+                    self.random and self.cur_trial < self.ntone and self.cur_time - self.entry_time > self.iti):
                 self.change_state(self.States.TONE)
                 self.reward_available = True
                 self.tone.toggle(True)
@@ -72,10 +77,11 @@ class PMA(Task):
                 self.change_state(self.States.SHOCK)
                 self.shocker.toggle(True)
                 self.cur_trial += 1
+                self.iti = self.iti_min + (self.iti_max - self.iti_min) * random.random()
         elif self.state == self.States.SHOCK:
             if self.cur_time - self.entry_time > self.shock_duration:
                 self.shocker.toggle(False)
-                if self.cur_trial < len(self.time_sequence):
+                if (not self.random and self.cur_trial < len(self.time_sequence)) or (self.random and self.cur_trial < self.ntone):
                     self.change_state(self.States.INTER_TONE_INTERVAL)
                 else:
                     self.change_state(self.States.POST_SESSION)
@@ -91,7 +97,10 @@ class PMA(Task):
         return {
             'ephys': False,
             'type': 'low',
-            'inter_tone_interval': 10,
+            'random': True,
+            'ntone': 20,
+            'iti_min': 50,
+            'iti_max': 150,
             'tone_duration': 30,
             'time_sequence': [96, 75, 79, 90, 80, 97, 88, 104, 77, 99, 102, 88, 101, 100, 96, 87, 78, 93, 89, 98],
             'shock_duration': 2,
