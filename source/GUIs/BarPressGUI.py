@@ -1,6 +1,7 @@
 from typing import List
 from types import MethodType
 from enum import Enum
+import math
 
 from Elements.BarPressElement import BarPressElement
 from Elements.Element import Element
@@ -33,6 +34,12 @@ class BarPressGUI(GUI):
         def event_countup(self):
             return [str(round((task.cur_time - task.start_time) / 60, 2))]
 
+        def vi_countdown(self):
+            if task.state == task.States.REWARD_UNAVAILABLE:
+                return [str(max([0, math.ceil(task.lockout - (task.cur_time - task.entry_time))]))]
+            else:
+                return "0"
+
         self.lever = BarPressElement(self.task_gui, self.SF * 77, self.SF * 25, self.SF * 100, self.SF * 90, task.food_lever)
         self.feed_button = ButtonElement(self.task_gui, self.SF * 129, self.SF * 170, self.SF * 50, self.SF * 20, "FEED", task.food, int(self.SF * 12))
         self.feed_button.mouse_up = MethodType(feed_mouse_up, self.feed_button)
@@ -46,6 +53,10 @@ class BarPressGUI(GUI):
         ec = InfoBoxElement(self.task_gui, self.SF * 372, self.SF * 170, self.SF * 50, self.SF * 15, "TIME", 'BOTTOM', ['0'], int(self.SF * 14), self.SF)
         ec.get_text = MethodType(event_countup, ec)
         self.info_boxes.append(ec)
+        vic = InfoBoxElement(self.task_gui, self.SF * 64, self.SF * 170, self.SF * 50, self.SF * 15, "VI COUNT",
+                             'BOTTOM', ['0'], int(self.SF * 14), self.SF)
+        vic.get_text = MethodType(vi_countdown, vic)
+        self.info_boxes.append(vic)
 
     def draw(self):
         self.task_gui.fill(Colors.darkgray)
