@@ -36,9 +36,13 @@ class Component:
     """
 
     class Type(Enum):
-        INPUT = 0  # The Component solely provides input
-        OUTPUT = 1  # The Component solely receives output
-        BOTH = 2  # The Component both inputs and outputs
+        DIGITAL_INPUT = 0  # The Component solely provides digital input
+        DIGITAL_OUTPUT = 1  # The Component solely receives digital output
+        ANALOG_INPUT = 2  # The Component solely provides analog input
+        ANALOG_OUTPUT = 3  # The Component solely receives analog output
+        INPUT = 4  # Arbitrary input type
+        OUTPUT = 5  # Arbitrary output type
+        BOTH = 2  # The Component both inputs and outputs (arbitrary type)
 
     def __init__(self, source, component_id, component_address, metadata=""):
         self.id = component_id  # The unique identifier for the component or set of related components

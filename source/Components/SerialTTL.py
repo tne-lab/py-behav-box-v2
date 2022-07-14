@@ -36,4 +36,4 @@ class SerialTTL(Component):
         return self.state
 
     def get_type(self):
-        return Component.Type.OUTPUT
+        return Component.Type.DIGITAL_OUTPUT

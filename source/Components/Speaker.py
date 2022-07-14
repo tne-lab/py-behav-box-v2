@@ -36,7 +36,7 @@ class Speaker(Component):
             get_state()
                 Returns state
             get_type()
-                Returns Component.Type.OUTPUT
+                Returns Component.Type.DIGITAL_OUTPUT
         """
     def __init__(self, source, component_id, component_address, metadata=""):
         self.state = False
@@ -100,4 +100,4 @@ class Speaker(Component):
         return self.state
 
     def get_type(self):
-        return Component.Type.OUTPUT
+        return Component.Type.DIGITAL_OUTPUT

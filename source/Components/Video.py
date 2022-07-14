@@ -18,4 +18,4 @@ class Video(Component):
         return self.state
 
     def get_type(self):
-        return Component.Type.INPUT
+        return Component.Type.DIGITAL_INPUT

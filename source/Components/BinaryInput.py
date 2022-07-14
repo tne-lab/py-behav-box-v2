@@ -32,4 +32,4 @@ class BinaryInput(Component):
         self.source.write_component(self.id, on)
 
     def get_type(self):
-        return Component.Type.INPUT
+        return Component.Type.DIGITAL_INPUT
