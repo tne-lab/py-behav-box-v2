@@ -15,3 +15,7 @@ class SequenceGUI(GUI):
     @abstractmethod
     def get_elements(self):
         raise NotImplementedError
+
+    def handle_events(self, events):
+        super(SequenceGUI, self).handle_events(events)
+        self.sub_gui.handle_events(events)
