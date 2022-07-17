@@ -3,18 +3,18 @@ from enum import Enum
 from Tasks.Task import Task
 
 
-class DPALHabituation1(Task):
+class Raw(Task):
     class States(Enum):
         ACTIVE = 0
 
-    def start(self):
-        self.state = self.States.ACTIVE
+    def __init__(self, *args):
+        super().__init__(*args)
         self.fan.toggle(True)
-        super(DPALHabituation1, self).start()
+        self.state = self.States.ACTIVE
 
     def get_variables(self):
         return {
-            'duration': 10
+            'duration': 10/60
         }
 
     def is_complete(self):

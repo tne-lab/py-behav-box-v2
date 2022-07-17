@@ -41,7 +41,7 @@ class ChamberWidget(QGroupBox):
         self.task_name = QComboBox()
         tasks = []
         for f in pkgutil.iter_modules(['Tasks']):  # Get all classes in the Tasks folder
-            if not f.name == "Task":  # Ignore the abstract class
+            if not f.name == "Task" and not f.name == "TaskSequence":  # Ignore the abstract class
                 tasks.append(f.name)
         self.task_name.addItems(tasks)
         self.task_name.setCurrentIndex(task_index)

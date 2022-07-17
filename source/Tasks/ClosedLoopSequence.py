@@ -7,16 +7,17 @@ from Components.BinaryInput import BinaryInput
 from Events.InputEvent import InputEvent
 from Events.OEEvent import OEEvent
 
+from Tasks.Raw import Raw
 
-class ClosedLoop(Task):
+
+class ClosedLoopSequence(Task):
     class States(Enum):
         PRE_RAW = 0
         PRE_ERP = 1
         CLOSED_LOOP = 2
-        POST_ERP = 3
-        POST_RAW = 4
-        START_RECORD = 5
-        STOP_RECORD = 6
+        PMA = 4
+        POST_ERP = 4
+        POST_RAW = 5
 
     class Inputs(Enum):
         STIM = 0
@@ -24,8 +25,9 @@ class ClosedLoop(Task):
 
     def __init__(self, ws, chamber, sources, address_file, protocol):
         super().__init__(ws, chamber, sources, address_file, protocol)
-        self.state = self.States.START_RECORD
-        self.next_state = self.States.PRE_RAW
+        self.state = self.States.PRE_RAW
+        self.tasks = []
+        self.tasks.append(Raw(ws, chamber, sources, address_file, protocol))
         self.last_pulse_time = 0
         self.pulse_count = 0
         self.stim_last = False
@@ -33,7 +35,7 @@ class ClosedLoop(Task):
         self.recording_started = False
 
     def start(self):
-        super(ClosedLoop, self).start()
+        super(ClosedLoopSequence, self).start()
         self.stim.parametrize(0, [1, 3], 180, 1800, np.array([300, -300], [0, 0]), [90, 90])
 
     def main_loop(self):

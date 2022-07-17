@@ -16,15 +16,15 @@ class FearConditioning(Task):
         LEVER_PRESSED = 0
         LEVER_DEPRESSED = 1
 
-    def __init__(self, ws, chamber, source, address_file, protocol):
-        super().__init__(ws, chamber, source, address_file, protocol)
+    def __init__(self, *args):
+        super().__init__(*args)
         self.cur_trial = 0
         self.reward_available = False
         self.prev_reward_time = 0
         self.reward_lockout = 0
-        self.cage_light.toggle(True)
 
     def start(self):
+        self.cage_light.toggle(True)
         self.cur_trial = 0
         self.reward_available = True
         self.prev_reward_time = 0

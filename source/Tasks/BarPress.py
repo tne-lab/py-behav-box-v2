@@ -15,8 +15,8 @@ class BarPress(Task):
         LEVER_PRESSED = 0
         LEVER_DEPRESSED = 1
 
-    def __init__(self, ws, chamber, source, address_file, protocol):
-        super().__init__(ws, chamber, source, address_file, protocol)
+    def __init__(self, *args):
+        super().__init__(*args)
         self.presses = 0
         self.lockout = 0
 

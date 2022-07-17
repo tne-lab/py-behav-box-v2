@@ -1,7 +1,5 @@
 from abc import ABCMeta, abstractmethod
 
-import pygame.event
-
 
 class GUI:
     __metaclass__ = ABCMeta

@@ -50,55 +50,88 @@ class Task:
     class SessionStates(Enum):
         PAUSED = 0
 
-    def __init__(self, ws, metadata, sources, address_file="", protocol=""):
-        self.ws = ws
-        self.metadata = metadata
+    # ws, metadata, sources, address_file="", protocol=""
+    # task, components, protocol
+    def __init__(self, *args):
         self.events = []  # List of Events from the current task loop
         self.state = None  # The current task state
         self.entry_time = 0  # Time when the current state began
         self.start_time = 0  # Time the task started
         self.cur_time = 0  # The time for the current task loop
-        self.paused = False
-        self.started = False
-        self.time_into_trial = 0
-        self.components = []
-        # Open the provided AddressFile
-        with open(address_file if len(address_file) > 0 else "Defaults/{}.csv".format(type(self).__name__), newline='') as csvfile:
-            address_reader = csv.reader(csvfile, delimiter=',', quotechar='|')
-            # Each row in the AddressFile corresponds to a Task Component
-            for row in address_reader:
-                # Import and instantiate the indicated Component with the provided ID and address
-                component_type = getattr(importlib.import_module("Components." + row[1]), row[1])
-                if len(row) > 6:
-                    component = component_type(sources[row[2]], row[0] + "-" + str(metadata["chamber"]) + "-" + str(row[4]), row[3], row[6])
-                else:
-                    component = component_type(sources[row[2]], row[0] + "-" + str(metadata["chamber"]) + "-" + str(row[4]), row[3])
-                sources[row[2]].register_component(self, component)
-                # If the ID has yet to be registered
-                if not hasattr(self, row[0]):
-                    # If the Component is part of a list
-                    if int(row[5]) > 1:
-                        # Create the list and add the Component at the specified index
-                        component_list = [None] * int(row[5])
-                        component_list[int(row[4])] = component
-                        setattr(self, row[0], component_list)
-                    else:  # If the Component is unique
-                        setattr(self, row[0], component)
-                else:  # If the Component is part of an already registered list
-                    # Update the list with the Component at the specified index
-                    component_list = getattr(self, row[0])
-                    component_list[int(row[4])] = component
-                    setattr(self, row[0], component_list)
-                self.components.append(component)
+        self.paused = False  # Boolean indicator if task is paused
+        self.started = False  # Boolean indicator if task has started
+        self.time_into_trial = 0  # Tracks time into trial for pausing purposes
+
         # Get all default values for task variables
         for key, value in self.get_variables().items():
             setattr(self, key, value)
-        # If a Protocol is provided, replace all indicated variables with the values from the Protocol
-        if len(protocol) > 0:
-            with open(protocol, newline='') as csvfile:
-                protocol_reader = csv.reader(csvfile, delimiter=',', quotechar='|')
-                for row in protocol_reader:
-                    setattr(self, row[0], read_protocol_variable(row))
+
+        # If this task is being created as part of a Task sequence
+        if isinstance(args[0], Task):
+            # Assign variables from base Task
+            self.ws = args[0].ws
+            self.metadata = args[0].metadata
+            self.components = args[1]
+            for component in self.components:
+                if not hasattr(self, component.id.split('-')[0]):
+                    setattr(self, component.id.split('-')[0], component)
+                else:  # If the Component is part of an already registered list
+                    # Update the list with the Component at the specified index
+                    if isinstance(getattr(self, component.id.split('-')[0]), list):
+                        getattr(self, component.id.split('-')[0]).append(component)
+                    else:
+                        setattr(self, component.id.split('-')[0], [getattr(self, component.id.split('-')[0]), component])
+            # Load protocol is provided
+            if len(args) > 2 and args[2] is not None:
+                for key in args[2]:
+                    setattr(self, key, args[2][key])
+        else:  # If this is a standard Task
+            self.ws = args[0]
+            self.metadata = args[1]
+            sources = args[2]
+            protocol = ""
+            address_file = ""
+            if len(args) >= 4:
+                address_file = args[3]
+            if len(args) >= 5:
+                protocol = args[4]
+            self.components = []
+
+            # Open the provided AddressFile
+            with open(address_file if len(address_file) > 0 else "Defaults/{}.csv".format(type(self).__name__), newline='') as csvfile:
+                address_reader = csv.reader(csvfile, delimiter=',', quotechar='|')
+                # Each row in the AddressFile corresponds to a Task Component
+                for row in address_reader:
+                    # Import and instantiate the indicated Component with the provided ID and address
+                    component_type = getattr(importlib.import_module("Components." + row[1]), row[1])
+                    if len(row) > 6:
+                        component = component_type(sources[row[2]], row[0] + "-" + str(self.metadata["chamber"]) + "-" + str(row[4]), row[3], row[6])
+                    else:
+                        component = component_type(sources[row[2]], row[0] + "-" + str(self.metadata["chamber"]) + "-" + str(row[4]), row[3])
+                    sources[row[2]].register_component(self, component)
+                    # If the ID has yet to be registered
+                    if not hasattr(self, row[0]):
+                        # If the Component is part of a list
+                        if int(row[5]) > 1:
+                            # Create the list and add the Component at the specified index
+                            component_list = [None] * int(row[5])
+                            component_list[int(row[4])] = component
+                            setattr(self, row[0], component_list)
+                        else:  # If the Component is unique
+                            setattr(self, row[0], component)
+                    else:  # If the Component is part of an already registered list
+                        # Update the list with the Component at the specified index
+                        component_list = getattr(self, row[0])
+                        component_list[int(row[4])] = component
+                        setattr(self, row[0], component_list)
+                    self.components.append(component)
+
+            # If a Protocol is provided, replace all indicated variables with the values from the Protocol
+            if isinstance(protocol, str) and len(protocol) > 0:
+                with open(protocol, newline='') as csvfile:
+                    protocol_reader = csv.reader(csvfile, delimiter=',', quotechar='|')
+                    for row in protocol_reader:
+                        setattr(self, row[0], read_protocol_variable(row))
 
     def change_state(self, new_state, metadata=None):
         self.entry_time = self.cur_time
@@ -125,7 +158,7 @@ class Task:
 
     def stop(self):
         self.started = False
-        self.events = []
+        # self.events = []
         self.events.append(FinalStateEvent(self.state, self.cur_time - self.start_time))
 
     def main_loop(self):

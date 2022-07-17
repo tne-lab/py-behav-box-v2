@@ -11,6 +11,7 @@ from GUIs import Colors
 from Elements.LabelElement import LabelElement
 import pygame
 from Workstation.WorkstationGUI import WorkstationGUI
+from Tasks.TaskSequence import TaskSequence
 
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
@@ -136,6 +137,35 @@ class Workstation:
         # Create the GUI
         self.guis[chamber] = gui(self.task_gui.subsurface(col * self.w, row * self.h, self.w, self.h),
                                  self.tasks[chamber])
+        if isinstance(self.tasks[chamber], TaskSequence):
+            self.tasks[chamber].initialize()
+
+    def switch_task(self, task_base, task_name, protocol=None):
+        """
+        Switch the active Task in a sequence.
+
+        Parameters
+        ----------
+        task_base : Task
+            The base Task of the sequence
+        task_name : str
+            The next Task in the sequence
+        protocol : dict
+            Dictionary representing the protocol for the new Task
+        """
+        task_module = importlib.import_module("Tasks." + task_name)
+        task = getattr(task_module, task_name)
+        # Create the new Task as part of a sequence
+        new_task = task(task_base, task_base.components, protocol)
+        gui = getattr(importlib.import_module("GUIs." + task_name + "GUI"), task_name + "GUI")
+        # Position the GUI in pygame
+        col = task_base.metadata['chamber'] % self.n_col
+        row = math.floor(task_base.metadata['chamber'] / self.n_col)
+        # Create the GUI
+        self.guis[task_base.metadata['chamber']].sub_gui = gui(
+            self.task_gui.subsurface(col * self.w, row * self.h, self.w, self.h),
+            new_task)
+        return new_task
 
     def remove_task(self, chamber, del_loggers=True):
         """
@@ -154,6 +184,7 @@ class Workstation:
             c.close()
         del self.tasks[chamber]
         del self.event_loggers[chamber]
+        del self.guis[chamber]
 
     def start_task(self, chamber):
         """
@@ -202,7 +233,8 @@ class Workstation:
             col = key % self.n_col
             row = math.floor(key / self.n_col)
             pygame.draw.rect(self.task_gui, Colors.white, pygame.Rect(col * self.w, row * self.h, self.w, self.h), 1)
-            LabelElement(self.task_gui, col * self.w + 10, (row + 1) * self.h - 30, self.w, 20, self.tasks[key].metadata["subject"]).draw()
+            LabelElement(self.task_gui, col * self.w + 10, (row + 1) * self.h - 30, self.w, 20,
+                         self.tasks[key].metadata["subject"]).draw()
         pygame.display.flip()  # Signal to pygame that the whole GUI has updated
 
     def log_events(self, chamber):

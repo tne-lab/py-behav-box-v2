@@ -13,13 +13,10 @@ class DPALHabituation2(Task):
         INIT_ENTERED = 0
         INIT_EXIT = 1
 
-    def __init__(self, ws, chamber, source, address_file, protocol):
-        super().__init__(ws, chamber, source, address_file, protocol)
-        self.fan.toggle(True)
-
     def start(self):
         self.state = self.States.INPUT
         self.init_light.toggle(True)
+        self.fan.toggle(True)
         super(DPALHabituation2, self).start()
 
     def main_loop(self):

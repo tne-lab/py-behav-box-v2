@@ -23,14 +23,13 @@ class DPAL(Task):
         REAR_TOUCH = 4
         ERROR_TOUCH = 5
 
-    def __init__(self, ws, chamber, source, address_file, protocol):
-        super().__init__(ws, chamber, source, address_file, protocol)
+    def __init__(self, *args):
+        super().__init__(*args)
         for i in range(len(self.coords)):
             self.coords[i] = (self.coords[i][0], self.coords[i][1] + self.dead_height)
         desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
         self.image_folder = "{}/py-behav/DPAL/Images/".format(desktop)
         self.cur_trial = 0
-        self.state = self.States.INITIATION
         self.fan.toggle(True)
         self.correct_img = None
         self.incorrect_img = None
@@ -38,8 +37,9 @@ class DPAL(Task):
         self.generate_images()
 
     def start(self):
-        super(DPAL, self).start()
+        self.state = self.States.INITIATION
         self.init_light.toggle(True)
+        super(DPAL, self).start()
 
     def main_loop(self):
         super().main_loop()

@@ -78,6 +78,9 @@ class VideoSource(Source):
                                                                      int(self.caps[vid].get(3)),
                                                                      int(self.caps[vid].get(4))))
                             self.outs[vid].write(self.cur_frames[vid])
+                        elif self.outs[vid] is not None:
+                            self.outs[vid].release()
+                            del self.outs[vid]
 
                         # Do we need this?
                         if cv2.waitKey(1) & 0xFF == ord('q'):

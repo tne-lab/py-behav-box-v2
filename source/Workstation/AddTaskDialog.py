@@ -36,7 +36,7 @@ class AddTaskDialog(QDialog):
         self.task = QComboBox()
         self.tasks = []
         for f in pkgutil.iter_modules(['Tasks']):
-            if not f.name == "Task":
+            if not f.name == "Task" and not f.name == "TaskSequence":
                 self.tasks.append(f.name)
         self.task.addItems(self.tasks)
         task_box_layout.addWidget(self.task)
