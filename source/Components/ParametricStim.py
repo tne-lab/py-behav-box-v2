@@ -20,6 +20,7 @@ class ParametricStim(Component):
         self.source.write_component(self.id, stimulus)
 
     def start(self, pnum, stype="T"):
+        self.state = True
         self.source.write_component(self.id, "{}{}".format(stype, pnum))
 
     def get_state(self):

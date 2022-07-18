@@ -7,6 +7,33 @@ from Sources.Source import Source
 
 
 class NIDAQSource(Source):
+    """
+        Class defining a Source for interacting with National Instruments DAQs.
+
+        Attributes
+        ----------
+        dev : Device
+            Library representation of DAQ
+        components : dict
+            Links Component IDs to Component objects
+        tasks : dict
+            Links Component IDs to DAQ tasks
+        streams : dict
+            Links Component IDs to DAQ streams
+
+        Methods
+        -------
+        register_component(_, component)
+            Registers the component with the DAQ according to its type
+        close_source()
+            Closes all tasks
+        close_component(component_id)
+            Closes the task for a specific Component
+        read_component(component_id)
+            Requests the current value for the Component from the DAQ
+        write_component(component_id, msg)
+            Writes a value for the Component to the DAQ
+    """
 
     def __init__(self, dev):
         self.dev = dev

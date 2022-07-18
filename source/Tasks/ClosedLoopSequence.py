@@ -1,13 +1,6 @@
 from enum import Enum
-import time
 
-import numpy as np
 from Tasks.Task import Task
-from Components.BinaryInput import BinaryInput
-from Events.InputEvent import InputEvent
-from Events.OEEvent import OEEvent
-
-from Tasks.Raw import Raw
 
 
 class ClosedLoopSequence(Task):
@@ -19,94 +12,37 @@ class ClosedLoopSequence(Task):
         POST_ERP = 4
         POST_RAW = 5
 
-    class Inputs(Enum):
-        STIM = 0
-        SHAM = 1
-
-    def __init__(self, ws, chamber, sources, address_file, protocol):
-        super().__init__(ws, chamber, sources, address_file, protocol)
-        self.state = self.States.PRE_RAW
-        self.tasks = []
-        self.tasks.append(Raw(ws, chamber, sources, address_file, protocol))
-        self.last_pulse_time = 0
-        self.pulse_count = 0
-        self.stim_last = False
-        self.complete = False
-        self.recording_started = False
+    def __init__(self, *args):
+        super().__init__(*args)
+        self.init_sequence("Raw", self.pre_raw_protocol)
 
     def start(self):
+        self.state = self.States.PRE_RAW
         super(ClosedLoopSequence, self).start()
-        self.stim.parametrize(0, [1, 3], 180, 1800, np.array([300, -300], [0, 0]), [90, 90])
 
     def main_loop(self):
         super().main_loop()
-        thr = self.threshold.check()
-        if self.state == self.States.START_RECORD:
-            if not self.recording_started:
-                self.recording_started = True
-                self.events.append(OEEvent("startRecording", self.cur_time - self.start_time, {"pre": self.next_state.name}))
-            if self.cur_time - self.entry_time > self.record_lockout:
-                self.change_state(self.next_state)
-        elif self.state == self.States.STOP_RECORD:
-            if self.recording_started:
-                self.recording_started = False
-                self.events.append(OEEvent("stopRecording", self.cur_time - self.start_time))
-            if self.cur_time - self.entry_time > self.record_lockout:
-                if self.next_state is not None:
-                    self.change_state(self.States.START_RECORD)
-                else:
-                    self.complete = True
-        elif self.state == self.States.PRE_RAW:
-            if self.cur_time - self.entry_time > self.pre_raw_duration*60:
-                self.next_state = self.States.PRE_ERP
-                self.change_state(self.States.STOP_RECORD)
-        elif self.state == self.States.PRE_ERP:
-            if time.time() - self.last_pulse_time > self.pre_erp_pulse_sep and self.pulse_count == self.pre_erp_npulse:
-                self.pulse_count = 0
-                self.next_state = self.States.CLOSED_LOOP
-                self.change_state(self.States.STOP_RECORD)
-            elif time.time() - self.last_pulse_time > self.pre_erp_pulse_sep:
-                self.last_pulse_time = time.time()
-                self.ttl.pulse()
-                self.pulse_count += 1
-        elif self.state == self.States.CLOSED_LOOP:
-            if time.time() - self.last_pulse_time > self.min_pulse_separation and time.time() - self.entry_time > self.closed_loop_duration*60:
-                self.next_state = self.States.POST_ERP
-                self.change_state(self.States.STOP_RECORD)
-            else:
-                if time.time() - self.last_pulse_time > self.min_pulse_separation:
-                    if thr == BinaryInput.ENTERED:
-                        if not self.stim_last:
-                            self.events.append(InputEvent(self.Inputs.STIM, self.cur_time - self.start_time))
-                            self.ttl.pulse()
-                        else:
-                            self.events.append(InputEvent(self.Inputs.SHAM, self.cur_time - self.start_time))
-                        self.stim_last = not self.stim_last
-        elif self.state == self.States.POST_ERP:
-            if time.time() - self.last_pulse_time > self.post_erp_pulse_sep and self.pulse_count == self.post_erp_npulse:
-                self.next_state = self.States.PRE_RAW
-                self.change_state(self.States.STOP_RECORD)
-            elif time.time() - self.last_pulse_time > self.post_erp_pulse_sep:
-                self.last_pulse_time = time.time()
-                self.ttl.pulse()
-                self.pulse_count += 1
-        elif self.state == self.States.POST_RAW:
-            if self.cur_time - self.entry_time > self.post_raw_duration*60:
-                self.next_state = None
-                self.change_state(self.States.STOP_RECORD)
+        if self.state == self.States.PRE_RAW and self.cur_task.is_complete():
+            self.switch_task("ERP", self.States.PRE_ERP, self.pre_erp_protocol)
+        elif self.state == self.States.PRE_ERP and self.cur_task.is_complete():
+            self.switch_task("ClosedLoop", self.States.CLOSED_LOOP, self.closed_loop_protocol)
+        elif self.state == self.States.CLOSED_LOOP and self.cur_task.is_complete():
+            self.switch_task("PMA", self.States.PMA, self.pma_protocol)
+        elif self.state == self.States.PMA and self.cur_task.is_complete():
+            self.switch_task("ERP", self.States.POST_ERP, self.post_erp_protocol)
+        elif self.state == self.States.POST_ERP and self.cur_task.is_complete():
+            self.switch_task("Raw", self.States.POST_RAW, self.post_raw_protocol)
+        self.log_sequence_events()
 
     def get_variables(self):
         return {
-            'record_lockout': 4,
-            'pre_raw_duration': 5,
-            'pre_erp_npulse': 40,
-            'pre_erp_pulse_sep': 4,
-            'closed_loop_duration': 30,
-            'min_pulse_separation': 2,
-            'post_erp_npulse': 40,
-            'post_erp_pulse_sep': 4,
-            'post_raw_duration': 5
+            'pre_raw_protocol': None,
+            'pre_erp_protocol': None,
+            'closed_loop_protocol': None,
+            'pma_protocol': None,
+            'post_erp_protocol': None,
+            'post_raw_protocol': None
         }
 
     def is_complete(self):
-        return self.complete
+        return self.state == self.States.POST_RAW and self.cur_task.is_complete()

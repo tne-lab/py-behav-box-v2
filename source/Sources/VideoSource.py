@@ -8,10 +8,47 @@ from Sources.Source import Source
 
 
 class VideoSource(Source):
+    """
+        Class defining a Source for interacting with National Instruments DAQs.
+
+        Attributes
+        ----------
+        components : dict
+            Links Component IDs to Component objects
+        caps : dict
+            Links Component IDs to VideoCapture objects
+        outs : dict
+            Links Component IDs to VideoWriter objects
+        out_paths : dict
+            Links Component IDs to output paths for video files
+        cur_frames : dict
+            Links Component IDs to the currently acquired video frame
+        frame_times : dict
+            Links Component IDs to the time the last frame was acquired
+        do_close : dict
+            Links Component IDs to an indicator if they should be closed
+        available : bool
+            Boolean indicating if video is currently being acquired
+
+        Methods
+        -------
+        register_component(task, component)
+            Sets up a connection to the provided camera address
+        close_source()
+            Stops video acquisition
+        close_component(component_id)
+            Flags that the indicated component should be closed
+        read_component(component_id)
+            Returns the most recently acquired frame for the indicated Component
+        write_component(component_id, msg)
+            No functionality
+        run()
+            Function run continuously in video thread for coordinating acqusition, saving, and control
+    """
+
     def __init__(self):
         self.components = {}
         self.caps = {}
-        self.recs = {}
         self.outs = {}
         self.out_paths = {}
         self.cur_frames = {}
@@ -43,11 +80,14 @@ class VideoSource(Source):
         return self.cur_frames[component_id]
 
     def write_component(self, component_id, msg):
-        self.recs[component_id] = msg
+        pass
 
     def run(self):
+        # While video is being acquired
         while self.available:
+            # Iterate over registered cameras
             for vid in list(self.caps):
+                # Removes all objects associated with camera flagged for closing
                 if self.do_close[vid]:
                     cv2.destroyAllWindows()
                     self.caps[vid].release()
@@ -60,15 +100,21 @@ class VideoSource(Source):
                     del self.frame_times[vid]
                     del self.out_paths[vid]
                     del self.do_close[vid]
+                # If the camera is available and more than a frame has passed since the last acquisition
                 elif self.caps[vid].isOpened() and time.perf_counter() - self.frame_times[vid] > 1 / int(
                         self.components[vid].fr):
-                    ret, self.cur_frames[vid] = self.caps[vid].read()
+                    ret, self.cur_frames[vid] = self.caps[vid].read()  # Acquire the frame
+                    # If a frame was returned
                     if ret:
+                        # Update the time when the last frame was acquired
                         self.frame_times[vid] = self.frame_times[vid] + 1 / int(self.components[vid].fr)
+                        # Create a window for the video frame
                         cv2.namedWindow(self.components[vid].address)
                         cv2.imshow(self.components[vid].address, self.cur_frames[vid])
 
+                        # If video should be saved
                         if self.components[vid].get_state():
+                            # If an output object has not yet been created, generate a VideoWriter
                             if self.outs[vid] is None:
                                 fourcc = cv2.VideoWriter_fourcc(*'XVID')  # for AVI files
                                 if not os.path.exists(self.out_paths[vid] + "Videos"):
@@ -77,12 +123,14 @@ class VideoSource(Source):
                                                                  int(self.components[vid].fr), (
                                                                      int(self.caps[vid].get(3)),
                                                                      int(self.caps[vid].get(4))))
+                            # Write the current frame to the output file
                             self.outs[vid].write(self.cur_frames[vid])
+                        # If the video should not be saved and there is an active VIdeoWriter, close the writer
                         elif self.outs[vid] is not None:
                             self.outs[vid].release()
                             del self.outs[vid]
 
-                        # Do we need this?
+                        # Refresh cv2
                         if cv2.waitKey(1) & 0xFF == ord('q'):
                             self.caps[vid].release()
                             cv2.destroyAllWindows()  # Don't want to destroy all
@@ -90,6 +138,7 @@ class VideoSource(Source):
                                 self.outs[vid].release()
                             except:
                                 pass
+
         cv2.destroyAllWindows()
         for vid in self.caps.keys():
             self.caps[vid].release()

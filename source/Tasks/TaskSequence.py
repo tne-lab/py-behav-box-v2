@@ -15,15 +15,15 @@ class TaskSequence(Task):
     def initialize(self):
         self.cur_task = self.ws.switch_task(self, self.init_name, self.init_protocol)
 
-    def init_sequence(self, task_name, protocol):
-        self.init_name = task_name
+    def init_sequence(self, task, protocol):
+        self.init_name = task
         self.init_protocol = protocol
 
-    def switch_task(self, task, protocol, metadata=None):
+    def switch_task(self, task, seq_state, protocol, metadata=None):
         self.cur_task.stop()
         self.log_sequence_events()
-        self.change_state(task, metadata)
-        self.cur_task = self.ws.switch_task(self, task.name, protocol)
+        self.change_state(seq_state, metadata)
+        self.cur_task = self.ws.switch_task(self, task, protocol)
         self.start_sub()
 
     def log_sequence_events(self):

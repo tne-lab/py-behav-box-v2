@@ -7,9 +7,9 @@ class EmptySource(Source):
 
         Attributes
         ----------
-        components : Dictionary
+        components : dict
             Links Component IDs to Component objects
-        values : Dictionary
+        values : dict
             Links Component IDs to stored value for each Component
 
         Methods
@@ -22,7 +22,7 @@ class EmptySource(Source):
             Returns the stored value for the component with id component_id
         write_component(component_id, msg)
             Changes the stored value of the component with id component_id to msg
-        """
+    """
 
     def __init__(self):
         self.components = {}

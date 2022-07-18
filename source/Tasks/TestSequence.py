@@ -19,7 +19,7 @@ class TestSequence(TaskSequence):
     def main_loop(self):
         super().main_loop()
         if self.state == self.States.RAW and self.cur_task.is_complete():
-            self.switch_task(self.States.PMA, self.pma_protocol)
+            self.switch_task("PMA", self.States.PMA, self.pma_protocol)
         self.log_sequence_events()
 
     def get_variables(self):

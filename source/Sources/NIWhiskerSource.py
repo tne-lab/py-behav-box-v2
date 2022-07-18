@@ -15,14 +15,16 @@ def look_for_program(hwnd, program_name):
 
 
 class NIWhiskerSource(NIDAQSource):
+    """
+        Class defining a Source for interacting with National Instruments DAQs through the Whisker interface.
+    """
 
     def __init__(self, dev, whisker_path=r"C:\Program Files (x86)\WhiskerControl\WhiskerServer.exe"):
         super(NIWhiskerSource, self).__init__(dev)
-        self.path = whisker_path
         win32gui.EnumWindows(look_for_program, 'WhiskerServer')
         if not IsWhiskerRunning:
             try:
-                ws = r"C:\Program Files (x86)\WhiskerControl\WhiskerServer.exe"
+                ws = whisker_path
                 window = subprocess.Popen(ws)
                 time.sleep(2)
                 print("WHISKER server started", window)
