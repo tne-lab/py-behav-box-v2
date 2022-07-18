@@ -3,7 +3,8 @@ from enum import Enum
 import numpy as np
 from Tasks.Task import Task
 
-from source.Events.OEEvent import OEEvent
+from Events.OEEvent import OEEvent
+from Events.InputEvent import InputEvent
 
 
 class ERP(Task):
@@ -24,8 +25,9 @@ class ERP(Task):
 
     def start(self):
         self.state = self.States.START_RECORD
-        self.stim.parametrize(0, [1, 3], 180, 1800, np.array([300, -300], [0, 0]), [90, 90])
-        self.events.append(OEEvent("startRecording", self.cur_time - self.start_time, {"pre": "ClosedLoop"}))
+        self.stim.parametrize(0, [1, 3], 1800, 1800, np.array(([300, -300], [0, 0])), [90, 90])
+        if self.ephys:
+            self.events.append(OEEvent("startRecording", self.cur_time - self.start_time, {"pre": "ClosedLoop"}))
         super(ERP, self).start()
 
     def main_loop(self):
@@ -33,21 +35,22 @@ class ERP(Task):
         if self.state == self.States.START_RECORD:
             if self.cur_time - self.entry_time > self.record_lockout:
                 self.change_state(self.States.ERP)
-        if self.cur_time - self.last_pulse_time > self.min_pulse_separation and self.cur_time - self.entry_time > self.closed_loop_duration * 60:
-            self.change_state(self.States.STOP_RECORD)
-            self.events.append(OEEvent("stopRecording", self.cur_time - self.start_time))
-        else:
+        elif self.state == self.States.ERP:
             if self.cur_time - self.last_pulse_time > self.pulse_sep and self.pulse_count == self.npulse:
                 self.change_state(self.States.STOP_RECORD)
+                if self.ephys:
+                    self.events.append(OEEvent("stopRecording", self.cur_time - self.start_time))
             elif self.cur_time - self.last_pulse_time > self.pulse_sep:
                 self.last_pulse_time = self.cur_time
                 self.stim.start(0)
                 self.pulse_count += 1
+                self.events.append(InputEvent(self.Inputs.ERP_STIM, self.cur_time - self.start_time))
 
     def get_variables(self):
         return {
+            'ephys': False,
             'record_lockout': 4,
-            'npulse': 40,
+            'npulse': 5,
             'pulse_sep': 4,
         }
 

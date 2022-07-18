@@ -27,7 +27,8 @@ class ClosedLoop(Task):
 
     def start(self):
         self.state = self.States.START_RECORD
-        self.stim.parametrize(0, [1, 3], 180, 1800, np.array([300, -300], [0, 0]), [90, 90])
+        self.stim.parametrize(0, [1, 3], 1800, 1800, np.array(([300, -300], [0, 0])), [90, 90])
+        self.sham.parametrize(0, [1, 3], 1800, 1800, np.array(([300, -300], [0, 0])), [90, 90])
         self.events.append(OEEvent("startRecording", self.cur_time - self.start_time, {"pre": "ClosedLoop"}))
         super(ClosedLoop, self).start()
 
@@ -48,6 +49,7 @@ class ClosedLoop(Task):
                         self.stim.start(0)
                     else:
                         self.events.append(InputEvent(self.Inputs.SHAM, self.cur_time - self.start_time))
+                        self.sham.start(0)
                     self.stim_last = not self.stim_last
 
     def get_variables(self):

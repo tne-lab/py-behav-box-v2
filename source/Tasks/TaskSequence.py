@@ -45,6 +45,18 @@ class TaskSequence(Task):
         super(TaskSequence, self).start()
         self.start_sub()
 
+    def pause(self):
+        super(TaskSequence, self).pause()
+        self.cur_task.pause()
+
+    def stop(self):
+        super(TaskSequence, self).stop()
+        self.cur_task.stop()
+
+    def resume(self):
+        super(TaskSequence, self).resume()
+        self.cur_task.resume()
+
     @abstractmethod
     def get_variables(self):
         raise NotImplementedError

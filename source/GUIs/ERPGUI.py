@@ -10,21 +10,21 @@ from GUIs.GUI import GUI
 from source.Elements.InfoBoxElement import InfoBoxElement
 
 
-class ClosedLoopGUI(GUI):
+class ERPGUI(GUI):
 
     def __init__(self, task_gui, task):
         super().__init__(task_gui, task)
         self.info_boxes = []
 
-        def total_pulses(self):
+        def pulses_remaining(self):
             if task.started:
-                return [str(task.pulse_count)]
+                return [str(task.npulse - task.pulse_count)]
             else:
                 return [str(0)]
 
-        ne = InfoBoxElement(self.task_gui, self.SF * 372, self.SF * 125, self.SF * 50, self.SF * 15, "Total Pulses",
+        ne = InfoBoxElement(self.task_gui, self.SF * 372, self.SF * 125, self.SF * 50, self.SF * 15, "PULSES REMAINING",
                             'BOTTOM', ['0'], int(self.SF * 14), self.SF)
-        ne.get_text = MethodType(total_pulses, ne)
+        ne.get_text = MethodType(pulses_remaining, ne)
         self.info_boxes.append(ne)
         self.fan = FanElement(self.task_gui, self.SF * 210, self.SF * 20, self.SF * 40, task.fan)
 

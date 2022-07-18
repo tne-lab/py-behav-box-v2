@@ -161,6 +161,7 @@ class Task:
         # self.events = []
         self.events.append(FinalStateEvent(self.state, self.cur_time - self.start_time))
 
+    # Add event logging function
     def main_loop(self):
         self.cur_time = time.time()
 

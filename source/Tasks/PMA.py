@@ -5,7 +5,7 @@ from Components.BinaryInput import BinaryInput
 from Events.InputEvent import InputEvent
 from Tasks.Task import Task
 
-from source.Events.OEEvent import OEEvent
+from Events.OEEvent import OEEvent
 
 
 class PMA(Task):

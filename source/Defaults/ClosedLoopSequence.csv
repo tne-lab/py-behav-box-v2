@@ -1,0 +1,11 @@
+food_lever,BinaryInput,es,20,0,0,
+cage_light,Toggle,es,21,0,0,
+food,FoodDispenser,es,22,0,0,
+tone,Toggle,es,23,0,0,
+fan,Toggle,es,24,0,0,
+shocker,Toggle,es,25,0,0,
+lever_out,ByteOutput,es,26,0,0,
+food_light,Toggle,es,27,0,0,
+cam,Video,es,28,0,0,
+stim,WaveformStim,es,29,0,0,sr=3000000
+sham,WaveformStim,es,29,0,0,sr=3000000
