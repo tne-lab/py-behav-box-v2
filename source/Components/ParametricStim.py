@@ -1,7 +1,8 @@
+from Components.Stimmer import Stimmer
 from Components.Component import Component
 
 
-class ParametricStim(Component):
+class ParametricStim(Stimmer):
 
     def __init__(self, source, component_id, component_address, metadata=""):
         self.state = False

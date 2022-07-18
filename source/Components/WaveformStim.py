@@ -1,10 +1,11 @@
 import math
 
 import numpy as np
+from Components.Stimmer import Stimmer
 from Components.Component import Component
 
 
-class WaveformStim(Component):
+class WaveformStim(Stimmer):
 
     def __init__(self, source, component_id, component_address, metadata=""):
         self.state = False
@@ -26,7 +27,7 @@ class WaveformStim(Component):
             waveforms[i, -1] = 0
         self.configs[pnum] = waveforms
 
-    def start(self, pnum):
+    def start(self, pnum, _):
         self.state = True  # Ideally make this false when stim is done
         self.source.write_component(self.configs[pnum])
 

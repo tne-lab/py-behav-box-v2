@@ -1,9 +1,9 @@
 from enum import Enum
 
-from Tasks.Task import Task
+from Tasks.TaskSequence import TaskSequence
 
 
-class ClosedLoopSequence(Task):
+class ClosedLoopSequence(TaskSequence):
     class States(Enum):
         PRE_RAW = 0
         PRE_ERP = 1
