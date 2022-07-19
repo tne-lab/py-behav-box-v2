@@ -23,7 +23,7 @@ class BarPressGUI(GUI):
         def feed_mouse_up(self, _):
             self.clicked = False
             task.food.dispense()
-            task.events.append(InputEvent(BarPressGUI.Inputs.GUI_PELLET, task.cur_time - task.start_time))
+            task.events.append(InputEvent(task, BarPressGUI.Inputs.GUI_PELLET))
 
         def pellets_text(self):
             return [str(task.food.pellets)]
@@ -32,11 +32,11 @@ class BarPressGUI(GUI):
             return [str(task.presses)]
 
         def event_countup(self):
-            return [str(round((task.cur_time - task.start_time) / 60, 2))]
+            return [str(round(task.time_elapsed() / 60, 2))]
 
         def vi_countdown(self):
             if task.state == task.States.REWARD_UNAVAILABLE:
-                return [str(max([0, math.ceil(task.lockout - (task.cur_time - task.entry_time))]))]
+                return [str(max([0, math.ceil(task.lockout - task.time_in_state())]))]
             else:
                 return "0"
 

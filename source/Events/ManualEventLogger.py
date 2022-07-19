@@ -33,7 +33,7 @@ class ManualEventLogger(GUIEventLogger):
     def send_event(self):
         temp_enum = Enum('TempEnum', {'MANUAL': int(self.code_input.text())})
         self.cw.task.events.append(
-            InputEvent(temp_enum.MANUAL, self.cw.task.cur_time - self.cw.task.start_time, {"desc": self.manual_input.text()}))
+            InputEvent(self.cw.task, temp_enum.MANUAL, {"desc": self.manual_input.text()}))
 
     def log_events(self, events):
         pass

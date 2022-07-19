@@ -18,7 +18,7 @@ class RawGUI(GUI):
 
         def next_event(self):
             if task.started:
-                return [str(math.ceil(60*task.duration - (task.cur_time - task.entry_time)))]
+                return [str(math.ceil(60*task.duration - task.time_in_state()))]
             else:
                 return [str(0)]
 

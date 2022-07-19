@@ -15,7 +15,7 @@ class TestSequenceGUI(SequenceGUI):
         self.info_boxes = []
 
         def event_countup(self):
-            return [str(round((task.cur_time - task.start_time) / 60, 2))]
+            return [str(round((task.time_elapsed()) / 60, 2))]
 
         ec = InfoBoxElement(self.task_gui, self.SF * 372, self.SF * 500, self.SF * 50, self.SF * 15, "SESSION TIME", 'BOTTOM',
                             ['0'], int(self.SF * 14), self.SF)

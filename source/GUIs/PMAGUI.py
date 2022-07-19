@@ -27,7 +27,7 @@ class PMAGUI(GUI):
         def feed_mouse_up(self, _):
             self.clicked = False
             task.food.dispense()
-            task.events.append(InputEvent(PMAGUI.Inputs.GUI_PELLET, task.cur_time - task.start_time))
+            task.events.append(task, InputEvent(PMAGUI.Inputs.GUI_PELLET))
 
         def pellets_text(self):
             return [str(task.food.pellets)]
@@ -44,20 +44,20 @@ class PMAGUI(GUI):
         def next_event(self):
             if task.state == PMA.States.INTER_TONE_INTERVAL:
                 if task.random:
-                    return [str(math.ceil(task.iti - (task.cur_time - task.entry_time)))]
+                    return [str(math.ceil(task.iti - task.time_in_state()))]
                 else:
-                    return [str(math.ceil(task.time_sequence[task.cur_trial] - (task.cur_time - task.entry_time)))]
+                    return [str(math.ceil(task.time_sequence[task.cur_trial] - task.time_in_state()))]
             elif task.state == PMA.States.TONE:
-                return [str(math.ceil(task.tone_duration - (task.cur_time - task.entry_time)))]
+                return [str(math.ceil(task.tone_duration - task.time_in_state()))]
             elif task.state == PMA.States.SHOCK:
-                return [str(math.ceil(task.shock_duration - (task.cur_time - task.entry_time)))]
+                return [str(math.ceil(task.shock_duration - task.time_in_state()))]
             elif task.state == PMA.States.POST_SESSION:
-                return [str(math.ceil(task.post_session_time - (task.cur_time - task.entry_time)))]
+                return [str(math.ceil(task.post_session_time - task.time_in_state()))]
             else:
                 return [str(0)]
 
         def event_countup(self):
-            return [str(round((task.cur_time - task.start_time) / 60, 2))]
+            return [str(round(task.time_elapsed() / 60, 2))]
 
         self.lever = BarPressElement(self.task_gui, self.SF * 77, self.SF * 25, self.SF * 100, self.SF * 90, task.food_lever)
         self.feed_button = ButtonElement(self.task_gui, self.SF * 129, self.SF * 170, self.SF * 50, self.SF * 20, "FEED", task.food, int(self.SF * 12))

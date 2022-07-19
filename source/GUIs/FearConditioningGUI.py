@@ -43,7 +43,7 @@ class FearConditioningGUI(GUI):
                 return [str(task.time_sequence[task.cur_trial * 2 + 1])]
 
         def event_countup(self):
-            return [str(math.ceil(task.cur_time - task.start_time))]
+            return [str(math.ceil(task.time_elapsed()))]
 
         self.lever = BarPressElement(self.task_gui, self.SF * 77, self.SF * 25, self.SF * 100, self.SF * 90, task.food_lever)
         self.feed_button = ButtonElement(self.task_gui, self.SF * 129, self.SF * 170, self.SF * 50, self.SF * 20, "FEED", task.food, int(self.SF * 12))
