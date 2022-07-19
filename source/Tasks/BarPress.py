@@ -44,11 +44,11 @@ class BarPress(Task):
         food_lever = self.food_lever.check()
         pressed = False
         if food_lever == BinaryInput.ENTERED:
-            self.events.append(InputEvent(self.Inputs.LEVER_PRESSED, self.cur_time - self.start_time))
+            self.events.append(InputEvent(self, self.Inputs.LEVER_PRESSED))
             pressed = True
             self.presses += 1
         elif food_lever == BinaryInput.EXIT:
-            self.events.append(InputEvent(self.Inputs.LEVER_DEPRESSED, self.cur_time - self.start_time))
+            self.events.append(InputEvent(self, self.Inputs.LEVER_DEPRESSED))
         if self.state == self.States.REWARD_AVAILABLE:
             if pressed:
                 self.food.dispense()
@@ -56,11 +56,11 @@ class BarPress(Task):
                     self.lockout = self.reward_lockout_min+random.random()*(self.reward_lockout_max-self.reward_lockout_min)
                     self.change_state(self.States.REWARD_UNAVAILABLE)
         elif self.state == self.States.REWARD_UNAVAILABLE:
-            if self.cur_time - self.entry_time > self.lockout:
+            if self.time_in_state() > self.lockout:
                 self.change_state(self.States.REWARD_AVAILABLE)
 
     def is_complete(self):
-        return self.cur_time - self.start_time > self.duration * 60.0
+        return self.time_elapsed() > self.duration * 60.0
 
     def get_variables(self):
         return {

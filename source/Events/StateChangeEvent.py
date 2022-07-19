@@ -13,7 +13,7 @@ class StateChangeEvent(Event):
             Enumerated variable representing the new state of the Task
     """
 
-    def __init__(self, initial_state, new_state, entry_time, metadata=None):
-        super().__init__(entry_time, metadata)
+    def __init__(self, task, initial_state, new_state, metadata=None):
+        super().__init__(task, metadata)
         self.initial_state = initial_state
         self.new_state = new_state

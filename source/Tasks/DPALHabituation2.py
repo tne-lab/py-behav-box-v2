@@ -23,9 +23,9 @@ class DPALHabituation2(Task):
         super().main_loop()
         init_poke = self.init_poke.check()
         if init_poke == BinaryInput.ENTERED:
-            self.events.append(InputEvent(self.Inputs.INIT_ENTERED, self.cur_time - self.start_time))
+            self.events.append(InputEvent(self,self.Inputs.INIT_ENTERED))
         elif init_poke == BinaryInput.EXIT:
-            self.events.append(InputEvent(self.Inputs.INIT_EXIT, self.cur_time - self.start_time))
+            self.events.append(InputEvent(self, self.Inputs.INIT_EXIT))
         if self.state == self.States.INPUT:
             if init_poke == BinaryInput.ENTERED:
                 self.init_light.toggle(False)
@@ -33,7 +33,7 @@ class DPALHabituation2(Task):
                 self.tone.play_sound(1800, 1, 1)
                 self.change_state(self.States.INTER_TRIAL_INTERVAL)
         elif self.state == self.States.INTER_TRIAL_INTERVAL:
-            if self.cur_time - self.entry_time > self.inter_trial_interval:
+            if self.time_in_state() > self.inter_trial_interval:
                 self.init_light.toggle(True)
                 self.change_state(self.States.INPUT)
 
@@ -44,4 +44,4 @@ class DPALHabituation2(Task):
         }
 
     def is_complete(self):
-        return self.cur_time - self.start_time > self.duration * 60
+        return self.time_elapsed() > self.duration * 60

@@ -4,12 +4,13 @@ class Event:
 
         Attributes
         ----------
-        entry_time : float
-            Time when the event was initiated
+        task : Task
+            Task the event corresponds to
         metadata : Object
             Any metadata related to the Event
     """
 
-    def __init__(self, entry_time, metadata=None):
-        self.entry_time = entry_time
+    def __init__(self, task, metadata=None):
+        self.task = task
+        self.entry_time = task.cur_time - task.start_time
         self.metadata = metadata

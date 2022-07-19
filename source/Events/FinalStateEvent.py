@@ -10,6 +10,6 @@ class FinalStateEvent(Event):
         final_state : Enum
             Enumerated variable representing the final state
     """
-    def __init__(self, final_state, entry_time, metadata=None):
-        super().__init__(entry_time, metadata)
+    def __init__(self, task, final_state, metadata=None):
+        super().__init__(task, metadata)
         self.final_state = final_state

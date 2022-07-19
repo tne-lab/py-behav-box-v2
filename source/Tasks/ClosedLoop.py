@@ -29,35 +29,35 @@ class ClosedLoop(Task):
         self.state = self.States.START_RECORD
         self.stim.parametrize(0, [1, 3], 1800, 1800, np.array(([300, -300], [0, 0])), [90, 90])
         self.sham.parametrize(0, [1, 3], 1800, 1800, np.array(([300, -300], [0, 0])), [90, 90])
-        self.events.append(OEEvent("startRecording", self.cur_time - self.start_time, {"pre": "ClosedLoop"}))
+        self.events.append(OEEvent(self, "startRecording", {"pre": "ClosedLoop"}))
         super(ClosedLoop, self).start()
 
     def main_loop(self):
         super().main_loop()
         thr = self.threshold.check()
         if self.state == self.States.START_RECORD:
-            if self.cur_time - self.entry_time > self.record_lockout:
+            if self.time_in_state() > self.record_lockout:
                 self.change_state(self.States.CLOSED_LOOP)
-        if self.cur_time - self.last_pulse_time > self.min_pulse_separation and self.cur_time - self.entry_time > self.closed_loop_duration * 60:
+        if self.state == self.States.CLOSED_LOOP and self.cur_time - self.last_pulse_time > self.min_pulse_separation and self.time_in_state() > self.duration * 60:
             self.change_state(self.States.STOP_RECORD)
-            self.events.append(OEEvent("stopRecording", self.cur_time - self.start_time))
+            self.events.append(OEEvent(self, "stopRecording"))
         else:
             if self.cur_time - self.last_pulse_time > self.min_pulse_separation:
                 if thr == BinaryInput.ENTERED:
                     if not self.stim_last:
-                        self.events.append(InputEvent(self.Inputs.STIM, self.cur_time - self.start_time))
+                        self.events.append(InputEvent(self, self.Inputs.STIM))
                         self.stim.start(0)
                     else:
-                        self.events.append(InputEvent(self.Inputs.SHAM, self.cur_time - self.start_time))
+                        self.events.append(InputEvent(self, self.Inputs.SHAM))
                         self.sham.start(0)
                     self.stim_last = not self.stim_last
 
     def get_variables(self):
         return {
             'record_lockout': 4,
-            'closed_loop_duration': 30,
+            'duration': 30,
             'min_pulse_separation': 2
         }
 
     def is_complete(self):
-        return self.state == self.States.STOP_RECORD and self.cur_time - self.entry_time > self.record_lockout
+        return self.state == self.States.STOP_RECORD and self.time_in_state() > self.record_lockout

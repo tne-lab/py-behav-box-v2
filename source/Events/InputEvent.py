@@ -11,6 +11,6 @@ class InputEvent(Event):
             Enumerated variable representing the type of input
     """
 
-    def __init__(self, input_event, entry_time, metadata=None):
-        super().__init__(entry_time, metadata)
+    def __init__(self, task, input_event, metadata=None):
+        super().__init__(task, metadata)
         self.input_event = input_event

@@ -45,25 +45,25 @@ class DPAL(Task):
         super().main_loop()
         init_poke = self.init_poke.check()
         if init_poke == BinaryInput.ENTERED:
-            self.events.append(InputEvent(self.Inputs.INIT_ENTERED, self.cur_time - self.start_time))
+            self.events.append(InputEvent(self, self.Inputs.INIT_ENTERED))
         elif init_poke == BinaryInput.EXIT:
-            self.events.append(InputEvent(self.Inputs.INIT_EXIT, self.cur_time - self.start_time))
+            self.events.append(InputEvent(self, self.Inputs.INIT_EXIT))
         self.touch_screen.get_touches()
         touches = self.touch_screen.handle()
         touch_locs = []
         for touch in touches:
             if touch_in_region(self.coords[0], self.img_dim, touch):
                 touch_locs.append(1)
-                self.events.append(InputEvent(self.Inputs.FRONT_TOUCH, self.cur_time - self.start_time))
+                self.events.append(InputEvent(self, self.Inputs.FRONT_TOUCH))
             elif touch_in_region(self.coords[1], self.img_dim, touch):
                 touch_locs.append(2)
-                self.events.append(InputEvent(self.Inputs.MIDDLE_TOUCH, self.cur_time - self.start_time))
+                self.events.append(InputEvent(self, self.Inputs.MIDDLE_TOUCH))
             elif touch_in_region(self.coords[2], self.img_dim, touch):
                 touch_locs.append(3)
-                self.events.append(InputEvent(self.Inputs.REAR_TOUCH, self.cur_time - self.start_time))
+                self.events.append(InputEvent(self, self.Inputs.REAR_TOUCH))
             else:
                 touch_locs.append(0)
-                self.events.append(InputEvent(self.Inputs.ERROR_TOUCH, self.cur_time - self.start_time))
+                self.events.append(InputEvent(self, self.Inputs.ERROR_TOUCH))
         if self.state == self.States.INITIATION:
             if init_poke == BinaryInput.ENTERED:
                 self.init_light.toggle(False)
@@ -91,11 +91,11 @@ class DPAL(Task):
                 self.tone.play_sound(1200, 1, 1)
                 self.change_state(self.States.TIMEOUT, {"response": "incorrect"})
         elif self.state == self.States.TIMEOUT:
-            if self.cur_time - self.entry_time > self.timeout_duration:
+            if self.time_in_state() > self.timeout_duration:
                 self.cage_light.toggle(False)
                 self.change_state(self.States.INTER_TRIAL_INTERVAL)
         elif self.state == self.States.INTER_TRIAL_INTERVAL:
-            if self.cur_time - self.entry_time > self.inter_trial_interval:
+            if self.time_in_state() > self.inter_trial_interval:
                 self.init_light.toggle(True)
                 self.change_state(self.States.INITIATION)
 
@@ -112,7 +112,7 @@ class DPAL(Task):
         }
 
     def is_complete(self):
-        return self.cur_trial >= self.max_correct or self.cur_time - self.start_time > self.max_duration * 60
+        return self.cur_trial >= self.max_correct or self.time_elapsed() > self.max_duration * 60
 
     def generate_images(self):
         locs = list(range(len(self.images)))

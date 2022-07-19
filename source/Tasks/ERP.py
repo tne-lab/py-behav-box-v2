@@ -27,24 +27,24 @@ class ERP(Task):
         self.state = self.States.START_RECORD
         self.stim.parametrize(0, [1, 3], 1800, 1800, np.array(([300, -300], [0, 0])), [90, 90])
         if self.ephys:
-            self.events.append(OEEvent("startRecording", self.cur_time - self.start_time, {"pre": "ClosedLoop"}))
+            self.events.append(OEEvent(self, "startRecording", {"pre": "ClosedLoop"}))
         super(ERP, self).start()
 
     def main_loop(self):
         super().main_loop()
         if self.state == self.States.START_RECORD:
-            if self.cur_time - self.entry_time > self.record_lockout:
+            if self.time_in_state() > self.record_lockout:
                 self.change_state(self.States.ERP)
         elif self.state == self.States.ERP:
             if self.cur_time - self.last_pulse_time > self.pulse_sep and self.pulse_count == self.npulse:
                 self.change_state(self.States.STOP_RECORD)
                 if self.ephys:
-                    self.events.append(OEEvent("stopRecording", self.cur_time - self.start_time))
+                    self.events.append(OEEvent(self, "stopRecording"))
             elif self.cur_time - self.last_pulse_time > self.pulse_sep:
                 self.last_pulse_time = self.cur_time
                 self.stim.start(0)
                 self.pulse_count += 1
-                self.events.append(InputEvent(self.Inputs.ERP_STIM, self.cur_time - self.start_time))
+                self.events.append(InputEvent(self, self.Inputs.ERP_STIM))
 
     def get_variables(self):
         return {
@@ -55,4 +55,4 @@ class ERP(Task):
         }
 
     def is_complete(self):
-        return self.state == self.States.STOP_RECORD and self.cur_time - self.entry_time > self.record_lockout
+        return self.state == self.States.STOP_RECORD and self.time_in_state() > self.record_lockout

@@ -44,23 +44,23 @@ class SetShift(Task):
             pokes.append(self.nose_pokes[i].check())
             if pokes[i] == BinaryInput.ENTERED:
                 if i == 0:
-                    self.events.append(InputEvent(self.Inputs.FRONT_ENTERED, self.cur_time - self.start_time))
+                    self.events.append(InputEvent(self, self.Inputs.FRONT_ENTERED))
                 elif i == 1:
-                    self.events.append(InputEvent(self.Inputs.MIDDLE_ENTERED, self.cur_time - self.start_time))
+                    self.events.append(InputEvent(self, self.Inputs.MIDDLE_ENTERED))
                 elif i == 2:
-                    self.events.append(InputEvent(self.Inputs.REAR_ENTERED, self.cur_time - self.start_time))
+                    self.events.append(InputEvent(self, self.Inputs.REAR_ENTERED))
             elif pokes[i] == BinaryInput.EXIT:
                 if i == 0:
-                    self.events.append(InputEvent(self.Inputs.FRONT_EXIT, self.cur_time - self.start_time))
+                    self.events.append(InputEvent(self, self.Inputs.FRONT_EXIT))
                 elif i == 1:
-                    self.events.append(InputEvent(self.Inputs.MIDDLE_EXIT, self.cur_time - self.start_time))
+                    self.events.append(InputEvent(self, self.Inputs.MIDDLE_EXIT))
                 elif i == 2:
-                    self.events.append(InputEvent(self.Inputs.REAR_EXIT, self.cur_time - self.start_time))
+                    self.events.append(InputEvent(self, self.Inputs.REAR_EXIT))
         trough_entered = self.food_trough.check()
         if trough_entered == BinaryInput.ENTERED:
-            self.events.append(InputEvent(self.Inputs.TROUGH_ENTERED, self.cur_time - self.start_time))
+            self.events.append(InputEvent(self, self.Inputs.TROUGH_ENTERED))
         elif trough_entered == BinaryInput.EXIT:
-            self.events.append(InputEvent(self.Inputs.TROUGH_EXIT, self.cur_time - self.start_time))
+            self.events.append(InputEvent(self, self.Inputs.TROUGH_EXIT))
         if self.state == self.States.INITIATION:  # The rat has not initiated the trial yet
             if pokes[1] == BinaryInput.ENTERED:
                 self.nose_poke_lights[1].toggle(False)
@@ -113,7 +113,7 @@ class SetShift(Task):
                 self.nose_poke_lights[0].toggle(False)
                 self.nose_poke_lights[2].toggle(False)
                 self.change_state(self.States.INTER_TRIAL_INTERVAL, metadata)
-            elif self.cur_time - self.entry_time > self.response_duration:
+            elif self.time_in_state() > self.response_duration:
                 metadata["rule"] = self.rule_sequence[self.cur_rule]
                 metadata["cur_block"] = self.cur_block
                 metadata["rule_index"] = self.cur_rule
@@ -123,7 +123,7 @@ class SetShift(Task):
                 self.nose_poke_lights[2].toggle(False)
                 self.change_state(self.States.INTER_TRIAL_INTERVAL, metadata)
         elif self.state == self.States.INTER_TRIAL_INTERVAL:
-            if self.cur_time - self.entry_time > self.inter_trial_interval:
+            if self.time_in_state() > self.inter_trial_interval:
                 self.nose_poke_lights[1].toggle(True)
                 self.change_state(self.States.INITIATION)
         return self.events
@@ -142,7 +142,7 @@ class SetShift(Task):
 
     def is_complete(self):
         return self.cur_trial == self.n_random_start + self.n_random_end + self.correct_to_switch * len(
-            self.rule_sequence) or self.cur_time - self.start_time > self.max_duration * 60
+            self.rule_sequence) or self.time_elapsed() > self.max_duration * 60
 
     def correct(self):
         self.food.dispense()

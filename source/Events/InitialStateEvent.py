@@ -10,6 +10,6 @@ class InitialStateEvent(Event):
         initial_state : Enum
             Enumerated variable representing the initial state
     """
-    def __init__(self, initial_state, entry_time, metadata=None):
-        super().__init__(entry_time, metadata)
+    def __init__(self, task, initial_state, metadata=None):
+        super().__init__(task, metadata)
         self.initial_state = initial_state

@@ -18,4 +18,4 @@ class Raw(Task):
         }
 
     def is_complete(self):
-        return self.cur_time - self.start_time > self.duration * 60
+        return self.time_elapsed() > self.duration * 60

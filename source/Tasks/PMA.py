@@ -57,15 +57,15 @@ class PMA(Task):
         super().main_loop()
         food_lever = self.food_lever.check()
         if food_lever == BinaryInput.ENTERED:
-            self.events.append(InputEvent(self.Inputs.LEVER_PRESSED, self.cur_time - self.start_time))
+            self.events.append(InputEvent(self, self.Inputs.LEVER_PRESSED))
             self.food.dispense()
             self.presses += 1
         elif food_lever == BinaryInput.EXIT:
-            self.events.append(InputEvent(self.Inputs.LEVER_DEPRESSED, self.cur_time - self.start_time))
+            self.events.append(InputEvent(self, self.Inputs.LEVER_DEPRESSED))
         if self.state == self.States.INTER_TONE_INTERVAL:
-            if (not self.random and self.cur_trial < len(self.time_sequence) and self.cur_time - self.entry_time > self.time_sequence[
+            if (not self.random and self.cur_trial < len(self.time_sequence) and self.time_in_state() > self.time_sequence[
                 self.cur_trial]) or (
-                    self.random and self.cur_trial < self.ntone and self.cur_time - self.entry_time > self.iti):
+                    self.random and self.cur_trial < self.ntone and self.time_in_state() > self.iti):
                 self.change_state(self.States.TONE)
                 self.reward_available = True
                 self.tone.toggle(True)
@@ -73,13 +73,13 @@ class PMA(Task):
                     self.lever_out.send(3)
                     self.food_light.toggle(True)
         elif self.state == self.States.TONE:
-            if self.cur_time - self.entry_time > self.tone_duration - self.shock_duration:
+            if self.time_in_state() > self.tone_duration - self.shock_duration:
                 self.change_state(self.States.SHOCK)
                 self.shocker.toggle(True)
                 self.cur_trial += 1
                 self.iti = self.iti_min + (self.iti_max - self.iti_min) * random.random()
         elif self.state == self.States.SHOCK:
-            if self.cur_time - self.entry_time > self.shock_duration:
+            if self.time_in_state() > self.shock_duration:
                 self.shocker.toggle(False)
                 if (not self.random and self.cur_trial < len(self.time_sequence)) or (self.random and self.cur_trial < self.ntone):
                     self.change_state(self.States.INTER_TONE_INTERVAL)
@@ -91,7 +91,7 @@ class PMA(Task):
                     self.food_light.toggle(False)
 
     def is_complete(self):
-        return self.cur_trial == len(self.time_sequence) and self.cur_time - self.entry_time > self.post_session_time
+        return self.cur_trial == len(self.time_sequence) and self.time_in_state() > self.post_session_time
 
     def get_variables(self):
         return {

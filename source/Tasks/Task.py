@@ -61,6 +61,7 @@ class Task:
         self.paused = False  # Boolean indicator if task is paused
         self.started = False  # Boolean indicator if task has started
         self.time_into_trial = 0  # Tracks time into trial for pausing purposes
+        self.time_paused = 0
 
         # Get all default values for task variables
         for key, value in self.get_variables().items():
@@ -136,34 +137,42 @@ class Task:
     def change_state(self, new_state, metadata=None):
         self.entry_time = self.cur_time
         # Add a StateChangeEvent to the events list indicated the pair of States representing the transition
-        self.events.append(StateChangeEvent(self.state, new_state, self.entry_time-self.start_time, metadata))
+        self.events.append(StateChangeEvent(self, self.state, new_state, metadata))
         self.state = new_state
 
     def start(self):
         self.events = []
         self.started = True
         self.entry_time = self.start_time = self.cur_time = time.time()
-        self.events.append(InitialStateEvent(self.state, self.cur_time - self.start_time))
+        self.events.append(InitialStateEvent(self, self.state))
 
     def pause(self):
         self.paused = True
-        self.time_into_trial = time.time() - self.entry_time
-        self.events.append(StateChangeEvent(self.state, self.SessionStates.PAUSED, time.time() - self.start_time, None))
+        self.time_into_trial = self.time_in_state()
+        self.events.append(StateChangeEvent(self, self.state, self.SessionStates.PAUSED, None))
         self.ws.log_events(self.metadata["chamber"])
 
     def resume(self):
         self.paused = False
-        self.entry_time = time.time() - self.time_into_trial
-        self.events.append(StateChangeEvent(self.SessionStates.PAUSED, self.state, time.time() - self.start_time, None))
+        time_temp = time.time()
+        self.time_paused += time_temp - self.cur_time
+        self.cur_time = time_temp
+        self.entry_time = self.cur_time - self.time_into_trial
+        self.events.append(StateChangeEvent(self, self.SessionStates.PAUSED, self.state, None))
 
     def stop(self):
         self.started = False
         # self.events = []
-        self.events.append(FinalStateEvent(self.state, self.cur_time - self.start_time))
+        self.events.append(FinalStateEvent(self, self.state))
 
-    # Add event logging function
     def main_loop(self):
         self.cur_time = time.time()
+
+    def time_elapsed(self):
+        return self.cur_time - self.start_time - self.time_paused
+
+    def time_in_state(self):
+        return self.cur_time - self.entry_time
 
     @abstractmethod
     def get_variables(self):

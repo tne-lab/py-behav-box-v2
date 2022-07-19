@@ -45,16 +45,16 @@ class DPALInitTouch(Task):
         for touch in touches:
             if touch_in_region(self.coords[0], self.img_dim, touch):
                 touch_locs.append(1)
-                self.events.append(InputEvent(self.Inputs.FRONT_TOUCH, self.cur_time - self.start_time))
+                self.events.append(InputEvent(self, self.Inputs.FRONT_TOUCH))
             elif touch_in_region(self.coords[1], self.img_dim, touch):
                 touch_locs.append(2)
-                self.events.append(InputEvent(self.Inputs.MIDDLE_TOUCH, self.cur_time - self.start_time))
+                self.events.append(InputEvent(self, self.Inputs.MIDDLE_TOUCH))
             elif touch_in_region(self.coords[2], self.img_dim, touch):
                 touch_locs.append(3)
-                self.events.append(InputEvent(self.Inputs.REAR_TOUCH, self.cur_time - self.start_time))
+                self.events.append(InputEvent(self, self.Inputs.REAR_TOUCH))
             else:
                 touch_locs.append(0)
-                self.events.append(InputEvent(self.Inputs.ERROR_TOUCH, self.cur_time - self.start_time))
+                self.events.append(InputEvent(self, self.Inputs.ERROR_TOUCH))
         if self.state == self.States.STIMULUS_PRESENTATION:
             if len(touch_locs) > 0 and touch_locs[0] == self.correct_locations[-1] + 1:
                 self.food.dispense()
@@ -64,7 +64,7 @@ class DPALInitTouch(Task):
                 self.cur_trial += 1
                 self.tone.play_sound(1800, 1, 1)
                 self.change_state(self.States.INTER_TRIAL_INTERVAL, {"response": "correct"})
-            elif not self.must_touch and self.cur_time - self.entry_time > self.stimulus_duration:
+            elif not self.must_touch and self.time_in_state() > self.stimulus_duration:
                 self.food.dispense()
                 self.touch_screen.remove_image(self.image_folder + self.blank)
                 self.touch_screen.refresh()
@@ -72,7 +72,7 @@ class DPALInitTouch(Task):
                 self.tone.play_sound(1800, 1, 1)
                 self.change_state(self.States.INTER_TRIAL_INTERVAL, {"response": "none"})
         elif self.state == self.States.INTER_TRIAL_INTERVAL:
-            if self.cur_time - self.entry_time > self.inter_trial_interval:
+            if self.time_in_state() > self.inter_trial_interval:
                 self.change_state(self.States.STIMULUS_PRESENTATION, {"correct_location": self.correct_locations[-1]})
                 self.touch_screen.add_image(self.image_folder + self.blank, self.coords[self.correct_locations[-1]],
                                             self.img_dim)
@@ -93,7 +93,7 @@ class DPALInitTouch(Task):
         }
 
     def is_complete(self):
-        return self.cur_trial >= self.max_correct or self.cur_time - self.start_time > self.max_duration * 60
+        return self.cur_trial >= self.max_correct or self.time_elapsed() > self.max_duration * 60
 
     def generate_images(self):
         locs = list(range(len(self.coords)))
