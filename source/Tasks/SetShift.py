@@ -35,7 +35,15 @@ class SetShift(Task):
         self.cur_block = 0
         self.state = self.States.INITIATION
         self.nose_poke_lights[1].toggle(True)
+        self.house_light.toggle(True)
         super(SetShift, self).start()
+
+    def stop(self):
+        super(SetShift, self).stop()
+        self.nose_poke_lights[0].toggle(False)
+        self.nose_poke_lights[1].toggle(False)
+        self.nose_poke_lights[2].toggle(False)
+        self.house_light.toggle(False)
 
     def main_loop(self):
         super().main_loop()
@@ -56,11 +64,6 @@ class SetShift(Task):
                     self.events.append(InputEvent(self, self.Inputs.MIDDLE_EXIT))
                 elif i == 2:
                     self.events.append(InputEvent(self, self.Inputs.REAR_EXIT))
-        trough_entered = self.food_trough.check()
-        if trough_entered == BinaryInput.ENTERED:
-            self.events.append(InputEvent(self, self.Inputs.TROUGH_ENTERED))
-        elif trough_entered == BinaryInput.EXIT:
-            self.events.append(InputEvent(self, self.Inputs.TROUGH_EXIT))
         if self.state == self.States.INITIATION:  # The rat has not initiated the trial yet
             if pokes[1] == BinaryInput.ENTERED:
                 self.nose_poke_lights[1].toggle(False)
