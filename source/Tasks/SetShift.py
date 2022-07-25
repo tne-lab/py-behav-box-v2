@@ -40,9 +40,9 @@ class SetShift(Task):
 
     def stop(self):
         super(SetShift, self).stop()
-        self.nose_poke_lights[0].toggle(False)
-        self.nose_poke_lights[1].toggle(False)
-        self.nose_poke_lights[2].toggle(False)
+        for i in range(3):
+            self.nose_poke_lights[i].toggle(False)
+            self.entry_lights[i].toggle(False)
         self.house_light.toggle(False)
 
     def main_loop(self):
@@ -51,6 +51,7 @@ class SetShift(Task):
         for i in range(3):
             pokes.append(self.nose_pokes[i].check())
             if pokes[i] == BinaryInput.ENTERED:
+                self.entry_lights[i].toggle(True)
                 if i == 0:
                     self.events.append(InputEvent(self, self.Inputs.FRONT_ENTERED))
                 elif i == 1:
@@ -58,6 +59,7 @@ class SetShift(Task):
                 elif i == 2:
                     self.events.append(InputEvent(self, self.Inputs.REAR_ENTERED))
             elif pokes[i] == BinaryInput.EXIT:
+                self.entry_lights[i].toggle(False)
                 if i == 0:
                     self.events.append(InputEvent(self, self.Inputs.FRONT_EXIT))
                 elif i == 1:
