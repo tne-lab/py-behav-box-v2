@@ -27,8 +27,6 @@ class PMA(Task):
         self.iti = 0
 
     def start(self):
-        if self.ephys:
-            self.log_events([OEEvent("startRecord", 0)])
         self.cur_trial = 0
         self.state = self.States.INTER_TONE_INTERVAL
         self.iti = self.iti_min + (self.iti_max - self.iti_min) * random.random()
@@ -44,7 +42,7 @@ class PMA(Task):
     def stop(self):
         super(PMA, self).stop()
         if self.ephys:
-            self.log_events([OEEvent("stopRecord", 0)])
+            self.events.append([OEEvent(self, "stopRecord")])
         self.food_light.toggle(False)
         self.cage_light.toggle(False)
         self.fan.toggle(False)
@@ -68,14 +66,16 @@ class PMA(Task):
                     self.random and self.cur_trial < self.ntone and self.time_in_state() > self.iti):
                 self.change_state(self.States.TONE)
                 self.reward_available = True
-                self.tone.toggle(True)
+                if not self.type == 'light':
+                    self.tone.toggle(True)
                 if not self.type == 'low':
                     self.lever_out.send(3)
                     self.food_light.toggle(True)
         elif self.state == self.States.TONE:
             if self.time_in_state() > self.tone_duration - self.shock_duration:
                 self.change_state(self.States.SHOCK)
-                self.shocker.toggle(True)
+                if not self.type == 'light':
+                    self.shocker.toggle(True)
                 self.cur_trial += 1
                 self.iti = self.iti_min + (self.iti_max - self.iti_min) * random.random()
         elif self.state == self.States.SHOCK:

@@ -88,7 +88,7 @@ class OENetworkLogger(GUIEventLogger):
             self.acq_button.icon = 'Workstation/icons/stop_play.svg'
             self.acq_button.hover_icon = 'Workstation/icons/stop_play_hover.svg'
             self.acq_button.setIcon(QIcon(self.acq_button.icon))
-            self.log_events([OEEvent("startAcquisition", 0)])
+            self.log_events([OEEvent(self.cw.task, "startAcquisition")])
             self.acq = True
         elif self.acq:
             self.acq_button.icon = 'Workstation/icons/play.svg'
@@ -99,7 +99,7 @@ class OENetworkLogger(GUIEventLogger):
                 self.rec_button.hover_icon = 'Workstation/icons/record_hover.svg'
                 self.rec_button.setIcon(QIcon(self.rec_button.icon))
                 self.rec = False
-            self.log_events([OEEvent("stopAcquisition", 0)])
+            self.log_events([OEEvent(self.cw.task, "stopAcquisition")])
             self.acq = False
 
     def record(self):
@@ -110,14 +110,14 @@ class OENetworkLogger(GUIEventLogger):
             self.rec_button.icon = 'Workstation/icons/stop_record.svg'
             self.rec_button.hover_icon = 'Workstation/icons/stop_record_hover.svg'
             self.rec_button.setIcon(QIcon(self.rec_button.icon))
-            self.log_events([OEEvent("startRecord", 0)])
+            self.log_events([OEEvent(self.cw.task, "startRecord")])
             self.acq = True
             self.rec = True
         elif self.rec:
             self.rec_button.icon = 'Workstation/icons/record.svg'
             self.rec_button.hover_icon = 'Workstation/icons/record_hover.svg'
             self.rec_button.setIcon(QIcon(self.rec_button.icon))
-            self.log_events([OEEvent("stopRecord", 0)])
+            self.log_events([OEEvent(self.cw.task, "stopRecord")])
             self.rec = False
 
     def get_file_path(self):

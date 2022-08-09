@@ -128,7 +128,7 @@ class VideoSource(Source):
                         # If the video should not be saved and there is an active VIdeoWriter, close the writer
                         elif self.outs[vid] is not None:
                             self.outs[vid].release()
-                            del self.outs[vid]
+                            self.outs[vid] = None
 
                         # Refresh cv2
                         if cv2.waitKey(1) & 0xFF == ord('q'):

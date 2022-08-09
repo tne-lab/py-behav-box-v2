@@ -27,7 +27,7 @@ class PMAGUI(GUI):
         def feed_mouse_up(self, _):
             self.clicked = False
             task.food.dispense()
-            task.events.append(task, InputEvent(PMAGUI.Inputs.GUI_PELLET))
+            task.events.append(task, InputEvent(task, PMAGUI.Inputs.GUI_PELLET))
 
         def pellets_text(self):
             return [str(task.food.pellets)]

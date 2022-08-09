@@ -213,7 +213,6 @@ class Workstation:
         self.tasks[chamber].stop()  # Stop the task
         for el in self.event_loggers[chamber]:  # Close all EventLoggers and log remaining events
             el.log_events(self.tasks[chamber].events)
-            el.close()
 
     def loop(self):
         """
