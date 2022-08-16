@@ -7,7 +7,7 @@ def read_protocol_variable(row):
     elif row[2] == "TEXT":
         return row[1]
     elif row[2] == "BOOL":
-        return bool(row[1])
+        return row[1] == "True"
     elif row[2] == "PROTOCOL":
         with open(row[1], newline='') as csvfile:
             protocol_reader = csv.reader(csvfile, delimiter=',', quotechar='|')
