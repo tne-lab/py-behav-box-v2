@@ -6,7 +6,7 @@ class OEBinaryInput(BinaryInput):
     def check(self):
         json_strs = self.source.read_component(self.id)
         if len(json_strs) > 0:
-            for json_str in json_strs:
+            for json_str in reversed(json_strs):
                 if self.rising and self.falling:
                     if not self.state and json_str['metaData']['Direction'] == '1' and json_str['data']:
                         self.state = True
@@ -15,6 +15,7 @@ class OEBinaryInput(BinaryInput):
                         self.state = False
                         return self.EXIT
                 else:
+                    print(json_str)
                     if not self.state and json_str['data']:
                         self.state = True
                         return self.ENTERED

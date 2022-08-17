@@ -36,5 +36,4 @@ class OESource(Source):
         return jsonStrs
 
     def write_component(self, component_id, msg):
-        # What do enable and send pulse do?
         pass

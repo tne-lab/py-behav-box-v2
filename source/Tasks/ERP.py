@@ -25,7 +25,7 @@ class ERP(Task):
 
     def start(self):
         self.state = self.States.START_RECORD
-        self.stim.parametrize(0, [1, 3], 1800, 1800, np.array(([300, -300], [0, 0])), [90, 90])
+        self.stim.parametrize(0, 1, 180, 180, np.array(([[1, -1]])), [90, 90])
         if self.ephys:
             self.events.append(OEEvent(self, "startRecording", {"pre": "ClosedLoop"}))
         super(ERP, self).start()

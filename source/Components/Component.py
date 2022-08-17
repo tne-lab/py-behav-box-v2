@@ -52,7 +52,7 @@ class Component:
         if len(c_vars[0]) > 0:
             for v in c_vars:
                 vals = v.split("=")
-                setattr(self, vals[0], vals[1])
+                setattr(self, vals[0], eval(vals[1]))
 
     @abstractmethod
     def get_state(self): raise NotImplementedError
