@@ -141,7 +141,6 @@ class Task:
         self.state = new_state
 
     def start(self):
-        self.events = []
         self.started = True
         self.entry_time = self.start_time = self.cur_time = time.time()
         self.events.append(InitialStateEvent(self, self.state))
@@ -162,7 +161,6 @@ class Task:
 
     def stop(self):
         self.started = False
-        # self.events = []
         self.events.append(FinalStateEvent(self, self.state))
 
     def main_loop(self):

@@ -42,20 +42,25 @@ class TaskSequence(Task):
         self.cur_task.start()
 
     def start(self):
+        self.initialize()
         super(TaskSequence, self).start()
         self.start_sub()
+        self.log_sequence_events()
 
     def pause(self):
-        super(TaskSequence, self).pause()
         self.cur_task.pause()
+        self.log_sequence_events()
+        super(TaskSequence, self).pause()
 
     def stop(self):
-        super(TaskSequence, self).stop()
         self.cur_task.stop()
+        self.log_sequence_events()
+        super(TaskSequence, self).stop()
 
     def resume(self):
         super(TaskSequence, self).resume()
         self.cur_task.resume()
+        self.log_sequence_events()
 
     @abstractmethod
     def get_variables(self):

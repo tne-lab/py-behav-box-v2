@@ -94,8 +94,7 @@ class NIDAQSource(Source):
             if self.ao_task.is_task_done():
                 self.ao_task.stop()
             self.ao_task.timing.cfg_samp_clk_timing(self.components[component_id].sr,
-                                                                sample_mode=nidaqmx.constants.AcquisitionType.FINITE,
-                                                                samps_per_chan=msg.shape[1])
+                                                    sample_mode=nidaqmx.constants.AcquisitionType.FINITE,
+                                                    samps_per_chan=msg.shape[1])
             self.ao_stream.write_many_sample(np.squeeze(output))
             self.ao_task.start()
-

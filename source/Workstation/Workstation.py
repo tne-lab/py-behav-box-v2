@@ -137,8 +137,6 @@ class Workstation:
         # Create the GUI
         self.guis[chamber] = gui(self.task_gui.subsurface(col * self.w, row * self.h, self.w, self.h),
                                  self.tasks[chamber])
-        if isinstance(self.tasks[chamber], TaskSequence):
-            self.tasks[chamber].initialize()
 
     def switch_task(self, task_base, task_name, protocol=None):
         """
@@ -211,8 +209,9 @@ class Workstation:
             The chamber corresponding to the Task that should be stopped
         """
         self.tasks[chamber].stop()  # Stop the task
-        for el in self.event_loggers[chamber]:  # Close all EventLoggers and log remaining events
+        for el in self.event_loggers[chamber]:  # Log remaining events
             el.log_events(self.tasks[chamber].events)
+        self.tasks[chamber].events = []
 
     def loop(self):
         """

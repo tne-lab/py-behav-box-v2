@@ -10,7 +10,8 @@ class SequenceGUI(GUI):
         self.sub_gui = None
 
     def draw(self):
-        self.sub_gui.draw()
+        if self.sub_gui is not None:
+            self.sub_gui.draw()
 
     @abstractmethod
     def get_elements(self):
