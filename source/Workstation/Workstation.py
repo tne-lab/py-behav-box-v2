@@ -11,7 +11,6 @@ from GUIs import Colors
 from Elements.LabelElement import LabelElement
 import pygame
 from Workstation.WorkstationGUI import WorkstationGUI
-from Tasks.TaskSequence import TaskSequence
 
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *

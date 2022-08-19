@@ -5,5 +5,8 @@ nose_pokes,BinaryInput,es,3,2,3
 nose_poke_lights,Toggle,es,4,0,3
 nose_poke_lights,Toggle,es,5,1,3
 nose_poke_lights,Toggle,es,6,2,3
+entry_lights,Toggle,es,9,0,3
+entry_lights,Toggle,es,10,1,3
+entry_lights,Toggle,es,11,2,3
 food,FoodDispenser,es,7,0,0
 house_light,Toggle,es,8,0,0
