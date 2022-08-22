@@ -1,3 +1,4 @@
+from datetime import datetime
 import os
 import threading
 import time
@@ -66,7 +67,9 @@ class VideoSource(Source):
         self.frame_times[component.id] = time.perf_counter()
         self.do_close[component.id] = False
         desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
-        self.out_paths[component.id] = "{}\\py-behav\\{}\\".format(desktop, type(task).__name__)
+        self.out_paths[component.id] = "{}\\py-behav\\{}\\Data\\{}\\{}\\".format(desktop, type(task).__name__,
+                                                                                 task.metadata.subject,
+                                                                                 datetime.now().strftime("%m-%d-%Y"))
         if not self.caps[component.id].isOpened():
             print('error opening vid')
 
@@ -119,10 +122,11 @@ class VideoSource(Source):
                                 fourcc = cv2.VideoWriter_fourcc(*'XVID')  # for AVI files
                                 if not os.path.exists(self.out_paths[vid] + "Videos"):
                                     os.makedirs(self.out_paths[vid] + "Videos")
-                                self.outs[vid] = cv2.VideoWriter(self.out_paths[vid] + "Videos\\" + self.components[vid].name + ".avi", fourcc,
-                                                                 int(self.components[vid].fr), (
-                                                                     int(self.caps[vid].get(3)),
-                                                                     int(self.caps[vid].get(4))))
+                                self.outs[vid] = cv2.VideoWriter(
+                                    self.out_paths[vid] + self.components[vid].name + ".avi", fourcc,
+                                    int(self.components[vid].fr), (
+                                        int(self.caps[vid].get(3)),
+                                        int(self.caps[vid].get(4))))
                             # Write the current frame to the output file
                             self.outs[vid].write(self.cur_frames[vid])
                         # If the video should not be saved and there is an active VIdeoWriter, close the writer
