@@ -23,11 +23,13 @@ class MiddleNosePokeTraining(Task):
     def start(self):
         self.state = self.States.INTER_TRIAL_INTERVAL
         self.house_light.toggle(True)
+        self.house_light2.toggle(True)
         super(MiddleNosePokeTraining, self).start()
 
     def stop(self):
         super(MiddleNosePokeTraining, self).stop()
         self.house_light.toggle(False)
+        self.house_light2.toggle(False)
         self.nose_poke_lights[1].toggle(False)
 
     def main_loop(self):
