@@ -76,7 +76,7 @@ class NIDAQSource(Source):
             self.components[component.id] = component
 
     def close_source(self):
-        for c in self.tasks:
+        for c in self.tasks.values():
             c.close()
 
     def close_component(self, component_id):

@@ -5,10 +5,11 @@ import time
 class Video(Component):
     def __init__(self, source, component_id, component_address, metadata=""):
         self.state = False
-        self.name = str(time.time())
+        self.name = None
         super().__init__(source, component_id, component_address, metadata)
 
     def start(self):
+        self.name = str(time.time())
         self.state = True
 
     def stop(self):

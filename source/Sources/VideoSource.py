@@ -56,6 +56,7 @@ class VideoSource(Source):
         self.frame_times = {}
         self.do_close = {}
         self.available = True
+        self.tasks = {}
         vt = threading.Thread(target=self.run, args=[])
         vt.start()
 
@@ -67,9 +68,8 @@ class VideoSource(Source):
         self.frame_times[component.id] = time.perf_counter()
         self.do_close[component.id] = False
         desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
-        self.out_paths[component.id] = "{}\\py-behav\\{}\\Data\\{}\\{}\\".format(desktop, type(task).__name__,
-                                                                                 task.metadata.subject,
-                                                                                 datetime.now().strftime("%m-%d-%Y"))
+        self.out_paths[component.id] = "{}\\py-behav\\{}\\Data\\{{}}\\{{}}\\".format(desktop, type(task).__name__)
+        self.tasks[component.id] = task
         if not self.caps[component.id].isOpened():
             print('error opening vid')
 
@@ -103,6 +103,7 @@ class VideoSource(Source):
                     del self.frame_times[vid]
                     del self.out_paths[vid]
                     del self.do_close[vid]
+                    del self.tasks[vid]
                 # If the camera is available and more than a frame has passed since the last acquisition
                 elif self.caps[vid].isOpened() and time.perf_counter() - self.frame_times[vid] > 1 / int(
                         self.components[vid].fr):
@@ -120,10 +121,8 @@ class VideoSource(Source):
                             # If an output object has not yet been created, generate a VideoWriter
                             if self.outs[vid] is None:
                                 fourcc = cv2.VideoWriter_fourcc(*'XVID')  # for AVI files
-                                if not os.path.exists(self.out_paths[vid] + "Videos"):
-                                    os.makedirs(self.out_paths[vid] + "Videos")
                                 self.outs[vid] = cv2.VideoWriter(
-                                    self.out_paths[vid] + self.components[vid].name + ".avi", fourcc,
+                                    self.out_paths[vid].format(self.tasks[vid].metadata["subject"], datetime.now().strftime("%m-%d-%Y")) + self.components[vid].name + ".avi", fourcc,
                                     int(self.components[vid].fr), (
                                         int(self.caps[vid].get(3)),
                                         int(self.caps[vid].get(4))))
