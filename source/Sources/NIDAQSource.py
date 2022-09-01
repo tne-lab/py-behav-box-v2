@@ -80,7 +80,12 @@ class NIDAQSource(Source):
             c.close()
 
     def close_component(self, component_id):
-        if self.available:
+        if self.components[component_id].get_type() == Component.Type.ANALOG_OUTPUT:
+            if self.ao_task is not None:
+                self.ao_task.close()
+                self.ao_task = None
+                self.ao_stream = None
+        elif self.available:
             self.tasks[component_id].close()
             del self.tasks[component_id]
             del self.components[component_id]

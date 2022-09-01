@@ -15,7 +15,6 @@ class OEBinaryInput(BinaryInput):
                         self.state = False
                         return self.EXIT
                 else:
-                    print(json_str)
                     if not self.state and json_str['data']:
                         self.state = True
                         return self.ENTERED

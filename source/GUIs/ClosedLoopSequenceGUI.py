@@ -1,11 +1,10 @@
-import math
 from types import MethodType
 from typing import List
 
 from Elements.Element import Element
 from GUIs.SequenceGUI import SequenceGUI
 
-from source.Elements.InfoBoxElement import InfoBoxElement
+from Elements.InfoBoxElement import InfoBoxElement
 
 
 class ClosedLoopSequenceGUI(SequenceGUI):

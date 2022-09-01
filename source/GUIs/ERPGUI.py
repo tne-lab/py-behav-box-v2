@@ -7,7 +7,7 @@ from Elements.FanElement import FanElement
 from GUIs import Colors
 from GUIs.GUI import GUI
 
-from source.Elements.InfoBoxElement import InfoBoxElement
+from Elements.InfoBoxElement import InfoBoxElement
 
 
 class ERPGUI(GUI):
