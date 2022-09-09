@@ -1,5 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from Tasks.Task import Task
+import time
 
 
 class TaskSequence(Task):
@@ -8,16 +9,44 @@ class TaskSequence(Task):
     def __init__(self, *args):
         super().__init__(*args)
         self.cur_task = None
-        self.init_name = None
+        self.init_task = None
         self.init_protocol = None
         self.sub_start_time = 0
+        self.init_sequence__()
+
+    @staticmethod
+    @abstractmethod
+    def get_tasks():
+        raise NotImplementedError
+
+    @staticmethod
+    def get_sequence_components():
+        return {}
+
+    def get_components(self):
+        components = {}
+        for task in self.get_tasks():
+            sub_components = task.get_components()
+            for name in sub_components:
+                if name not in components:
+                    components[name] = sub_components[name]
+                elif len(components[name]) < len(sub_components[name]):
+                    components[name] = sub_components[name]
+        components.update(self.get_sequence_components())
+        return components
 
     def initialize(self):
-        self.cur_task = self.ws.switch_task(self, self.init_name, self.init_protocol)
+        self.cur_task = self.ws.switch_task(self, self.init_task, self.init_protocol)
 
-    def init_sequence(self, task, protocol):
-        self.init_name = task
-        self.init_protocol = protocol
+    def init_sequence__(self):
+        res = self.init_sequence()
+        self.init_task = res[0]
+        if len(res) > 1:
+            self.init_protocol = res[1]
+
+    @abstractmethod
+    def init_sequence(self):
+        raise NotImplementedError
 
     def switch_task(self, task, seq_state, protocol, metadata=None):
         self.cur_task.stop()
@@ -33,39 +62,33 @@ class TaskSequence(Task):
             event.entry_time += self.sub_start_time - self.start_time
         self.events.extend(sub_events)
 
-    def main_loop(self):
-        super(TaskSequence, self).main_loop()
-        self.cur_task.main_loop()
+    def main_loop__(self):
+        self.cur_time = time.time()
+        self.cur_task.main_loop__()
+        self.main_loop()
+        self.log_sequence_events()
 
     def start_sub(self):
         self.sub_start_time = self.cur_time
-        self.cur_task.start()
+        self.cur_task.start__()
 
-    def start(self):
+    def start__(self):
         self.initialize()
-        super(TaskSequence, self).start()
+        super(TaskSequence, self).start__()
         self.start_sub()
         self.log_sequence_events()
 
-    def pause(self):
-        self.cur_task.pause()
+    def pause__(self):
+        self.cur_task.pause__()
         self.log_sequence_events()
-        super(TaskSequence, self).pause()
+        super(TaskSequence, self).pause__()
 
-    def stop(self):
-        self.cur_task.stop()
+    def stop__(self):
+        self.cur_task.stop__()
         self.log_sequence_events()
-        super(TaskSequence, self).stop()
+        super(TaskSequence, self).stop__()
 
-    def resume(self):
-        super(TaskSequence, self).resume()
-        self.cur_task.resume()
+    def resume__(self):
+        super(TaskSequence, self).resume__()
+        self.cur_task.resume__()
         self.log_sequence_events()
-
-    @abstractmethod
-    def get_variables(self):
-        raise NotImplementedError
-
-    @abstractmethod
-    def is_complete(self):
-        raise NotImplementedError

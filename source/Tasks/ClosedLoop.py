@@ -3,6 +3,7 @@ from enum import Enum
 import numpy as np
 from Tasks.Task import Task
 from Components.BinaryInput import BinaryInput
+from Components.Stimmer import Stimmer
 from Events.InputEvent import InputEvent
 
 from Events.OEEvent import OEEvent
@@ -18,22 +19,44 @@ class ClosedLoop(Task):
         STIM = 0
         SHAM = 1
 
-    def __init__(self, *args):
-        super().__init__(*args)
-        self.last_pulse_time = 0
-        self.pulse_count = 0
-        self.stim_last = False
-        self.complete = False
+    @staticmethod
+    def get_components():
+        return {
+            'threshold': [BinaryInput],
+            'stim': [Stimmer],
+            'sham': [Stimmer]
+        }
+
+    # noinspection PyMethodMayBeStatic
+    def get_constants(self):
+        return {
+            'record_lockout': 4,
+            'duration': 30,
+            'min_pulse_separation': 2,
+            'stim_dur': 180,
+            'period': 180,
+            'amps': ([[1, -1]]),
+            'pws': [90, 90]
+        }
+
+    # noinspection PyMethodMayBeStatic
+    def get_variables(self):
+        return {
+            'last_pulse_time': 0,
+            'pulse_count': 0,
+            'stim_last': False,
+            'complete': False
+        }
+
+    def init_state(self):
+        return self.States.START_RECORD
 
     def start(self):
-        self.state = self.States.START_RECORD
-        self.stim.parametrize(0, 1, 180, 180, np.array(([[1, -1]])), [90, 90])
-        self.sham.parametrize(0, 1, 180, 180, np.array(([[1, -1]])), [90, 90])
+        self.stim.parametrize(0, 1, self.stim_dur, self.period, np.array(self.amps), self.pws)
+        self.sham.parametrize(0, 1, self.stim_dur, self.period, np.array(self.amps), self.pws)
         self.events.append(OEEvent(self, "startRecording", {"pre": "ClosedLoop"}))
-        super(ClosedLoop, self).start()
 
     def main_loop(self):
-        super().main_loop()
         thr = self.threshold.check()
         if self.state == self.States.START_RECORD:
             if self.time_in_state() > self.record_lockout:
@@ -52,13 +75,6 @@ class ClosedLoop(Task):
                         self.events.append(InputEvent(self, self.Inputs.SHAM))
                         self.sham.start(0)
                     self.stim_last = not self.stim_last
-
-    def get_variables(self):
-        return {
-            'record_lockout': 4,
-            'duration': 30,
-            'min_pulse_separation': 2
-        }
 
     def is_complete(self):
         return self.state == self.States.STOP_RECORD and self.time_in_state() > self.record_lockout

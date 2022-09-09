@@ -42,7 +42,7 @@ class Component:
         ANALOG_OUTPUT = 3  # The Component solely receives analog output
         INPUT = 4  # Arbitrary input type
         OUTPUT = 5  # Arbitrary output type
-        BOTH = 2  # The Component both inputs and outputs (arbitrary type)
+        BOTH = 6  # The Component both inputs and outputs (arbitrary type)
 
     def __init__(self, source, component_id, component_address, metadata=""):
         self.id = component_id  # The unique identifier for the component or set of related components
@@ -53,6 +53,12 @@ class Component:
             for v in c_vars:
                 vals = v.split("=")
                 setattr(self, vals[0], eval(vals[1]))
+
+    def write(self, msg):
+        self.source.write_component(self.id, msg)
+
+    def read(self):
+        return self.source.read_component(self.id)
 
     @abstractmethod
     def get_state(self): raise NotImplementedError

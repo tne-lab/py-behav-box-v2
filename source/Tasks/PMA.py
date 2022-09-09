@@ -2,6 +2,10 @@ import random
 from enum import Enum
 
 from Components.BinaryInput import BinaryInput
+from Components.Toggle import Toggle
+from Components.FoodDispenser import FoodDispenser
+from Components.Video import Video
+from Components.ByteOutput import ByteOutput
 from Events.InputEvent import InputEvent
 from Tasks.Task import Task
 
@@ -19,28 +23,56 @@ class PMA(Task):
         LEVER_PRESSED = 0
         LEVER_DEPRESSED = 1
 
-    def __init__(self, *args):
-        super().__init__(*args)
-        self.cur_trial = 0
-        self.reward_available = False
-        self.presses = 0
-        self.iti = 0
+    @staticmethod
+    def get_components():
+        return {
+            'food_lever': [BinaryInput],
+            'cage_light': [Toggle],
+            'food': [FoodDispenser],
+            'fan': [Toggle],
+            'lever_out': [ByteOutput],
+            'food_light': [Toggle],
+            'shocker': [Toggle],
+            'tone': [Toggle],
+            'cam': [Video]
+        }
+
+    # noinspection PyMethodMayBeStatic
+    def get_constants(self):
+        return {
+            'ephys': False,
+            'type': 'low',
+            'random': True,
+            'ntone': 20,
+            'iti_min': 50,
+            'iti_max': 150,
+            'tone_duration': 30,
+            'time_sequence': [96, 75, 79, 90, 80, 97, 88, 104, 77, 99, 102, 88, 101, 100, 96, 87, 78, 93, 89, 98],
+            'shock_duration': 2,
+            'post_session_time': 45,
+        }
+
+    # noinspection PyMethodMayBeStatic
+    def get_variables(self):
+        return {
+            "cur_trial": 0,
+            "reward_available": False,
+            "presses": 0,
+            "iti": self.iti_min + (self.iti_max - self.iti_min) * random.random()
+        }
+
+    def init_state(self):
+        return self.States.INTER_TONE_INTERVAL
 
     def start(self):
-        self.cur_trial = 0
-        self.state = self.States.INTER_TONE_INTERVAL
-        self.iti = self.iti_min + (self.iti_max - self.iti_min) * random.random()
         self.cage_light.toggle(True)
         self.cam.start()
         self.fan.toggle(True)
-        self.presses = 0
         if self.type == 'low':
             self.lever_out.send(3)
             self.food_light.toggle(True)
-        super(PMA, self).start()
 
     def stop(self):
-        super(PMA, self).stop()
         if self.ephys:
             self.events.append([OEEvent(self, "stopRecord")])
         self.food_light.toggle(False)
@@ -52,7 +84,6 @@ class PMA(Task):
         self.cam.stop()
 
     def main_loop(self):
-        super().main_loop()
         food_lever = self.food_lever.check()
         if food_lever == BinaryInput.ENTERED:
             self.events.append(InputEvent(self, self.Inputs.LEVER_PRESSED))
@@ -92,17 +123,3 @@ class PMA(Task):
 
     def is_complete(self):
         return self.cur_trial == len(self.time_sequence) and self.time_in_state() > self.post_session_time
-
-    def get_variables(self):
-        return {
-            'ephys': False,
-            'type': 'low',
-            'random': True,
-            'ntone': 20,
-            'iti_min': 50,
-            'iti_max': 150,
-            'tone_duration': 30,
-            'time_sequence': [96, 75, 79, 90, 80, 97, 88, 104, 77, 99, 102, 88, 101, 100, 96, 87, 78, 93, 89, 98],
-            'shock_duration': 2,
-            'post_session_time': 45,
-        }

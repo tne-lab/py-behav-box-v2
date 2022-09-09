@@ -191,13 +191,13 @@ class ChamberWidget(QGroupBox):
             self.play_button.icon = 'Workstation/icons/pause.svg'
             self.play_button.hover_icon = 'Workstation/icons/pause_hover.svg'
             self.play_button.setIcon(QIcon(self.play_button.icon))
-            self.task.resume()  # Resume the task
+            self.task.resume__()  # Resume the task
         else:  # The task is currently playing
             # Change the play to a pause button
             self.play_button.icon = 'Workstation/icons/play.svg'
             self.play_button.hover_icon = 'Workstation/icons/play_hover.svg'
             self.play_button.setIcon(QIcon(self.play_button.icon))
-            self.task.pause()  # Pause the task
+            self.task.pause__()  # Pause the task
 
     def stop(self):
         """

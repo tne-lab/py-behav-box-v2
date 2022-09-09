@@ -27,8 +27,10 @@ class EmptySource(Source):
     def __init__(self):
         self.components = {}
         self.values = {}
+        self.next_id = 0
 
     def register_component(self, _, component):
+        self.next_id += 1
         self.components[component.id] = component.address
         self.values[component.id] = component.get_state()
 

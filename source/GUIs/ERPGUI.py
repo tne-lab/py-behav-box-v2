@@ -26,7 +26,6 @@ class ERPGUI(GUI):
                             'BOTTOM', ['0'], int(self.SF * 14), self.SF)
         ne.get_text = MethodType(pulses_remaining, ne)
         self.info_boxes.append(ne)
-        self.fan = FanElement(self.task_gui, self.SF * 210, self.SF * 20, self.SF * 40, task.fan)
 
     def draw(self):
         self.task_gui.fill(Colors.darkgray)
@@ -34,4 +33,4 @@ class ERPGUI(GUI):
             el.draw()
 
     def get_elements(self) -> List[Element]:
-        return [self.fan, *self.info_boxes]
+        return [*self.info_boxes]

@@ -8,7 +8,7 @@ from Tasks.Task import Task
 from Utilities.touch_in_region import touch_in_region
 
 
-class Bandit(Task):
+class Bandit(Task):  # NOT FUNCTIONAL
     class States(Enum):
         INITIATION = 0
         STIMULUS_PRESENTATION = 1

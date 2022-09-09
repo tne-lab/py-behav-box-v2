@@ -2,6 +2,10 @@ from enum import Enum
 
 import random
 from Components.BinaryInput import BinaryInput
+from Components.Toggle import Toggle
+from Components.FoodDispenser import FoodDispenser
+from Components.Video import Video
+from Components.ByteOutput import ByteOutput
 from Events.InputEvent import InputEvent
 from Tasks.Task import Task
 
@@ -15,24 +19,45 @@ class BarPress(Task):
         LEVER_PRESSED = 0
         LEVER_DEPRESSED = 1
 
-    def __init__(self, *args):
-        super().__init__(*args)
-        self.presses = 0
-        self.lockout = 0
+    @staticmethod
+    def get_components():
+        return {
+            'food_lever': [BinaryInput],
+            'cage_light': [Toggle],
+            'food': [FoodDispenser],
+            'fan': [Toggle],
+            'lever_out': [ByteOutput],
+            'food_light': [Toggle],
+            'cam': [Video]
+        }
+
+    # noinspection PyMethodMayBeStatic
+    def get_constants(self):
+        return {
+            'duration': 40,
+            'reward_lockout': False,
+            'reward_lockout_min': 25,
+            'reward_lockout_max': 35
+        }
+
+    # noinspection PyMethodMayBeStatic
+    def get_variables(self):
+        return {
+            'lockout': 0,
+            'presses': 0
+        }
+
+    def init_state(self):
+        return self.States.REWARD_AVAILABLE
 
     def start(self):
-        self.state = self.States.REWARD_AVAILABLE
         self.cage_light.toggle(True)
         self.cam.start()
         self.fan.toggle(True)
-        self.presses = 0
         self.lever_out.send(3)
         self.food_light.toggle(True)
-        self.lockout = 0
-        super(BarPress, self).start()
 
     def stop(self):
-        super(BarPress, self).stop()
         self.food_light.toggle(False)
         self.cage_light.toggle(False)
         self.fan.toggle(False)
@@ -40,7 +65,6 @@ class BarPress(Task):
         self.cam.stop()
 
     def main_loop(self):
-        super().main_loop()
         food_lever = self.food_lever.check()
         pressed = False
         if food_lever == BinaryInput.ENTERED:
@@ -61,11 +85,3 @@ class BarPress(Task):
 
     def is_complete(self):
         return self.time_elapsed() > self.duration * 60.0
-
-    def get_variables(self):
-        return {
-            'duration': 40,
-            'reward_lockout': False,
-            'reward_lockout_min': 25,
-            'reward_lockout_max': 35
-        }

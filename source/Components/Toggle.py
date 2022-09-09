@@ -36,7 +36,7 @@ class Toggle(Component):
         super().__init__(source, component_id, component_address, metadata)
 
     def toggle(self, on):
-        self.source.write_component(self.id, on)
+        self.write(on)
         self.state = on
 
     def get_state(self):

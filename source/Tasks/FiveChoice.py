@@ -2,6 +2,8 @@ import random
 from enum import Enum
 
 from Components.BinaryInput import BinaryInput
+from Components.FoodDispenser import FoodDispenser
+from Components.Toggle import Toggle
 from Events.InputEvent import InputEvent
 from Tasks.Task import Task
 
@@ -61,24 +63,46 @@ class FiveChoice(Task):
         NP5_ENTERED = 10
         NP5_EXIT = 11
 
-    def __init__(self, *args):
-        super().__init__(*args)
-        self.cur_trial = 0
+    @staticmethod
+    def get_components():
+        return {
+            "nose_pokes": [BinaryInput, BinaryInput, BinaryInput, BinaryInput, BinaryInput],
+            "nose_poke_lights": [Toggle, Toggle, Toggle, Toggle, Toggle],
+            "food_trough": [BinaryInput],
+            "food": [FoodDispenser],
+            "food_light": [Toggle]
+        }
+
+    # noinspection PyMethodMayBeStatic
+    def get_constants(self):
+        return {
+            'max_duration': 30,  # The max time the task can take in seconds
+            'max_trials': 100,  # The maximum number of trials the rat can do
+            'inter_trial_interval': 5,  # Time between initiation and stimulus presentation
+            'stimulus_duration': 0.5,  # Time the stimulus is presented for
+            'limited_hold_duration': 5,  # Time after stimulus presentation during which the rat can decide
+            'post_response_interval': 5,  # Time after response before the rat can initiate again
+            'sequence': [random.randint(0, 4) for _ in range(100)]  # Sequence of stimulus presentations
+        }
+
+    # noinspection PyMethodMayBeStatic
+    def get_variables(self):
+        return {
+            "cur_trial": 0
+        }
+
+    def init_state(self):
+        return self.States.INITIATION
 
     def start(self):
-        self.cur_trial = 0
-        self.state = self.States.INITIATION
         self.food_light.toggle(True)
-        super(FiveChoice, self).start()
 
     def stop(self):
-        super(FiveChoice, self).stop()
         self.food_light.toggle(False)
         for light in self.nose_poke_lights:
             light.toggle(False)
 
     def main_loop(self):
-        super().main_loop()
         pokes = []
         # Output events for pokes that were entered/exited
         for i in range(5):
@@ -150,18 +174,6 @@ class FiveChoice(Task):
                 self.change_state(self.States.INITIATION)
                 self.food_light.toggle(True)  # Turn the food light on
                 self.cur_trial += 1
-        return self.events
-
-    def get_variables(self):
-        return {
-            'max_duration': 30,  # The max time the task can take in seconds
-            'max_trials': 100,  # The maximum number of trials the rat can do
-            'inter_trial_interval': 5,  # Time between initiation and stimulus presentation
-            'stimulus_duration': 0.5,  # Time the stimulus is presented for
-            'limited_hold_duration': 5,  # Time after stimulus presentation during which the rat can decide
-            'post_response_interval': 5,  # Time after response before the rat can initiate again
-            'sequence': [random.randint(0, 4) for _ in range(100)]  # Sequence of stimulus presentations
-        }
 
     def is_complete(self):
         return self.cur_trial == self.max_trials or self.time_elapsed() > self.max_duration * 60

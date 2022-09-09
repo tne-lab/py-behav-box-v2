@@ -145,16 +145,14 @@ class Workstation:
         ----------
         task_base : Task
             The base Task of the sequence
-        task_name : str
+        task_name : Class
             The next Task in the sequence
         protocol : dict
             Dictionary representing the protocol for the new Task
         """
-        task_module = importlib.import_module("Tasks." + task_name)
-        task = getattr(task_module, task_name)
         # Create the new Task as part of a sequence
-        new_task = task(task_base, task_base.components, protocol)
-        gui = getattr(importlib.import_module("GUIs." + task_name + "GUI"), task_name + "GUI")
+        new_task = task_name(task_base, task_base.components, protocol)
+        gui = getattr(importlib.import_module("GUIs." + task_name.__name__ + "GUI"), task_name.__name__ + "GUI")
         # Position the GUI in pygame
         col = task_base.metadata['chamber'] % self.n_col
         row = math.floor(task_base.metadata['chamber'] / self.n_col)
@@ -192,7 +190,7 @@ class Workstation:
         chamber : int
             The chamber corresponding to the Task that should be started
         """
-        self.tasks[chamber].start()  # Start the Task
+        self.tasks[chamber].start__()  # Start the Task
         for el in self.event_loggers[chamber]:  # Start all EventLoggers and log initial events
             el.start()
             el.log_events(self.tasks[chamber].events)
@@ -207,7 +205,7 @@ class Workstation:
         chamber : int
             The chamber corresponding to the Task that should be stopped
         """
-        self.tasks[chamber].stop()  # Stop the task
+        self.tasks[chamber].stop__()  # Stop the task
         for el in self.event_loggers[chamber]:  # Log remaining events
             el.log_events(self.tasks[chamber].events)
         self.tasks[chamber].events = []
@@ -220,7 +218,7 @@ class Workstation:
         events = pygame.event.get()  # Get mouse/keyboard events
         for key in self.tasks:  # For each Task
             if self.tasks[key].started and not self.tasks[key].paused:  # If the Task has been started and is not paused
-                self.tasks[key].main_loop()  # Run the Task's logic loop
+                self.tasks[key].main_loop__()  # Run the Task's logic loop
                 self.guis[key].handle_events(events)  # Handle mouse/keyboard events with the Task GUI
                 self.log_events(key)  # Log Events with all associated EventLoggers
                 if self.tasks[key].is_complete():  # Stop the Task if it is complete

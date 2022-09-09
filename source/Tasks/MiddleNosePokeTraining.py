@@ -3,6 +3,8 @@ from enum import Enum
 from Tasks.Task import Task
 
 from Components.BinaryInput import BinaryInput
+from Components.FoodDispenser import FoodDispenser
+from Components.Toggle import Toggle
 from Events.InputEvent import InputEvent
 
 
@@ -16,24 +18,42 @@ class MiddleNosePokeTraining(Task):
         MIDDLE_EXIT = 1
         RESET_PRESSED = 2
 
-    def __init__(self, *args):
-        super().__init__(*args)
-        self.pokes = 0
+    @staticmethod
+    def get_components(self):
+        return {
+            'nose_pokes': [BinaryInput, BinaryInput, BinaryInput],
+            'nose_poke_lights': [Toggle, Toggle, Toggle],
+            'food': [FoodDispenser],
+            'house_light': [Toggle]
+        }
+
+    # noinspection PyMethodMayBeStatic
+    def get_constants(self):
+        return {
+            "pokes": 0
+        }
+
+    # noinspection PyMethodMayBeStatic
+    def get_variables(self):
+        return {
+            'max_duration': 1.5,
+            'pokes_to_complete': 20,
+            'inter_trial_interval': 15
+        }
+
+    def init_state(self):
+        return self.States.INTER_TRIAL_INTERVAL
 
     def start(self):
-        self.state = self.States.INTER_TRIAL_INTERVAL
         self.house_light.toggle(True)
         self.house_light2.toggle(True)
-        super(MiddleNosePokeTraining, self).start()
 
     def stop(self):
-        super(MiddleNosePokeTraining, self).stop()
         self.house_light.toggle(False)
         self.house_light2.toggle(False)
         self.nose_poke_lights[1].toggle(False)
 
     def main_loop(self):
-        super().main_loop()
         middle_poke = self.nose_pokes[1].check()
         if middle_poke == BinaryInput.ENTERED:
             self.events.append(InputEvent(self, self.Inputs.MIDDLE_ENTERED))
@@ -53,13 +73,6 @@ class MiddleNosePokeTraining(Task):
             if self.time_in_state() > self.inter_trial_interval:
                 self.nose_poke_lights[1].toggle(True)
                 self.change_state(self.States.ACTIVE)
-
-    def get_variables(self):
-        return {
-            'max_duration': 1.5,
-            'pokes_to_complete': 20,
-            'inter_trial_interval': 15
-        }
 
     def is_complete(self):
         return self.time_elapsed() > self.max_duration * 60 * 60 or self.pokes == self.pokes_to_complete
