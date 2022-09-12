@@ -46,11 +46,11 @@ class TouchScreen(Component):
         get_type()
             Returns Component.Type.BOTH
         """
-    def __init__(self, source, component_id, component_address, metadata=""):
+    def __init__(self, source, component_id, component_address):
         self.image_containers = {}
         self.touches = []
         self.handled_touches = []
-        super().__init__(source, component_id, component_address, metadata)
+        super().__init__(source, component_id, component_address)
         self.display_size = source.display_size
         self.refresh()
 

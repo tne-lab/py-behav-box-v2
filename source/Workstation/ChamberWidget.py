@@ -155,7 +155,7 @@ class ChamberWidget(QGroupBox):
         file_name = QFileDialog.getOpenFileName(self, 'Select File',
                                                 "{}/py-behav/{}/{}/".format(desktop, self.task_name.currentText(),
                                                                             dir_type),
-                                                '*.csv')
+                                                '*.py')
         if len(file_name[0]) > 0:  # If a file was selected
             le.setText(file_name[0])
             self.refresh()  # Update the Task representation with the new file

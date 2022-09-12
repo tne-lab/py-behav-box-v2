@@ -1,14 +1,14 @@
 import time
 from abc import ABCMeta, abstractmethod
-import csv
 import importlib
 from enum import Enum
+import runpy
 
 from Components import *
 from Events.StateChangeEvent import StateChangeEvent
 from Events.InitialStateEvent import InitialStateEvent
 from Events.FinalStateEvent import FinalStateEvent
-from Utilities.read_protocol_variable import read_protocol_variable
+from Utilities.AddressFile import AddressFile
 
 
 class Task:
@@ -109,40 +109,33 @@ class Task:
             self.components = []
 
             # Open the provided AddressFile
-            if len(address_file) > 0:
-                with open(address_file, newline='') as csvfile:
-                    address_reader = csv.reader(csvfile, delimiter=',', quotechar='|')
-                    # Each row in the AddressFile corresponds to a Task Component
-                    for row in address_reader:
+            if isinstance(address_file, str) and len(address_file) > 0:
+                file_globals = runpy.run_path(address_file, {"AddressFile": AddressFile})
+                for cid in file_globals['addresses'].addresses:
+                    comps = file_globals['addresses'].addresses[cid]
+                    for i, comp in enumerate(comps):
                         # Import and instantiate the indicated Component with the provided ID and address
-                        component_type = getattr(importlib.import_module("Components." + row[1]), row[1])
-                        if issubclass(component_type, component_definition[row[0]][int(row[4])]):
-                            if len(row) > 6:
-                                component = component_type(sources[row[2]],
-                                                           row[0] + "-" + str(self.metadata["chamber"]) + "-" + str(
-                                                               row[4]),
-                                                           row[3], row[6])
-                            else:
-                                component = component_type(sources[row[2]],
-                                                           row[0] + "-" + str(self.metadata["chamber"]) + "-" + str(
-                                                               row[4]),
-                                                           row[3])
-                            sources[row[2]].register_component(self, component)
+                        component_type = getattr(importlib.import_module("Components." + comp.component_type), comp.component_type)
+                        if issubclass(component_type, component_definition[cid][i]):
+                            component = component_type(sources[comp.source_name], "{}-{}-{}".format(cid, str(self.metadata["chamber"]), str(i)), comp.component_address)
+                            if comp.metadata is not None:
+                                component.initialize()
+                            sources[comp.source_name].register_component(cid, component)
                             # If the ID has yet to be registered
-                            if not hasattr(self, row[0]):
+                            if not hasattr(self, cid):
                                 # If the Component is part of a list
-                                if int(row[5]) > 1:
+                                if len(comps) > 1:
                                     # Create the list and add the Component at the specified index
-                                    component_list = [None] * int(row[5])
-                                    component_list[int(row[4])] = component
-                                    setattr(self, row[0], component_list)
+                                    component_list = [None] * int(len(comps))
+                                    component_list[i] = component
+                                    setattr(self, cid, component_list)
                                 else:  # If the Component is unique
-                                    setattr(self, row[0], component)
+                                    setattr(self, cid, component)
                             else:  # If the Component is part of an already registered list
                                 # Update the list with the Component at the specified index
-                                component_list = getattr(self, row[0])
-                                component_list[int(row[4])] = component
-                                setattr(self, row[0], component_list)
+                                component_list = getattr(self, cid)
+                                component_list[i] = component
+                                setattr(self, cid, component_list)
                             self.components.append(component)
                         else:
                             raise InvalidComponentTypeError
@@ -173,10 +166,10 @@ class Task:
 
             # If a Protocol is provided, replace all indicated variables with the values from the Protocol
             if isinstance(protocol, str) and len(protocol) > 0:
-                with open(protocol, newline='') as csvfile:
-                    protocol_reader = csv.reader(csvfile, delimiter=',', quotechar='|')
-                    for row in protocol_reader:
-                        setattr(self, row[0], read_protocol_variable(row))
+                file_globals = runpy.run_path(protocol)
+                for cons in file_globals['protocol']:
+                    if hasattr(self, cons):
+                        setattr(self, cons, file_globals['protocol'][cons])
         self.init()
 
     def init(self):

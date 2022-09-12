@@ -7,11 +7,11 @@ from Components.Component import Component
 
 class WaveformStim(Stimmer):
 
-    def __init__(self, source, component_id, component_address, metadata=""):
+    def __init__(self, source, component_id, component_address):
         self.state = False
         self.configs = {}
-        super().__init__(source, component_id, component_address, metadata)
-        self.sr = int(self.sr)
+        super().__init__(source, component_id, component_address)
+        self.sr = None
 
     def parametrize(self, pnum, _, per, dur, amps, durs):
         waveforms = np.zeros((amps.shape[0], math.ceil(dur/1000000*self.sr) + 1))

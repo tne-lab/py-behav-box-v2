@@ -7,9 +7,9 @@ class BinaryInput(Component):
     ENTERED = 1
     EXIT = 2
 
-    def __init__(self, source, component_id, component_address, metadata=""):
+    def __init__(self, source, component_id, component_address):
         self.state = False
-        super().__init__(source, component_id, component_address, metadata)
+        super().__init__(source, component_id, component_address)
 
     def check(self):
         value = self.source.read_component(self.id)

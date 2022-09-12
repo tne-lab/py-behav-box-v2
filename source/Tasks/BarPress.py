@@ -37,7 +37,8 @@ class BarPress(Task):
             'duration': 40,
             'reward_lockout': False,
             'reward_lockout_min': 25,
-            'reward_lockout_max': 35
+            'reward_lockout_max': 35,
+            'fr': 30
         }
 
     # noinspection PyMethodMayBeStatic
@@ -49,6 +50,9 @@ class BarPress(Task):
 
     def init_state(self):
         return self.States.REWARD_AVAILABLE
+
+    def init(self):
+        self.video.initialize({"fr": self.fr})
 
     def start(self):
         self.cage_light.toggle(True)

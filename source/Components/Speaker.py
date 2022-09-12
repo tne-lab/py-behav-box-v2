@@ -7,7 +7,7 @@ import time
 from Components.Component import Component
 
 
-class Speaker(Component):
+class Speaker(Component):  # Not implemented
     """
         Class defining a Speaker component in the operant chamber.
 

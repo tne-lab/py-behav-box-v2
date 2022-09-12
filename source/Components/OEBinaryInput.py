@@ -3,6 +3,11 @@ from Components.BinaryInput import BinaryInput
 
 class OEBinaryInput(BinaryInput):
 
+    def __init__(self, source, component_id, component_address):
+        super().__init__(source, component_id, component_address)
+        self.rising = True
+        self.falling = False
+
     def check(self):
         json_strs = self.source.read_component(self.id)
         if len(json_strs) > 0:

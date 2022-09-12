@@ -35,9 +35,9 @@ class FoodDispenser(Component):
         get_type()
             Returns Component.Type.DIGITAL_OUTPUT
     """
-    def __init__(self, source, component_id, component_address, metadata=""):
+    def __init__(self, source, component_id, component_address):
         self.state = False
-        super().__init__(source, component_id, component_address, metadata)
+        super().__init__(source, component_id, component_address)
         self.pellets = 0
 
     def dispense(self):

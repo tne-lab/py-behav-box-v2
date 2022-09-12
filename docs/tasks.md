@@ -46,7 +46,7 @@ Components can be accessed in task code as attributes of the task: `self.COMPONE
 Many tasks have constants that control task progression without altering underlying logic. For example, there could be a need
 for multiple sequences of trial types, different timing as training progresses, or variable completion criteria. Rather than having
 to create new task definitions for changes of this sort, they can instead be explicitly defined using the `get_constants` method
-and later modified using [Protocols](). An example for the same operant task is shown below:
+and later modified using [Protocols](protocols_addressfiles.md). An example for the same operant task is shown below:
 
     def get_constants(self):
         return {

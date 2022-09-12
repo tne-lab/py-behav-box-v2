@@ -31,9 +31,9 @@ class ByteOutput(Component):
             Returns Component.Type.DIGITAL_OUTPUT
     """
 
-    def __init__(self, source, component_id, component_address, metadata=""):
+    def __init__(self, source, component_id, component_address):
         self.state = 0
-        super().__init__(source, component_id, component_address, metadata)
+        super().__init__(source, component_id, component_address)
 
     def send(self, msg):
         self.source.write_component(self.id, msg)

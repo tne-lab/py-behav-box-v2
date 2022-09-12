@@ -4,9 +4,9 @@ from Components.Component import Component
 
 class ParametricStim(Stimmer):
 
-    def __init__(self, source, component_id, component_address, metadata=""):
+    def __init__(self, source, component_id, component_address):
         self.state = False
-        super().__init__(source, component_id, component_address, metadata)
+        super().__init__(source, component_id, component_address)
 
     def trigger(self, ichan, pnum, falling=0):
         self.source.write_component(self.id, "R{},{},{}".format(ichan, pnum, falling))
