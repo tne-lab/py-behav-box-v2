@@ -26,4 +26,9 @@ class SerialSource(Source):
         return self.coms[component_id].readline()
 
     def write_component(self, component_id, msg):
-        self.coms[component_id].write(bytes(str(msg), 'utf-8'))
+        print(msg)
+        if hasattr(self.components[component_id], "terminator"):
+            term = self.components[component_id].terminator
+        else:
+            term = ""
+        self.coms[component_id].write(bytes(str(msg) + term, 'utf-8'))

@@ -57,8 +57,7 @@ class Component:
 
     def initialize(self, metadata):
         for key in metadata:
-            if hasattr(self, key):
-                setattr(self, key, metadata[key])
+            setattr(self, key, metadata[key])
 
     @abstractmethod
     def get_state(self): raise NotImplementedError

@@ -120,7 +120,7 @@ class Task:
                             if issubclass(component_type, component_definition[cid][i]):
                                 component = component_type(sources[comp.source_name], "{}-{}-{}".format(cid, str(self.metadata["chamber"]), str(i)), comp.component_address)
                                 if comp.metadata is not None:
-                                    component.initialize()
+                                    component.initialize(comp.metadata)
                                 sources[comp.source_name].register_component(cid, component)
                                 # If the ID has yet to be registered
                                 if not hasattr(self, cid):

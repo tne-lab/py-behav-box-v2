@@ -11,7 +11,7 @@ class ParametricStim(Stimmer):
     def trigger(self, ichan, pnum, falling=0):
         self.source.write_component(self.id, "R{},{},{}".format(ichan, pnum, falling))
 
-    def parametrize(self,pnum, outs, per, dur, amps, durs):
+    def parametrize(self, pnum, outs, per, dur, amps, durs):
         stimulus = "S{},{},{},{},{}".format(pnum, outs[0], outs[1], per, dur)
         for i in range(amps.shape[1]):
             stimulus += "; "
