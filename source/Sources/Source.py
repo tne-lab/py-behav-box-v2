@@ -22,15 +22,16 @@ class Source:
     @abstractmethod
     def register_component(self, task, component): raise NotImplementedError
 
-    @abstractmethod
-    def close_source(self): raise NotImplementedError
+    def close_source(self):
+        pass
 
-    @abstractmethod
     def close_component(self, component_id):
         pass
 
     @abstractmethod
-    def read_component(self, component_id): raise NotImplementedError
+    def read_component(self, component_id):
+        pass
 
     @abstractmethod
-    def write_component(self, component_id, msg): raise NotImplementedError
+    def write_component(self, component_id, msg):
+        pass

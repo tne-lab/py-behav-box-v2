@@ -83,7 +83,7 @@ class VideoSource(Source):
         return self.cur_frames[component_id]
 
     def write_component(self, component_id, msg):
-        pass
+        raise NotImplementedError
 
     def run(self):
         # While video is being acquired

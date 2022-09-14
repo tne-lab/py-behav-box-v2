@@ -1,4 +1,4 @@
-# Creating and using components
+# Creating and using Components
 
 ## Overview
 
@@ -35,8 +35,8 @@ all passed to the component constructor along with optional `metadata` and confi
 constructor can be overridden if necessary to define variables for the component subclass. The example below shows how
 the default constructor could be overridden to keep track of a state variable:
 
-    def __init__(self, source, component_id, component_address, metadata=""):
-        super().__init__(source, component_id, component_address, metadata)
+    def __init__(self, source, component_id, component_address):
+        super().__init__(source, component_id, component_address)
         self.state = False
 
 ## Interacting with sources
@@ -54,28 +54,23 @@ Rather than calling `write` or `read` directly, methods like `toggle` ensure sta
 types of components kept to. This is especially helpful when subclassing components when implementation specific features may 
 be necessary (look at `BinaryInput` and `OEBinaryInput` for a more in depth example).
 
-# Package reference
+## Package reference
 
 The methods and classes detailed below are contained in the `Components` package.
 
-## Component base class
+### Component base class
 
 The `Component` class in the `Component` module is the super class for all components.
 
-### \_\_init__
+#### \_\_init__
 
-    __init__(source, component_id, component_address, metadata="")
+    __init__(source, component_id, component_address)
 
 Constructor for a new component connecting to *Source* `source` registered with `component_id` at `component_address`.
-Additional `metadata` can be provided as a string to define instance attributes via a set of equality pairs separated by `|`
-characters. The right side of the pair indicates the attribute name while the left side indicates the value that is used as
-an input to [eval](https://docs.python.org/3/library/functions.html#eval). An example `metadata` string is shown below:
+Values for `source`, `component_id`, `component_address` should be provided by local [AddressFiles](protocols_addressfiles.md).
+Any attributes (metadata) necessary for the component should be defined here (ex. frame rates for videos).
 
-    sr=500000|ns=91
-
-Values for `source`, `component_id`, `component_address`, and `metadata` should be provided by local [AddressFiles]()
-
-### Type
+#### Type
 
     class Type(Enum)
 
@@ -90,7 +85,7 @@ types are shown below:
     OUTPUT = 5          # Arbitrary output type
     BOTH = 6            # The Component both inputs and outputs (arbitrary type)
 
-### get_type
+#### get_type
 
     get_type()
 
@@ -102,7 +97,7 @@ all subclasses of `Component`.
     def get_type(self):
         return Component.Type.DIGITAL_OUTPUT
 
-### get_state
+#### get_state
 
     get_type()
 
@@ -113,7 +108,7 @@ Returns the state the component currently is in. This method must be overridden 
     def get_type(self):
         return self.state   # Assuming the state variable was pre-initialized and modified by other methods
 
-### read
+#### read
     
     read()
 
@@ -124,7 +119,7 @@ on the source.
 
     value = self.read()
 
-### write
+#### write
     
     write(msg)
 
@@ -134,7 +129,7 @@ Outputs a value via the source. The data type of `msg` will depend on the source
 
     self.write(True)
 
-### close
+#### close
 
     close()
 
@@ -144,9 +139,9 @@ Notifies the source that the component should be closed.
 
     self.close()
 
-## Component subclasses
+### Component subclasses
 
-### Toggle
+#### Toggle
 
     class Toggle(Component)
     DIGITAL_OUTPUT
@@ -157,7 +152,7 @@ Toggles typically represent digital outputs like lights and motors and can be se
 
     self.house_light.toggle(True)   # where house_light is a Toggle object
 
-### TimedToggle
+#### TimedToggle
 
     class TimedToggle(Toggle)
     DIGITAL_OUTPUT
@@ -168,7 +163,7 @@ TimedToggles will only remain active for a set amount of time.
 
     self.food.toggle(0.7)   # where food is a TimedToggle object that should be active for 0.7s
 
-### BinaryInput
+#### BinaryInput
 
     class BinaryInput(Component)
     DIGITAL_INPUT
@@ -184,7 +179,7 @@ indicate if the state has changed compared to the last time it was queried.
         elif value == BinaryInput.EXIT:
             pass # Do something else
 
-### OEBinaryInput
+#### OEBinaryInput
 
     class OEBinaryInput(BinaryInput)
     DIGITAL_INPUT
@@ -192,7 +187,7 @@ indicate if the state has changed compared to the last time it was queried.
 OEBinaryInputs represent TTL broadcast events originating from [OpenEphys](https://open-ephys.github.io/gui-docs/User-Manual/Plugins/Event-Broadcaster.html).
 The class overrides the `check` method to handle the JSON data but has identical outputs to the standard BinaryInput.
 
-### TouchScreen
+#### TouchScreen
 
     class TouchScreen(Component)
     BOTH

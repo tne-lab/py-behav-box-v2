@@ -34,9 +34,6 @@ class EmptySource(Source):
         self.components[component.id] = component.address
         self.values[component.id] = component.get_state()
 
-    def close_source(self):
-        pass
-
     def read_component(self, component_id):
         return self.values[component_id]
 

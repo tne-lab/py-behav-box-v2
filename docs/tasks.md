@@ -80,7 +80,7 @@ It is likely you will see warnings about instance attribute definitions outside 
 safely ignored. Constant attributes will already be available when `get_variables` is called and can be used in the method.
 Variables can be accessed in task code as attributes of the task: `self.VARIABLE_NAME`.
 
-### Initial State
+## Initial State
 
 Every task must define the initial state it will be in by overriding the `init_state` method. Variables and constants are accessible 
 as attributes when this method is called should the initial state depend on them. An example override is shown below:
@@ -172,16 +172,17 @@ and will be called alongside `main_loop` to determine if the task is complete.
 
 ## Task GUIs
 
-All pybehave tasks have GUIs written in [pygame](https://www.pygame.org/) that can be used to monitor task components and variables or control 
-task features if necessary. Further details on GUI development are available on the GUI [page]().
+All pybehave tasks have GUIs written using [pygame](https://www.pygame.org/) functions that can monitor task components and variables or control 
+task features if necessary. Task GUIs are written as Python files in the *source/GUIs* folder and must be named TASK_NAMEGUI.py.
+Further details on GUI development are available on the GUI [page]().
 
-# Class reference
+## Class reference
 
 The methods detailed below are contained in the `Task` class.
 
-## Configuration methods
+### Configuration methods
 
-### get_components
+#### get_components
 
     get_components()
 
@@ -201,7 +202,7 @@ Returns a dictionary describing all the components used by the task. Each compon
             'cam': [Video]
         }
 
-### get_constants
+#### get_constants
 
     get_constants()
 
@@ -216,7 +217,7 @@ Returns a dictionary describing all the constants used by the task. Constants ca
             'reward_lockout_max': 35    # Maximum time to lockout reward
         }
 
-### get_variables
+#### get_variables
 
     get_variables()
 
@@ -230,46 +231,46 @@ Returns a dictionary describing all the variables used by the task. Variables ca
             'presses': 0    # Number of times the bar has been pressed
         }
 
-## Lifetime methods
+### Lifetime methods
 
-### init
+#### init
 
     init()
 
-### start
+#### start
 
     start()
 
-### stop
+#### stop
 
     stop()
 
-### resume
+#### resume
 
     resume()
 
-### pause
+#### pause
 
     pause()
 
-### is_complete
+#### is_complete
 
     is_complete()
 
-## Control and timing methods
+### Control and timing methods
 
-### init_state
+#### init_state
 
     init_state(state)
 
-### change_state
+#### change_state
 
     change_state(state, metadata=None)
 
-### time_elapsed
+#### time_elapsed
 
     time_elapsed()
 
-### time_in_state
+#### time_in_state
 
     time_in_state()

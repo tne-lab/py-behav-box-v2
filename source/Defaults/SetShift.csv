@@ -1,8 +1,0 @@
-nose_pokes,BinaryInput,es,1,0,3
-nose_pokes,BinaryInput,es,2,1,3
-nose_pokes,BinaryInput,es,3,2,3
-nose_poke_lights,Toggle,es,4,0,3
-nose_poke_lights,Toggle,es,5,1,3
-nose_poke_lights,Toggle,es,6,2,3
-food,FoodDispenser,es,7,0,0
-house_light,Toggle,es,8,0,0
