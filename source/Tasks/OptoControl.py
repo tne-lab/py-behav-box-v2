@@ -55,6 +55,12 @@ class OptoControl(Task):
                 self.stim.parametrize(stim_id, [0, 3], 7692, 100000000000, np.reshape(np.array([self.amps[j], 0]), (2, 1)), np.array([self.pws[i]]))
                 stim_id += 1
 
+    def start(self):
+        self.stim.start(0)
+
+    def stop(self):
+        self.stim.start(0)
+
     def main_loop(self):
         front_active = self.front_light.check()
         rear_active = self.rear_light.check()
@@ -77,7 +83,7 @@ class OptoControl(Task):
                     self.pw = self.pws[valid_params[0][test_ind]]
                     self.amp = self.amps[valid_params[1][test_ind]]
                     self.nstim += 1
-                    self.stim.start(test_ind+1)
+                    self.stim.start(len(self.amps)*valid_params[0][test_ind]+valid_params[1][test_ind]+1)
                 else:
                     self.pw = 0
                     self.amp = 0
