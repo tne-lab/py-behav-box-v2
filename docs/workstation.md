@@ -2,8 +2,8 @@
 
 ## Overview
 
-The Workstation GUI is responsible for controlling all user interactions with [Tasks](). The interface presents all the necessary
-controls for running tasks, configuring [Sources]() and [EventLoggers](), and visualizing behavior in real-time. Most configuration
+The Workstation GUI is responsible for controlling all user interactions with [Tasks](tasks.md). The interface presents all the necessary
+controls for running tasks, configuring [Sources](sources.md) and [EventLoggers](events.md), and visualizing behavior in real-time. Most configuration
 is accessible from the menu bar while Tasks are controlled via *ChamberWidgets*.
 
 ![workstation.png](img/workstation.png)
@@ -28,9 +28,9 @@ Each added task is associated with a *ChamberWidget* that provides all controls 
 
 The number in the top-left indicates the chamber the task is associated with. The name/ID of the subject or participant can 
 be indicated using the *Subject* textbox. The type of task currently loaded in this chamber is shown by the *Task* dropdown.
-The user can load an [AddressFile](protocols_addressfiles.md) or [Protocol](protocols_addressfiles.md) by clicking the folder 
+The user can load an [AddressFile](protocols_addressfiles.md#addressfiles) or [Protocol](protocols_addressfiles.md#protocols) by clicking the folder 
 icons next to the corresponding fields which will bring up a file browser interface. Any data saved by the task using 
-[EventLoggers]() or linked external systems will be saved in the folder indicated by *Output Folder*. This path defaults to the 
+[EventLoggers](events.md) or linked external systems will be saved in the folder indicated by *Output Folder*. This path defaults to the 
 *Desktop/py-behav-box-v2/TASK_NAME/Data/SUBJECT_NAME/DATE* directory. The task can be started by clicking the green play button
 which will transition to an orange pause button and enable the red stop button once begun. All events logged by the task will
 appear in the textbox at the bottom of the widget. To clear the chamber, right-click the widget and select *Clear Chamber*

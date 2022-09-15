@@ -1,5 +1,4 @@
 from Components.Stimmer import Stimmer
-from Components.Component import Component
 
 
 class ParametricStim(Stimmer):
@@ -26,6 +25,3 @@ class ParametricStim(Stimmer):
 
     def get_state(self):
         return self.state
-
-    def get_type(self):
-        return Component.Type.OUTPUT

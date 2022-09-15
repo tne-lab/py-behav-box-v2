@@ -6,7 +6,7 @@ Pybehave allows users to alter task functionality through two types of local Pyt
 Protocols can be processed to override default values for task constants. These constants can be used
 to control a variety of task behavior including trial timing and order, types of trials to include, or general rules for 
 task progression. Together, constants reduce the number of similar tasks that have to be written and simplify basic variation
-in tasks. AddressFiles indicate which [Sources]() are related to each [Component](), any necessary hardware
+in tasks. AddressFiles indicate which [Sources](sources.md) are related to each [Component](components.md), any necessary hardware
 addresses, and optional metadata. AddressFiles simplify the process of running the same task on a variety of hardware without
 editing the underlying task files.
 
@@ -46,7 +46,7 @@ requirement is that they define an *AddressFile* object called `addresses`. *Com
 The `add_component` method has four required arguments and two optional ones. The first, `component_id` is the component's ID
 and should correspond to one of the entries in the Task's `get_components` method. The second, `component_type` is the component's
 type and must correspond to a class in a module of the same name in the *sources/Components* folder. The third, `source_name`
-is the identifier that was given to the [Source]() this component should be associated with. The fourth, `component_address`,
+is the identifier that was given to the [Source](sources.md) this component should be associated with. The fourth, `component_address`,
 is the hardware address the source should associate this component with. The first of the two optional arguments, `list_index` 
 indicates the component's list position if the ID is associated with a list of components. The second optional argument, `metadata`
 is a dictionary that can be used to override Component attributes (analogous to a Protocol for components). AddressFiles can be 

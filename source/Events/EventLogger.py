@@ -22,8 +22,8 @@ class EventLogger:
     def start(self):
         self.event_count = 0
 
-    @abstractmethod
-    def close(self): raise NotImplementedError
+    def close(self):
+        pass
 
-    @abstractmethod
-    def log_events(self, events): raise NotImplementedError
+    def log_event(self, events):
+        pass

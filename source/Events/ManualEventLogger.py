@@ -35,11 +35,5 @@ class ManualEventLogger(GUIEventLogger):
         self.cw.task.events.append(
             InputEvent(self.cw.task, temp_enum.MANUAL, {"desc": self.manual_input.text()}))
 
-    def log_events(self, events):
-        pass
-
     def get_widget(self):
         return self.widget
-
-    def close(self):
-        pass

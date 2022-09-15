@@ -1,18 +1,18 @@
-from abc import ABCMeta, abstractmethod
+from abc import ABCMeta
 from Components.Component import Component
 
 
 class Stimmer(Component):
     __metaclass__ = ABCMeta
 
-    @abstractmethod
-    def parametrize(self, pnum, outs, per, dur, amps, durs): raise NotImplementedError
+    def parametrize(self, pnum, outs, per, dur, amps, durs):
+        pass
 
-    @abstractmethod
-    def start(self, pnum, stype): raise NotImplementedError
+    def start(self, pnum, stype):
+        pass
 
-    @abstractmethod
-    def get_state(self): raise NotImplementedError
+    def get_state(self):
+        pass
 
-    @abstractmethod
-    def get_type(self): raise NotImplementedError
+    def get_type(self):
+        return Component.Type.OUTPUT

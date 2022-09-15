@@ -2,7 +2,7 @@
 
 ![](img/full_gui.jpg)
 
-# Overview
+## Overview
 
 Pybehave is an open source software interface and framework for controlling behavioral experiments in neuroscience and psychology
 built around a hardware-agnostic and highly object-oriented design philosophy.
@@ -16,9 +16,9 @@ All pybehave tasks are coordinated via a [Workstation]() GUI.
 
 Pybehave software and documentation are available on [GitHub](https://github.com/tne-lab/py-behav-box-v2).
 
-# Getting started
+## Getting started
 
-## Installation
+### Installation
 
 Get the latest version of pybehave by cloning the [code repository](https://github.com/tne-lab/py-behav-box-v2) to your computer with Git. Cloning the repository
 simplifies the process of updating in the future.
@@ -38,7 +38,7 @@ Pybehave has the following folder structure:
             -Utilities      # Various helper functions
             -Workstation    # Classes for managing the pybehave interface
 
-## Dependencies
+### Dependencies
 
 Due to its hardware-agnostic design philosophy, pybehave has numerous dependencies to support many possible implementations.
 To simplify dependency management we recommend using [Anaconda](https://www.anaconda.com/).
@@ -52,13 +52,13 @@ root directory. A shortcut can be made for the file on the desktop to simplify s
 
 The source code for pybehave is in principle cross-platform but has not been thoroughly tested.
 
-## Updating pybehave
+### Updating pybehave
 
 Pybehave is explicitly designed in a manner where files for local configuration are separate from the root directory. This
 ensures that users can easily update to the newest version of the platform without compromising their experimental files. 
 To update, simply pull the latest version from the code repository.
 
-## Running a task
+### Running a task
 
 Run the file `py-behav.bat` from the root directory or shortcut, and you will see a GUI window like that shown above.
 
@@ -73,6 +73,6 @@ Press the green play button to start the task.
 
 The task can be paused or ended prematurely with the orange pause button or red stop button respectively.
 
-# Troubleshooting
+## Troubleshooting
 
 If you encounter problems, take a look at the [issues](https://github.com/tne-lab/py-behav-box-v2/issues) section of the GitHub and leave a new one if your problem isn't resolved.

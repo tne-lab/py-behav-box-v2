@@ -49,6 +49,3 @@ class TextEventLogger(GUIEventLogger):
     def start(self):
         super(TextEventLogger, self).start()
         self.event_log.setText("")
-
-    def close(self):
-        pass

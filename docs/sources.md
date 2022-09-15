@@ -2,10 +2,10 @@
 
 ## Overview
 
-Pybehave uses *Sources* to link [Components]() to external systems. Where *Components* are generally hardware-agnostic, 
+Pybehave uses *Sources* to link [Components](components.md) to external systems. Where *Components* are generally hardware-agnostic, 
 *Sources* are implementation specific. *Sources* can communicate with a variety of hardware including DAQs, serial controllers,
-video, or network events to control components with a unified framework. Sources are shared across [Tasks]() and are instead
-specific to each piece of hardware connected to the [Workstation]()
+video, or network events to control components with a unified framework. Sources are shared across [Tasks](tasks.md) and are instead
+specific to each piece of hardware connected to the [Workstation](workstation.md)
 
 ## Registering components
 

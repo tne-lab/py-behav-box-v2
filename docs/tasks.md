@@ -5,7 +5,7 @@
 Behavioral tasks in pybehave are implemented as state machines, the basic elements of which are states and components. To create
 a task, the user develops a *task definition file* written in Python in the *py-behav-box-v2/source/Tasks* folder. Task 
 definitions are hardware-agnostic and solely program for task logic and timing, interacting with hardware or implementation specific
-[Sources]() and [Events](). Pybehave tasks are objects that are all subclasses of the base `Task` class with the ability to 
+[Sources](sources.md) and [Events](events.md). Pybehave tasks are objects that are all subclasses of the base `Task` class with the ability to 
 override functionality as necessary.
 
 ## States
@@ -37,8 +37,9 @@ This task utilizes infrared nose poke sensors, LED and incandescent lights, and 
 Toggles, and a TimedToggle.
 
 Components will be instantiated as attributes of the Task either as single objects or lists depending on the structure of each
-entry in the `get_components` method. The specific [Source]() for these components can be specified using local [Address Files]().
-The indicated class type for each object only prescribes a super class; subclasses of the indicated type are also valid.
+entry in the `get_components` method. The specific [Source](sources.md) for these components can be specified using local [Address Files](protocols_addressfiles.md#addressfiles).
+The indicated class type for each object only prescribes a super class; subclasses of the indicated type are also valid. If
+an AddressFile is not provided, components can be controlled directly from the task [GUI](guis.md).
 Components can be accessed in task code as attributes of the task: `self.COMPONENT_NAME`.
 
 ## Constants
@@ -46,7 +47,7 @@ Components can be accessed in task code as attributes of the task: `self.COMPONE
 Many tasks have constants that control task progression without altering underlying logic. For example, there could be a need
 for multiple sequences of trial types, different timing as training progresses, or variable completion criteria. Rather than having
 to create new task definitions for changes of this sort, they can instead be explicitly defined using the `get_constants` method
-and later modified using [Protocols](protocols_addressfiles.md). An example for the same operant task is shown below:
+and later modified using [Protocols](protocols_addressfiles.md#protocols). An example for the same operant task is shown below:
 
     def get_constants(self):
         return {
@@ -174,7 +175,7 @@ and will be called alongside `main_loop` to determine if the task is complete.
 
 All pybehave tasks have GUIs written using [pygame](https://www.pygame.org/) functions that can monitor task components and variables or control 
 task features if necessary. Task GUIs are written as Python files in the *source/GUIs* folder and must be named TASK_NAMEGUI.py.
-Further details on GUI development are available on the GUI [page]().
+Further details on GUI development are available on the GUI [page](guis.md).
 
 ## Class reference
 

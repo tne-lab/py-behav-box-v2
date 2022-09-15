@@ -9,7 +9,7 @@ class or preexisting component in the *py-behav-box-v2/source/Components* folder
 Typically, components do not enforce a particular physical implementation but abstract functionality that could be implemented
 on a variety of hardware. For example, a *Toggle*, a component that can be set to be on or off, could be used
 to represent a variety of hardware like lights, motors, or arbitrary digital outputs. Rather than having a separate component class
-for each of these equivalent cases, the details of interacting with hardware are instead handled by implementation specific [Sources]().
+for each of these equivalent cases, the details of interacting with hardware are instead handled by implementation specific [Sources](sources.md).
 
 ## Defining the component type
 
@@ -31,7 +31,7 @@ complex objects for more flexible components like touch screens or analog inputs
 ## Component constructor
 
 All components are linked to a particular `source` via a `component_id` and `component_address`. These three variables are
-all passed to the component constructor along with optional `metadata` and configured using local [AddressFiles](). The component
+all passed to the component constructor along with optional `metadata` and configured using local [AddressFiles](protocols_addressfiles.md#addressfiles). The component
 constructor can be overridden if necessary to define variables for the component subclass. The example below shows how
 the default constructor could be overridden to keep track of a state variable:
 
@@ -67,7 +67,7 @@ The `Component` class in the `Component` module is the super class for all compo
     __init__(source, component_id, component_address)
 
 Constructor for a new component connecting to *Source* `source` registered with `component_id` at `component_address`.
-Values for `source`, `component_id`, `component_address` should be provided by local [AddressFiles](protocols_addressfiles.md).
+Values for `source`, `component_id`, `component_address` should be provided by local [AddressFiles](protocols_addressfiles.md#addressfiles).
 Any attributes (metadata) necessary for the component should be defined here (ex. frame rates for videos).
 
 #### Type

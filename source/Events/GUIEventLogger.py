@@ -10,12 +10,6 @@ class GUIEventLogger(EventLogger):
         self.cw = None
 
     @abstractmethod
-    def close(self): raise NotImplementedError
-
-    @abstractmethod
-    def log_events(self, events): raise NotImplementedError
-
-    @abstractmethod
     def get_widget(self): raise NotImplementedError
 
     def set_chamber(self, cw):
