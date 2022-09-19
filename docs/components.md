@@ -32,7 +32,8 @@ complex objects for more flexible components like touch screens or analog inputs
 
 All components are linked to a particular `source` via a `component_id` and `component_address`. These three variables are
 all passed to the component constructor along with optional `metadata` and configured using local [AddressFiles](protocols_addressfiles.md#addressfiles). The component
-constructor can be overridden if necessary to define variables for the component subclass. The example below shows how
+constructor can be overridden if necessary to define variables for the component subclass (if necessary, these variables
+can be locally configured using `metadata` in *AddressFiles*). The example below shows how
 the default constructor could be overridden to keep track of a state variable:
 
     def __init__(self, source, component_id, component_address):

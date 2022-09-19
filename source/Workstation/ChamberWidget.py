@@ -235,6 +235,8 @@ class ChamberWidget(QGroupBox):
         for el in self.event_loggers:  # Allow all EventLoggers to handle the change
             if isinstance(el, FileEventLogger):  # Handle the change for FileEventLoggers
                 el.output_folder = self.output_file_path.text()
+            if isinstance(el, GUIEventLogger):  # Handle the change for GUIEventLoggers
+                el.set_chamber(self)
 
     def contextMenuEvent(self, event):
         """
