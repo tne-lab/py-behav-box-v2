@@ -121,7 +121,7 @@ class Task:
                                 component = component_type(sources[comp.source_name], "{}-{}-{}".format(cid, str(self.metadata["chamber"]), str(i)), comp.component_address)
                                 if comp.metadata is not None:
                                     component.initialize(comp.metadata)
-                                sources[comp.source_name].register_component(cid, component)
+                                sources[comp.source_name].register_component(self, component)
                                 # If the ID has yet to be registered
                                 if not hasattr(self, cid):
                                     # If the Component is part of a list
