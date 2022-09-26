@@ -4,6 +4,7 @@ import numpy as np
 
 from Tasks.Task import Task
 from Components.BinaryInput import BinaryInput
+from Components.Video import Video
 from Components.ParametricStim import ParametricStim
 from Events.InputEvent import InputEvent
 
@@ -22,7 +23,8 @@ class OptoControl(Task):
         return {
             'front_light': [BinaryInput],
             'rear_light': [BinaryInput],
-            'stim': [ParametricStim]
+            'stim': [ParametricStim],
+            'cam': [Video]
         }
 
     # noinspection PyMethodMayBeStatic
@@ -57,9 +59,11 @@ class OptoControl(Task):
 
     def start(self):
         self.stim.start(0)
+        self.cam.start()
 
     def stop(self):
         self.stim.start(0)
+        self.cam.stop()
 
     def main_loop(self):
         front_active = self.front_light.check()

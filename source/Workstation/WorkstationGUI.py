@@ -69,6 +69,7 @@ class WorkstationGUI(QWidget):
         if sd.exec():
             settings = QSettings()
             settings.setValue("n_chamber", sd.n_chamber.text())
+            self.workstation.compute_chambergui()
 
     def task_dialog(self):
         # Opens the AddTaskDialog for adding a new task to a chamber

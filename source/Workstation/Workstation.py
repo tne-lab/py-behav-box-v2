@@ -71,30 +71,10 @@ class Workstation:
         if settings.contains("pygame/n_row"):
             self.n_row = int(settings.value("pygame/n_row"))
             self.n_col = int(settings.value("pygame/n_col"))
-            self.w = int(settings.value("pygame/w"))
-            self.h = int(settings.value("pygame/h"))
+            self.w = float(settings.value("pygame/w"))
+            self.h = float(settings.value("pygame/h"))
         else:
-            szo = pygame.display.get_desktop_sizes()
-            szo = szo[0]
-            sz = (int(szo[0] * 5 / 6), int(szo[1] - 70))
-            self.n_row = 1
-            self.n_col = self.n_chamber
-            self.w = sz[0] / self.n_chamber
-            self.h = sz[0] / self.n_chamber * 2
-            if self.h > sz[1]:
-                self.h = sz[1]
-                self.w = sz[1] / 2
-            while self.h < sz[1] / (self.n_row + 1) or self.n_col * self.w > sz[0]:
-                self.n_row += 1
-                self.h = sz[1] / self.n_row
-                self.w = self.h / 2
-                self.n_col = math.ceil(self.n_chamber / self.n_row)
-            settings.setValue("pygame/n_row", self.n_row)
-            settings.setValue("pygame/n_col", self.n_col)
-            settings.setValue("pygame/w", self.w)
-            settings.setValue("pygame/h", self.h)
-            settings.setValue("pyqt/w", int(szo[0] / 6))
-            settings.setValue("pyqt/h", int(szo[1] - 70))
+            self.compute_chambergui()
 
         self.task_gui = pygame.display.set_mode((self.w * self.n_col, self.h * self.n_row), pygame.RESIZABLE, 32)
         self.guis = {}
@@ -104,6 +84,30 @@ class Workstation:
         signal.signal(signal.SIGTERM, self.exit_handler)
         signal.signal(signal.SIGINT, self.exit_handler)
         sys.exit(app.exec())
+
+    def compute_chambergui(self):
+        settings = QSettings()
+        szo = pygame.display.get_desktop_sizes()
+        szo = szo[0]
+        sz = (int(szo[0] * 5 / 6), int(szo[1] - 70))
+        self.n_row = 1
+        self.n_col = self.n_chamber
+        self.w = sz[0] / self.n_chamber
+        self.h = sz[0] / self.n_chamber * 2
+        if self.h > sz[1]:
+            self.h = sz[1]
+            self.w = sz[1] / 2
+        while self.h < sz[1] / (self.n_row + 1) or self.n_col * self.w > sz[0]:
+            self.n_row += 1
+            self.h = sz[1] / self.n_row
+            self.w = self.h / 2
+            self.n_col = math.ceil(self.n_chamber / self.n_row)
+        settings.setValue("pygame/n_row", self.n_row)
+        settings.setValue("pygame/n_col", self.n_col)
+        settings.setValue("pygame/w", self.w)
+        settings.setValue("pygame/h", self.h)
+        settings.setValue("pyqt/w", int(szo[0] / 6))
+        settings.setValue("pyqt/h", int(szo[1] - 70))
 
     def add_task(self, chamber, task_name, address_file, protocol, task_event_loggers):
         """

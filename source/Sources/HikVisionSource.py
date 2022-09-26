@@ -1,6 +1,5 @@
 from hikload.hikvisionapi.classes import HikvisionServer
 import hikload.hikvisionapi.utils as hikutils
-import hikload.hikvisionapi as hikvisionapi
 import threading
 import os
 from datetime import datetime
