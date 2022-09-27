@@ -4,6 +4,7 @@ from PyQt5.QtCore import *
 import csv
 import re
 import importlib
+from Events.CSVEventLogger import CSVEventLogger
 from Workstation.AddTaskDialog import AddTaskDialog
 from Workstation.SettingsDialog import SettingsDialog
 from Workstation.ChamberWidget import ChamberWidget
@@ -109,7 +110,7 @@ class WorkstationGUI(QWidget):
             else:
                 self.add_task(td.chamber.currentText(), td.task.currentIndex())
 
-    def add_task(self, chamber_index, task_index, subject="default", afp="", pfp="", prompt="", event_loggers=([], [])):
+    def add_task(self, chamber_index, task_index, subject="default", afp="", pfp="", prompt="", event_loggers=([CSVEventLogger()], [[]])):
         """
         Adds a ChamberWidget to the GUI corresponding to a new task
 
