@@ -1,6 +1,6 @@
 import csv
 import importlib
-from typing import re
+import re
 
 from PyQt5.QtWidgets import *
 import pkgutil
