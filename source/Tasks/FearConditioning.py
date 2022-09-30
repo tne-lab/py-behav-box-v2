@@ -3,7 +3,7 @@ from enum import Enum
 
 from Components.BinaryInput import BinaryInput
 from Components.Toggle import Toggle
-from Components.FoodDispenser import FoodDispenser
+from Components.TimedToggle import TimedToggle
 from Events.InputEvent import InputEvent
 from Tasks.Task import Task
 
@@ -23,10 +23,11 @@ class FearConditioning(Task):
         return {
             "food_lever": [BinaryInput],
             "cage_light": [Toggle],
-            "food": [FoodDispenser],
+            "food": [TimedToggle],
             "tone": [Toggle],
             "fan": [Toggle],
-            "shocker": [Toggle]
+            "shocker": [Toggle],
+            'dispense_time': 0.7
         }
 
     # noinspection PyMethodMayBeStatic
@@ -63,7 +64,7 @@ class FearConditioning(Task):
         if food_lever == BinaryInput.ENTERED:
             self.events.append(InputEvent(self, self.Inputs.LEVER_PRESSED))
             if self.reward_available:
-                self.food.dispense()
+                self.food.toggle(self.dispense_time)
                 self.reward_available = False
                 self.reward_lockout = random.random() * self.max_reward_time
                 self.prev_reward_time = self.cur_time

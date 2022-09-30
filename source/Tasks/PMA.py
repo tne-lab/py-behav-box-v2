@@ -3,7 +3,7 @@ from enum import Enum
 
 from Components.BinaryInput import BinaryInput
 from Components.Toggle import Toggle
-from Components.FoodDispenser import FoodDispenser
+from Components.TimedToggle import TimedToggle
 from Components.Video import Video
 from Components.ByteOutput import ByteOutput
 from Events.InputEvent import InputEvent
@@ -28,7 +28,7 @@ class PMA(Task):
         return {
             'food_lever': [BinaryInput],
             'cage_light': [Toggle],
-            'food': [FoodDispenser],
+            'food': [TimedToggle],
             'fan': [Toggle],
             'lever_out': [ByteOutput],
             'food_light': [Toggle],
@@ -50,6 +50,7 @@ class PMA(Task):
             'time_sequence': [96, 75, 79, 90, 80, 97, 88, 104, 77, 99, 102, 88, 101, 100, 96, 87, 78, 93, 89, 98],
             'shock_duration': 2,
             'post_session_time': 45,
+            'dispense_time': 0.7
         }
 
     # noinspection PyMethodMayBeStatic
@@ -87,7 +88,7 @@ class PMA(Task):
         food_lever = self.food_lever.check()
         if food_lever == BinaryInput.ENTERED:
             self.events.append(InputEvent(self, self.Inputs.LEVER_PRESSED))
-            self.food.dispense()
+            self.food.toggle(self.dispense_time)
             self.presses += 1
         elif food_lever == BinaryInput.EXIT:
             self.events.append(InputEvent(self, self.Inputs.LEVER_DEPRESSED))

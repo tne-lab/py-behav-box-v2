@@ -25,7 +25,7 @@ class FearConditioningGUI(GUI):
             task.food.dispense()
 
         def pellets_text(self):
-            return [str(task.food.pellets)]
+            return [str(task.food.count)]
 
         def tone_count_text(self):
             return [str(task.cur_trial)]

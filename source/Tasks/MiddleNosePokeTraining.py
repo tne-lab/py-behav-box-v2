@@ -3,7 +3,7 @@ from enum import Enum
 from Tasks.Task import Task
 
 from Components.BinaryInput import BinaryInput
-from Components.FoodDispenser import FoodDispenser
+from Components.TimedToggle import TimedToggle
 from Components.Toggle import Toggle
 from Events.InputEvent import InputEvent
 
@@ -23,8 +23,9 @@ class MiddleNosePokeTraining(Task):
         return {
             'nose_pokes': [BinaryInput, BinaryInput, BinaryInput],
             'nose_poke_lights': [Toggle, Toggle, Toggle],
-            'food': [FoodDispenser],
-            'house_light': [Toggle]
+            'food': [TimedToggle],
+            'house_light': [Toggle],
+            'dispense_time': 0.7
         }
 
     # noinspection PyMethodMayBeStatic
@@ -66,7 +67,7 @@ class MiddleNosePokeTraining(Task):
         if self.state == self.States.ACTIVE:
             if middle_poke == BinaryInput.ENTERED:
                 self.nose_poke_lights[1].toggle(False)
-                self.food.dispense()
+                self.food.toggle(self.dispense_time)
                 self.pokes += 1
                 self.change_state(self.States.INTER_TRIAL_INTERVAL)
         elif self.state == self.States.INTER_TRIAL_INTERVAL:

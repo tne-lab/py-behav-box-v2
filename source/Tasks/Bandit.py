@@ -74,7 +74,7 @@ class Bandit(Task):  # NOT FUNCTIONAL
                 self.touch_screen.refresh()
         elif self.state == self.States.STIMULUS_PRESENTATION:
             if len(touch_locs) > 0 and touch_locs[0] == self.correct_img + 1:
-                self.food.dispense()
+                self.food.toggle(self.dispense_time)
                 self.touch_screen.remove_image(self.image_folder + self.images[self.correct_img])
                 self.touch_screen.remove_image(self.image_folder + self.images[self.incorrect_img])
                 self.touch_screen.remove_image(self.image_folder + self.blank)

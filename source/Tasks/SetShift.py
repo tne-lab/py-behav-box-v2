@@ -3,7 +3,7 @@ from enum import Enum
 
 from Components.BinaryInput import BinaryInput
 from Components.Toggle import Toggle
-from Components.FoodDispenser import FoodDispenser
+from Components.TimedToggle import TimedToggle
 from Events.InputEvent import InputEvent
 
 from Tasks.Task import Task
@@ -28,7 +28,7 @@ class SetShift(Task):
         return {
             'nose_pokes': [BinaryInput, BinaryInput, BinaryInput],
             'nose_poke_lights': [Toggle, Toggle, Toggle],
-            'food': [FoodDispenser],
+            'food': [TimedToggle],
             'house_light': [Toggle]
         }
 
@@ -42,7 +42,8 @@ class SetShift(Task):
             'n_random_end': 5,
             'rule_sequence': [0, 1, 0, 2, 0, 1, 0, 2],
             'correct_to_switch': 5,
-            'light_sequence': random.sample([True for _ in range(27)] + [False for _ in range(28)], 55)
+            'light_sequence': random.sample([True for _ in range(27)] + [False for _ in range(28)], 55),
+            'dispense_time': 0.7
         }
 
     # noinspection PyMethodMayBeStatic
@@ -97,7 +98,7 @@ class SetShift(Task):
                 if self.cur_trial < self.n_random_start or self.cur_trial >= self.n_random_start + self.correct_to_switch * len(
                         self.rule_sequence):
                     if random.random() < 0.5:
-                        self.food.dispense()
+                        self.food.toggle(self.dispense_time)
                         metadata["accuracy"] = "correct"
                     else:
                         metadata["accuracy"] = "incorrect"
@@ -154,7 +155,7 @@ class SetShift(Task):
             self.rule_sequence) or self.time_elapsed() > self.max_duration * 60
 
     def correct(self):
-        self.food.dispense()
+        self.food.toggle(self.dispense_time)
         if self.cur_block + 1 == self.correct_to_switch:
             self.cur_rule += 1
             self.cur_block = 0

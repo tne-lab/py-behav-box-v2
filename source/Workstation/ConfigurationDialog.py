@@ -9,6 +9,7 @@ class ConfigurationDialog(QDialog):
     def __init__(self, cw):
         super().__init__()
         self.cw = cw
+        self.ld = None
 
         self.setWindowTitle("Settings")
 
@@ -54,6 +55,11 @@ class ConfigurationDialog(QDialog):
         self.layout.addWidget(logger_box)
         self.layout.addWidget(self.control_buttons)
         self.setLayout(self.layout)
+    
+    def accept(self):
+        self.cw.prompt = self.prompt.text()  # Update the prompt from the configuration
+        self.cw.refresh()
+        super(ConfigurationDialog, self).accept()
 
     def on_logger_clicked(self, _):
         self.remove_button.setDisabled(False)
@@ -69,22 +75,15 @@ class ConfigurationDialog(QDialog):
         self.remove_button.setDisabled(False)
 
     def add_logger(self):
-        ld = AddLoggerDialog()
-        if ld.exec():
-            logger_type = getattr(importlib.import_module("Events." + ld.logger.currentText()), ld.logger.currentText())
-            self.cw.logger_params.append(ld.params)
-            new_logger = logger_type(*ld.params)
-            self.cw.event_loggers.append(new_logger)
-            self.logger_inds.append(len(self.cw.event_loggers) - 1)
-            QListWidgetItem(ld.logger.currentText(), self.logger_list)
-            if isinstance(new_logger, GUIEventLogger):
-                new_logger.set_chamber(self.cw)
-                self.cw.chamber.addWidget(new_logger.get_widget())
+        self.ld = AddLoggerDialog(self)
+        self.ld.show()
 
 
 class AddLoggerDialog(QDialog):
-    def __init__(self):
+    def __init__(self, cd):
         super().__init__()
+        self.cd = cd
+        self.lpd = None
         self.params = []
         self.setWindowTitle("Add Event Logger")
 
@@ -105,26 +104,33 @@ class AddLoggerDialog(QDialog):
         self.layout.addWidget(self.control_buttons)
         self.setLayout(self.layout)
 
+    def accept(self):
+        logger_type = getattr(importlib.import_module("Events." + self.logger.currentText()), self.logger.currentText())
+        self.cd.cw.logger_params.append(self.params)
+        new_logger = logger_type(*self.params)
+        self.cd.cw.event_loggers.append(new_logger)
+        self.cd.logger_inds.append(len(self.cd.cw.event_loggers) - 1)
+        QListWidgetItem(self.logger.currentText(), self.cd.logger_list)
+        if isinstance(new_logger, GUIEventLogger):
+            new_logger.set_chamber(self.cd.cw)
+            self.cd.cw.chamber.addWidget(new_logger.get_widget())
+        super(AddLoggerDialog, self).accept()
+
     def set_params(self):
         logger_type = getattr(importlib.import_module("Events." + self.logger.currentText()), self.logger.currentText())
         all_params = inspect.getfullargspec(logger_type.__init__)
         if len(all_params.args) > 1:
-            lpd = LoggerParametersDialog(self.logger.currentText(), all_params)
-            if lpd.exec():
-                for p in lpd.params:
-                    self.params.append(p.text())
-                self.accept()
-            else:
-                self.reject()
+            self.lpd = LoggerParametersDialog(self, all_params)
+            self.lpd.show()
         else:
             self.accept()
 
 
 class LoggerParametersDialog(QDialog):
-    def __init__(self, logger, all_params):
+    def __init__(self, ald, all_params):
         super().__init__()
-
-        self.setWindowTitle(logger)
+        self.ald = ald
+        self.setWindowTitle(ald.logger.currentText())
 
         control = QDialogButtonBox.Ok | QDialogButtonBox.Cancel
 
@@ -148,3 +154,13 @@ class LoggerParametersDialog(QDialog):
             self.params.append(param)
         self.layout.addWidget(self.control_buttons)
         self.setLayout(self.layout)
+
+    def accept(self):
+        for p in self.params:
+            self.ald.params.append(p.text())
+        super(LoggerParametersDialog, self).accept()
+        self.ald.accept()
+
+    def reject(self):
+        super(LoggerParametersDialog, self).reject()
+        self.ald.reject()

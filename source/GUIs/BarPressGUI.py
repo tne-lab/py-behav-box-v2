@@ -26,7 +26,7 @@ class BarPressGUI(GUI):
             task.events.append(InputEvent(task, BarPressGUI.Inputs.GUI_PELLET))
 
         def pellets_text(self):
-            return [str(task.food.pellets)]
+            return [str(task.food.count)]
 
         def presses_text(self):
             return [str(task.presses)]

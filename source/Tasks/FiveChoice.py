@@ -2,7 +2,7 @@ import random
 from enum import Enum
 
 from Components.BinaryInput import BinaryInput
-from Components.FoodDispenser import FoodDispenser
+from Components.TimedToggle import TimedToggle
 from Components.Toggle import Toggle
 from Events.InputEvent import InputEvent
 from Tasks.Task import Task
@@ -69,8 +69,9 @@ class FiveChoice(Task):
             "nose_pokes": [BinaryInput, BinaryInput, BinaryInput, BinaryInput, BinaryInput],
             "nose_poke_lights": [Toggle, Toggle, Toggle, Toggle, Toggle],
             "food_trough": [BinaryInput],
-            "food": [FoodDispenser],
-            "food_light": [Toggle]
+            "food": [TimedToggle],
+            "food_light": [Toggle],
+            'dispense_time': 0.7
         }
 
     # noinspection PyMethodMayBeStatic
@@ -149,7 +150,7 @@ class FiveChoice(Task):
             if any(map(lambda x: x == BinaryInput.ENTERED, pokes)):  # The rat made a selection
                 selection = next(i for i in range(5) if pokes[i] == BinaryInput.ENTERED)
                 if selection == self.sequence[self.cur_trial]:  # If the selection was correct, provide a reward
-                    self.food.dispense()
+                    self.food.toggle(self.dispense_time)
                     metadata = {"response": "correct"}
                 else:
                     metadata = {"response": "incorrect"}
@@ -162,7 +163,7 @@ class FiveChoice(Task):
             if any(map(lambda x: x == BinaryInput.ENTERED, pokes)):  # The rat made a selection
                 selection = next(i for i in range(5) if pokes[i] == BinaryInput.ENTERED)
                 if selection == self.sequence[self.cur_trial]:  # If the selection was correct, provide a reward
-                    self.food.dispense()
+                    self.food.toggle(self.dispense_time)
                     metadata = {"response": "correct"}
                 else:
                     metadata = {"response": "incorrect"}

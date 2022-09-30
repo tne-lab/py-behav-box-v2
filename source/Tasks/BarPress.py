@@ -3,7 +3,7 @@ from enum import Enum
 import random
 from Components.BinaryInput import BinaryInput
 from Components.Toggle import Toggle
-from Components.FoodDispenser import FoodDispenser
+from Components.TimedToggle import TimedToggle
 from Components.Video import Video
 from Components.ByteOutput import ByteOutput
 from Events.InputEvent import InputEvent
@@ -24,7 +24,7 @@ class BarPress(Task):
         return {
             'food_lever': [BinaryInput],
             'cage_light': [Toggle],
-            'food': [FoodDispenser],
+            'food': [TimedToggle],
             'fan': [Toggle],
             'lever_out': [ByteOutput],
             'food_light': [Toggle],
@@ -38,7 +38,8 @@ class BarPress(Task):
             'reward_lockout': False,
             'reward_lockout_min': 25,
             'reward_lockout_max': 35,
-            'fr': 30
+            'fr': 30,
+            'dispense_time': 0.7
         }
 
     # noinspection PyMethodMayBeStatic
@@ -79,7 +80,7 @@ class BarPress(Task):
             self.events.append(InputEvent(self, self.Inputs.LEVER_DEPRESSED))
         if self.state == self.States.REWARD_AVAILABLE:
             if pressed:
-                self.food.dispense()
+                self.food.toggle(self.dispense_time)
                 if self.reward_lockout:
                     self.lockout = self.reward_lockout_min+random.random()*(self.reward_lockout_max-self.reward_lockout_min)
                     self.change_state(self.States.REWARD_UNAVAILABLE)

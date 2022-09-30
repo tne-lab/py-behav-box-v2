@@ -72,7 +72,7 @@ class DPALMustInit(Task):
                 self.touch_screen.refresh()
         elif self.state == self.States.STIMULUS_PRESENTATION:
             if len(touch_locs) > 0 and touch_locs[0] == self.correct_locations[-1] + 1:
-                self.food.dispense()
+                self.food.toggle(self.dispense_time)
                 self.touch_screen.remove_image(self.image_folder + self.blank)
                 self.touch_screen.refresh()
                 self.generate_images()

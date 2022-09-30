@@ -24,7 +24,7 @@ class MiddleNosePokeTrainingGUI(GUI):
             task.pokes = 0
 
         def pellets_text(self):
-            return [str(task.food.pellets)]
+            return [str(task.food.count)]
 
         def trial_count_text(self):
             return [str(task.pokes)]

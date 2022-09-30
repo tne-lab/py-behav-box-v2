@@ -4,7 +4,7 @@ from enum import Enum
 
 from Components.BinaryInput import BinaryInput
 from Components.TouchScreen import TouchScreen
-from Components.FoodDispenser import FoodDispenser
+from Components.TimedToggle import TimedToggle
 from Components.Toggle import Toggle
 from Components.Video import Video
 from Components.Speaker import Speaker
@@ -34,7 +34,7 @@ class DPAL(Task):
             'init_poke': [BinaryInput],
             'init_light': [Toggle],
             'cage_light': [Toggle],
-            'food': [FoodDispenser],
+            'food': [TimedToggle],
             'touch_screen': [TouchScreen],
             'tone': [Speaker],
             'fan': [Toggle],
@@ -62,7 +62,8 @@ class DPAL(Task):
             "cur_trial": 0,
             "correct_img": None,
             "incorrect_img": None,
-            "incorrect_location": None
+            "incorrect_location": None,
+            'dispense_time': 0.7
         }
 
     def init_state(self):
@@ -110,7 +111,7 @@ class DPAL(Task):
                 self.touch_screen.refresh()
         elif self.state == self.States.STIMULUS_PRESENTATION:
             if len(touch_locs) > 0 and touch_locs[0] == self.correct_img + 1:
-                self.food.dispense()
+                self.food.toggle(self.dispense_time)
                 self.touch_screen.remove_image(self.image_folder + self.images[self.correct_img])
                 self.touch_screen.remove_image(self.image_folder + self.images[self.incorrect_img])
                 self.touch_screen.refresh()

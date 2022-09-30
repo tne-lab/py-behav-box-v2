@@ -27,7 +27,7 @@ class DPALGUI(GUI):
             task.food.dispense()
 
         def pellets_text(self):
-            return [str(task.food.pellets)]
+            return [str(task.food.count)]
 
         def trial_count_text(self):
             return [str(task.cur_trial+1)]

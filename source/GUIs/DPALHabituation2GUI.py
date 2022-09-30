@@ -23,7 +23,7 @@ class DPALHabituation2GUI(GUI):
             task.food.dispense()
 
         def pellets_text(self):
-            return [str(task.food.pellets)]
+            return [str(task.food.count)]
 
         self.food_poke = NosePokeElement(self.task_gui, self.SF * 220, self.SF * 90, self.SF * 30, task.init_poke)
         self.feed_button = ButtonElement(self.task_gui, self.SF * 225, self.SF * 210, self.SF * 50, self.SF * 20, "FEED", task.food, int(self.SF * 12))

@@ -39,7 +39,7 @@ requirement is that they define an *AddressFile* object called `addresses`. *Com
     addresses.add_component("nose_poke_lights", "Toggle", "es", 10, 0)
     addresses.add_component("nose_poke_lights", "Toggle", "es", 15, 1)
     addresses.add_component("nose_poke_lights", "Toggle", "es", 2, 2)
-    addresses.add_component("food", "FoodDispenser", "es", 5)
+    addresses.add_component("food", "TimedToggle", "es", 5)
     addresses.add_component("house_light", "Toggle", "es", 8)
     addresses.add_component("video", "Video", "es", 9, None, {"fr": 30})
 

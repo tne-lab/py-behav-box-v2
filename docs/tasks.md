@@ -29,7 +29,7 @@ the `get_components` method. An example for a typical operant task is shown belo
         return {
             'nose_pokes': [BinaryInput, BinaryInput, BinaryInput],
             'nose_poke_lights': [Toggle, Toggle, Toggle],
-            'food': [FoodDispenser],
+            'food': [TimedToggle],
             'house_light': [Toggle]
         }
 
@@ -155,7 +155,7 @@ The `main_loop` method will be repeatedly called while the task is still active 
             pressed = True
         if self.state == self.States.REWARD_AVAILABLE:
             if pressed:
-                self.food.dispense()
+                self.food.toggle(self.dispense_time)
                 self.change_state(self.States.REWARD_UNAVAILABLE)
         elif self.state == self.States.REWARD_UNAVAILABLE:
             if self.time_in_state() > self.lockout:
@@ -196,7 +196,7 @@ Returns a dictionary describing all the components used by the task. Each compon
         return {
             'food_lever': [BinaryInput],
             'cage_light': [Toggle],
-            'food': [FoodDispenser],
+            'food': [TimedToggle],
             'fan': [Toggle],
             'lever_out': [ByteOutput],
             'food_light': [Toggle],
