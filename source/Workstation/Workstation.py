@@ -73,10 +73,10 @@ class Workstation:
             self.n_col = int(settings.value("pygame/n_col"))
             self.w = float(settings.value("pygame/w"))
             self.h = float(settings.value("pygame/h"))
+            self.task_gui = pygame.display.set_mode((self.w * self.n_col, self.h * self.n_row), pygame.RESIZABLE, 32)
         else:
             self.compute_chambergui()
 
-        self.task_gui = pygame.display.set_mode((self.w * self.n_col, self.h * self.n_row), pygame.RESIZABLE, 32)
         self.guis = {}
         app = QApplication(sys.argv)
         self.wsg = WorkstationGUI(self)
@@ -108,6 +108,7 @@ class Workstation:
         settings.setValue("pygame/h", self.h)
         settings.setValue("pyqt/w", int(szo[0] / 6))
         settings.setValue("pyqt/h", int(szo[1] - 70))
+        self.task_gui = pygame.display.set_mode((self.w * self.n_col, self.h * self.n_row), pygame.RESIZABLE, 32)
 
     def add_task(self, chamber, task_name, address_file, protocol, task_event_loggers):
         """

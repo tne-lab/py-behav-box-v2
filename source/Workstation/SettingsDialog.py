@@ -56,6 +56,7 @@ class SettingsDialog(QDialog):
     def accept(self):
         settings = QSettings()
         settings.setValue("n_chamber", self.n_chamber.text())
+        self.workstation.n_chamber = int(self.n_chamber.text())
         self.workstation.compute_chambergui()
         super(SettingsDialog, self).accept()
 
