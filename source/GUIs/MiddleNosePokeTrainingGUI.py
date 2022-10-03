@@ -20,7 +20,7 @@ class MiddleNosePokeTrainingGUI(GUI):
 
         def feed_mouse_up(self, _):
             self.clicked = False
-            task.food.dispense()
+            task.food.toggle(task.dispense_time)
             task.pokes = 0
 
         def pellets_text(self):

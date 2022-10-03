@@ -1,16 +1,20 @@
 from typing import List
 from types import MethodType
+from enum import Enum
 
 from Elements.CircleLightElement import CircleLightElement
 from Elements.Element import Element
 from Elements.NosePokeElement import NosePokeElement
 from Elements.ButtonElement import ButtonElement
 from Elements.InfoBoxElement import InfoBoxElement
+from Events.InputEvent import InputEvent
 from GUIs import Colors
 from GUIs.GUI import GUI
 
 
 class SetShiftGUI(GUI):
+    class Inputs(Enum):
+        GUI_PELLET = 0
 
     def __init__(self, task_gui, task):
         super().__init__(task_gui, task)
@@ -20,7 +24,8 @@ class SetShiftGUI(GUI):
 
         def feed_mouse_up(self, _):
             self.clicked = False
-            task.food.dispense()
+            task.food.toggle(task.dispense_time)
+            task.events.append(InputEvent(task, SetShiftGUI.Inputs.GUI_PELLET))
 
         def pellets_text(self):
             return [str(task.food.count)]

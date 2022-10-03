@@ -20,7 +20,7 @@ class DPALHabituation2GUI(GUI):
 
         def feed_mouse_up(self, _):
             self.clicked = False
-            task.food.dispense()
+            task.food.toggle(task.dispense_time)
 
         def pellets_text(self):
             return [str(task.food.count)]

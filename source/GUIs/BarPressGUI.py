@@ -22,7 +22,7 @@ class BarPressGUI(GUI):
 
         def feed_mouse_up(self, _):
             self.clicked = False
-            task.food.dispense()
+            task.food.toggle(task.dispense_time)
             task.events.append(InputEvent(task, BarPressGUI.Inputs.GUI_PELLET))
 
         def pellets_text(self):
