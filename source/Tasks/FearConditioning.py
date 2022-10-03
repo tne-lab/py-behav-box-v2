@@ -26,8 +26,7 @@ class FearConditioning(Task):
             "food": [TimedToggle],
             "tone": [Toggle],
             "fan": [Toggle],
-            "shocker": [Toggle],
-            'dispense_time': 0.7
+            "shocker": [Toggle]
         }
 
     # noinspection PyMethodMayBeStatic
@@ -39,7 +38,8 @@ class FearConditioning(Task):
             'type_sequence': [0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1],
             'shock_duration': 0.5,
             'post_session_time': 30,
-            'max_reward_time': 120
+            'max_reward_time': 120,
+            'dispense_time': 0.7
         }
 
     # noinspection PyMethodMayBeStatic

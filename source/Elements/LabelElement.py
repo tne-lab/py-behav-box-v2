@@ -37,10 +37,10 @@ class LabelElement(Element):
         Draws the label on screen
      """
 
-    def __init__(self, screen, x, y, w, h, text, f_size=20):
-        super().__init__(screen, x, y, pygame.Rect(x, y, w, h))
+    def __init__(self, tg, x, y, w, h, text, f_size=20, SF=None):
+        super().__init__(tg, x, y, pygame.Rect(x, y, w, h), SF)
         self.text = text
-        self.f_size = f_size
+        self.f_size = int(self.SF * f_size)
 
     def draw(self):
         txt_color = (255, 255, 255)  # Font color, could be made a parameter in the future

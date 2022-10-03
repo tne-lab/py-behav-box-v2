@@ -19,19 +19,19 @@ class MiddleNosePokeTraining(Task):
         RESET_PRESSED = 2
 
     @staticmethod
-    def get_components(self):
+    def get_components():
         return {
             'nose_pokes': [BinaryInput, BinaryInput, BinaryInput],
             'nose_poke_lights': [Toggle, Toggle, Toggle],
             'food': [TimedToggle],
-            'house_light': [Toggle],
-            'dispense_time': 0.7
+            'house_light': [Toggle]
         }
 
     # noinspection PyMethodMayBeStatic
     def get_constants(self):
         return {
-            "pokes": 0
+            "pokes": 0,
+            'dispense_time': 0.7
         }
 
     # noinspection PyMethodMayBeStatic

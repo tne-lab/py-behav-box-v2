@@ -4,17 +4,17 @@ from Elements.Element import Element
 
 
 class ShockElement(Element):
-    def __init__(self, screen, x, y, radius, color, tc=None):
-        super().__init__(screen, x, y, pygame.Rect(x, y, radius * 2, radius * 2))
-        self.radius = radius
+    def __init__(self, tg, x, y, radius, color=(255, 255, 0), comp=None):
+        super().__init__(tg, x, y, pygame.Rect(x, y, radius * 2, radius * 2))
+        self.radius = int(self.SF * radius)
         self.color = color
-        self.tc = tc
-        self.on = tc.get_state()
+        self.comp = comp
+        self.on = comp.get_state()
 
     def draw(self):
         cx = self.x + self.radius  # center x
         cy = self.y + self.radius  # center y
-        self.on = self.tc.get_state()
+        self.on = self.comp.get_state()
         sf = self.radius / 23
 
         if self.on:
@@ -40,4 +40,4 @@ class ShockElement(Element):
 
     def mouse_up(self, event):
         self.on = not self.on
-        self.tc.toggle(self.on)
+        self.comp.toggle(self.on)

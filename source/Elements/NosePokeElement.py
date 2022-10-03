@@ -5,16 +5,16 @@ from GUIs import Colors
 
 
 class NosePokeElement(Element):
-    def __init__(self, screen, x, y, radius, npc=None):
-        super().__init__(screen, x, y, pygame.Rect(x, y, radius * 2, radius * 2))
-        self.radius = radius
-        self.entered = npc.get_state()
-        self.npc = npc
+    def __init__(self, tg, x, y, radius, comp=None, SF=None):
+        super().__init__(tg, x, y, pygame.Rect(x, y, radius * 2, radius * 2), SF)
+        self.radius = int(self.SF * radius)
+        self.entered = comp.get_state()
+        self.comp = comp
 
     def draw(self):
         cx = self.x + self.radius  # center x
         cy = self.y + self.radius  # center y
-        self.entered = self.npc.get_state()
+        self.entered = self.comp.get_state()
 
         pygame.draw.circle(self.screen, Colors.lightgray, (cx, cy), self.radius, 0)  # MAIN BULB
         surf1 = pygame.Surface((500, 990), pygame.SRCALPHA)
@@ -30,8 +30,8 @@ class NosePokeElement(Element):
 
     def mouse_up(self, event):
         self.entered = False
-        self.npc.toggle(self.entered)
+        self.comp.toggle(self.entered)
 
     def mouse_down(self, event):
         self.entered = True
-        self.npc.toggle(self.entered)
+        self.comp.toggle(self.entered)

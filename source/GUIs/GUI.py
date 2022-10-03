@@ -1,4 +1,5 @@
 from abc import ABCMeta, abstractmethod
+from GUIs import Colors
 
 
 class GUI:
@@ -9,9 +10,10 @@ class GUI:
         self.SF = task_gui.get_width() / 500
         self.task = task
 
-    @abstractmethod
     def draw(self):
-        raise NotImplementedError
+        self.task_gui.fill(Colors.darkgray)
+        for el in self.get_elements():
+            el.draw()
 
     @abstractmethod
     def get_elements(self):

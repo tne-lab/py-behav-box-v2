@@ -45,33 +45,28 @@ class FearConditioningGUI(GUI):
         def event_countup(self):
             return [str(math.ceil(task.time_elapsed()))]
 
-        self.lever = BarPressElement(self.task_gui, self.SF * 77, self.SF * 25, self.SF * 100, self.SF * 90, task.food_lever)
-        self.feed_button = ButtonElement(self.task_gui, self.SF * 129, self.SF * 170, self.SF * 50, self.SF * 20, "FEED", task.food, int(self.SF * 12))
+        self.lever = BarPressElement(self, 77, 25, 100, 90, comp=task.food_lever)
+        self.feed_button = ButtonElement(self, 129, 170, 50, 20, "FEED")
         self.feed_button.mouse_up = MethodType(feed_mouse_up, self.feed_button)
-        pellets = InfoBoxElement(self.task_gui, self.SF * 129, self.SF * 125, self.SF * 50, self.SF * 15, "PELLETS", 'BOTTOM', ['0'], int(self.SF * 14), self.SF)
+        pellets = InfoBoxElement(self, 129, 125, 50, 15, "PELLETS", 'BOTTOM', ['0'])
         pellets.get_text = MethodType(pellets_text, pellets)
         self.info_boxes.append(pellets)
-        tone_count = InfoBoxElement(self.task_gui, self.SF * 242, self.SF * 125, self.SF * 50, self.SF * 15, "NTONE", 'BOTTOM', ['0'], int(self.SF * 14), self.SF)
+        tone_count = InfoBoxElement(self, 242, 125, 50, 15, "NTONE", 'BOTTOM', ['0'])
         tone_count.get_text = MethodType(tone_count_text, tone_count)
         self.info_boxes.append(tone_count)
-        ne = InfoBoxElement(self.task_gui, self.SF * 372, self.SF * 125, self.SF * 50, self.SF * 15, "NEXT EVENT", 'BOTTOM', ['0'], int(self.SF * 14), self.SF)
+        ne = InfoBoxElement(self, 372, 125, 50, 15, "NEXT EVENT", 'BOTTOM', ['0'])
         ne.get_text = MethodType(next_event, ne)
         self.info_boxes.append(ne)
-        ec = InfoBoxElement(self.task_gui, self.SF * 372, self.SF * 170, self.SF * 50, self.SF * 15, "TIME", 'BOTTOM', ['0'], int(self.SF * 14), self.SF)
+        ec = InfoBoxElement(self, 372, 170, 50, 15, "TIME", 'BOTTOM', ['0'])
         ec.get_text = MethodType(event_countup, ec)
         self.info_boxes.append(ec)
-        vic = InfoBoxElement(self.task_gui, self.SF * 64, self.SF * 125, self.SF * 50, self.SF * 15, "VI COUNT", 'BOTTOM', ['0'], int(self.SF * 14), self.SF)
+        vic = InfoBoxElement(self, 64, 125, 50, 15, "VI COUNT", 'BOTTOM', ['0'])
         vic.get_text = MethodType(vi_countdown, vic)
         self.info_boxes.append(vic)
-        self.reward_indicator = IndicatorElement(self.task_gui, self.SF * 74, self.SF * 163, self.SF * 15, Colors.green, Colors.red)
+        self.reward_indicator = IndicatorElement(self, 74, 163, 15)
         self.reward_indicator.on = MethodType(reward_available, self.reward_indicator)
-        self.tone = SoundElement(self.task_gui, self.SF * 227, self.SF * 25, self.SF * 40, task.tone)
-        self.shocker = ShockElement(self.task_gui, self.SF * 357, self.SF * 25, self.SF * 40, (255, 255, 0), task.shocker)
-
-    def draw(self):
-        self.task_gui.fill(Colors.darkgray)
-        for el in self.get_elements():
-            el.draw()
+        self.tone = SoundElement(self, 227, 25, 40, comp=task.tone)
+        self.shocker = ShockElement(self, 357, 25, 40, comp=task.shocker)
 
     def get_elements(self) -> List[Element]:
         return [self.feed_button, *self.info_boxes, self.lever, self.reward_indicator, self.tone, self.shocker]

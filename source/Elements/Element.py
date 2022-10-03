@@ -44,11 +44,15 @@ class Element:
         Draws the Element on screen
     """
 
-    def __init__(self, screen, x, y, rect):
-        self.screen = screen
-        self.x = x
-        self.y = y
-        self.rect = rect
+    def __init__(self, tg, x, y, rect, SF=None):
+        if SF is None:
+            self.SF = tg.SF
+        else:
+            self.SF = SF
+        self.screen = tg.task_gui
+        self.x = int(self.SF * x)
+        self.y = int(self.SF * y)
+        self.rect = pygame.Rect(int(rect.x * self.SF), int(rect.y * self.SF), int(rect.width * self.SF), int(rect.height * self.SF))
         self.selected = False
 
     def mouse_down(self, event):

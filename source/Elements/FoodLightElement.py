@@ -6,18 +6,18 @@ from GUIs import Colors
 
 
 class FoodLightElement(Element):
-    def __init__(self, screen, x, y, w, h, on_color, lc=None, line_color=Colors.black):
-        super().__init__(screen, x, y, pygame.Rect(x, y, w, h))
+    def __init__(self, tg, x, y, w, h, on_color=Colors.lightgray, comp=None, line_color=Colors.black, SF=None):
+        super().__init__(tg, x, y, pygame.Rect(x, y, w, h), SF)
         self.on_color = on_color
         self.off_color = (int(on_color[0] * .2), int(on_color[1] * .2), int(on_color[2] * .2))
         self.line_color = line_color
-        self.lc = lc
-        self.on = lc.get_state()
-        self.w = w
-        self.h = h
+        self.comp = comp
+        self.on = comp.get_state()
+        self.w = self.SF * w
+        self.h = self.SF * h
 
     def draw(self):
-        self.on = self.lc.get_state()
+        self.on = self.comp.get_state()
         if self.on:
             pygame.draw.rect(self.screen, self.on_color, self.rect,  0)
             pygame.draw.rect(self.screen, self.line_color, self.rect, 1)
@@ -37,4 +37,4 @@ class FoodLightElement(Element):
 
     def mouse_up(self, event):
         self.on = not self.on
-        self.lc.toggle(self.on)
+        self.comp.toggle(self.on)

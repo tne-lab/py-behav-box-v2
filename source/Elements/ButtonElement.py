@@ -5,20 +5,19 @@ from GUIs import Colors
 
 
 class ButtonElement(Element):
-    def __init__(self, screen, x, y, w, h, text, tc=None, f_size=12):
-        super().__init__(screen, x, y, pygame.Rect(x-3, y-3, w+6, h+6))
-        self.w = w
-        self.h = h
+    def __init__(self, tg, x, y, w, h, text, f_size=12, SF=None):
+        super().__init__(tg, x, y, pygame.Rect(x-3, y-3, w+6, h+6), SF)
+        self.w = int(self.SF * w)
+        self.h = int(self.SF * h)
         self.text = text
-        self.f_size = f_size
-        self.face = pygame.Rect(x, y, w, h)
-        self.pt1 = x, y
-        self.pt2 = x+w, y
-        self.pt3 = x+w, y+h
-        self.pt4 = x, y+h
+        self.f_size = int(self.SF * f_size)
+        self.face = pygame.Rect(self.x, self.y, self.w, self.h)
+        self.pt1 = self.x, self.y
+        self.pt2 = self.x+self.w, self.y
+        self.pt3 = self.x+self.w, self.y+self.h
+        self.pt4 = self.x, self.y+self.h
         self.face_color = (150, 150, 150)
         self.clicked = False
-        self.tc = tc
 
     def draw(self):
         ln_color = Colors.black

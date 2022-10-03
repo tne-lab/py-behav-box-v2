@@ -70,8 +70,7 @@ class FiveChoice(Task):
             "nose_poke_lights": [Toggle, Toggle, Toggle, Toggle, Toggle],
             "food_trough": [BinaryInput],
             "food": [TimedToggle],
-            "food_light": [Toggle],
-            'dispense_time': 0.7
+            "food_light": [Toggle]
         }
 
     # noinspection PyMethodMayBeStatic
@@ -83,7 +82,8 @@ class FiveChoice(Task):
             'stimulus_duration': 0.5,  # Time the stimulus is presented for
             'limited_hold_duration': 5,  # Time after stimulus presentation during which the rat can decide
             'post_response_interval': 5,  # Time after response before the rat can initiate again
-            'sequence': [random.randint(0, 4) for _ in range(100)]  # Sequence of stimulus presentations
+            'sequence': [random.randint(0, 4) for _ in range(100)],  # Sequence of stimulus presentations
+            'dispense_time': 0.7
         }
 
     # noinspection PyMethodMayBeStatic

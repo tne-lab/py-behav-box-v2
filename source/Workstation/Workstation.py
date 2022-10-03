@@ -233,8 +233,8 @@ class Workstation:
             col = key % self.n_col
             row = math.floor(key / self.n_col)
             pygame.draw.rect(self.task_gui, Colors.white, pygame.Rect(col * self.w, row * self.h, self.w, self.h), 1)
-            LabelElement(self.task_gui, col * self.w + 10, (row + 1) * self.h - 30, self.w, 20,
-                         self.tasks[key].metadata["subject"]).draw()
+            LabelElement(self.guis[key], 10, self.h - 30, self.w, 20,
+                         self.tasks[key].metadata["subject"], SF=1).draw()
         pygame.display.flip()  # Signal to pygame that the whole GUI has updated
 
     def log_events(self, chamber):

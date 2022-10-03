@@ -28,6 +28,7 @@ class BinaryInput(Component):
     def get_state(self):
         return self.state
 
+    # For simulation control
     def toggle(self, on):
         self.source.write_component(self.id, on)
 

@@ -7,16 +7,16 @@ from GUIs import Colors
 
 
 class FanElement(Element):
-    def __init__(self, screen, x, y, radius, tc=None):
+    def __init__(self, screen, x, y, radius, comp=None):
         super().__init__(screen, x, y, pygame.Rect(x, y, radius * 2, radius * 2))
-        self.radius = radius
-        self.tc = tc
-        self.on = tc.get_state()
+        self.radius = int(self.SF * radius)
+        self.comp = comp
+        self.on = comp.get_state()
 
     def draw(self):
         cx = self.x + self.radius  # center x
         cy = self.y + self.radius  # center y
-        self.on = self.tc.get_state()
+        self.on = self.comp.get_state()
         sf = self.radius / 40
         if self.on:
             col = Colors.lightgray
@@ -34,4 +34,4 @@ class FanElement(Element):
 
     def mouse_up(self, event):
         self.on = not self.on
-        self.tc.toggle(self.on)
+        self.comp.toggle(self.on)
