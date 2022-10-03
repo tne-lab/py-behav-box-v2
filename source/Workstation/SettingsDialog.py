@@ -73,7 +73,7 @@ class SettingsDialog(QDialog):
         else:
             si -= 1
         se = source_string.find(")", si)
-        self.workstation.sources[st_name].close()
+        self.workstation.sources[st_name].close_source()
         del self.workstation.sources[st_name]
         self.source_list.takeItem(self.source_list.currentRow())
         self.remove_button.setDisabled(False)
