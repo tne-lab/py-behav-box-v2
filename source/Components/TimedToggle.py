@@ -46,3 +46,4 @@ class TimedToggle(Toggle):
         self.count += 1
         time.sleep(dur)
         self.source.write_component(self.id, False)
+        self.state = False
