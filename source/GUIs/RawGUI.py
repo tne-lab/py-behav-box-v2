@@ -27,10 +27,5 @@ class RawGUI(GUI):
         self.info_boxes.append(ne)
         self.fan = FanElement(self, 210, 20, 40, comp=task.fan)
 
-    def draw(self):
-        self.task_gui.fill(Colors.darkgray)
-        for el in self.get_elements():
-            el.draw()
-
     def get_elements(self) -> List[Element]:
         return [self.fan, *self.info_boxes]

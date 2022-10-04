@@ -9,7 +9,6 @@ from Elements.SoundElement import SoundElement
 from Elements.ShockElement import ShockElement
 from Elements.ButtonElement import ButtonElement
 from Elements.InfoBoxElement import InfoBoxElement
-from GUIs import Colors
 from GUIs.GUI import GUI
 from Tasks.FearConditioning import FearConditioning
 
