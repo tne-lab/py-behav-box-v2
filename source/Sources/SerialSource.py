@@ -19,7 +19,7 @@ class SerialSource(Source):
         del self.components[component_id]
 
     def close_source(self):
-        for component in self.components:
+        for component in self.components.values():
             self.close_component(component)
 
     def read_component(self, component_id):

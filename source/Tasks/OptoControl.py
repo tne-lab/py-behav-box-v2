@@ -32,7 +32,8 @@ class OptoControl(Task):
         return {
             'delay': 3.5,
             'pws': [1000, 5000],
-            'amps': [1000, 2000, 3000]
+            'amps': [1000, 2000, 3000],
+            'vid_enabled': True
         }
 
     # noinspection PyMethodMayBeStatic
@@ -59,11 +60,13 @@ class OptoControl(Task):
 
     def start(self):
         self.stim.start(0)
-        self.cam.start()
+        if self.vid_enabled:
+            self.cam.start()
 
     def stop(self):
         self.stim.start(0)
-        self.cam.stop()
+        if self.vid_enabled:
+            self.cam.stop()
 
     def main_loop(self):
         front_active = self.front_light.check()
