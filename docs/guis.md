@@ -79,3 +79,85 @@ A similar strategy can be used to connect GUI elements to other portions of the 
 
     tone_count = InfoBoxElement(self, 242, 125, 50, 15, "NTONE", 'BOTTOM', ['0'])
     tone_count.get_text = MethodType(tone_count_text, tone_count)
+
+## Package reference
+
+### GUI
+
+#### draw
+
+    draw()
+
+By default, the `draw` method will clear the GUI canvas with a gray color and call each GUI Element's `draw` method. This 
+functionality can be altered by overriding the method.
+
+#### get_elements
+
+    get_elements()
+
+Returns the Elements in the GUI as a list. This method must be overridden by any GUI subclasses.
+
+*Example override:*
+
+    def get_elements(self) -> List[Element]:
+        return [self.fl, self.rl, self.complete_button, *self.info_boxes]
+
+#### handle_events
+
+    handle_events(events)
+
+Called by the Workstation event loop to send keyboard/mouse events in the GUI to each Element.
+
+### SequenceGUI
+
+Additionally calls the standard GUI methods on its `sub_gui` attribute.
+
+### Element 
+
+#### \_\_init\_\_
+
+    __init__(tg, x, y, rect, SF=None)
+
+#### draw
+
+    draw()
+
+#### handle_event
+
+    handle_event(event)
+
+#### mouse_down
+
+    mouse_down(event)
+
+#### mouse_up
+
+    mouse_up(event)
+
+### Default elements
+
+#### BarPressElement
+
+#### ButtonElement
+
+#### CircleLightElement
+
+#### FanElement
+
+#### FoodLightElement
+
+#### IndicatorElement
+
+#### InfoBoxElement
+
+#### LabelElement
+
+#### NosePokeElement
+
+#### RectangleLightElement
+
+#### ShockElement
+
+#### SoundElement
+
+### Helper functions

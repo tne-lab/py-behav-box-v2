@@ -27,3 +27,29 @@ Since some *Sources* might require functionality to relinquish control of certai
 `close_component` and `close_source`. `close_component` takes a component ID as input and alerts the system that the component
 is no longer required. `close_component` is called when a task is removed from the chamber or refreshed. In contrast, `close_source`
 is called when pybehave is exited.
+
+## Package Reference
+
+### Source base class
+
+### Included sources
+
+#### EmptySource
+
+#### EmptyTouchScreenSource
+
+#### HikVisionSource
+
+#### NIDAQSource
+
+#### NIWhiskerSource
+
+#### OESource
+
+#### OSControllerSource
+
+#### SerialSource
+
+#### VideoSource
+
+#### WhiskerTouchScreenSource
