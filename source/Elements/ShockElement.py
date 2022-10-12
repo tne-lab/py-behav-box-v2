@@ -1,17 +1,23 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from GUIs.GUI import GUI
+    from Components.Toggle import Toggle
+
 import pygame
 
 from Elements.Element import Element
 
 
 class ShockElement(Element):
-    def __init__(self, tg, x, y, radius, color=(255, 255, 0), comp=None):
+    def __init__(self, tg: GUI, x: int, y: int, radius: int, color: tuple[int, int, int] = (255, 255, 0), comp: Toggle = None):
         super().__init__(tg, x, y, pygame.Rect(x, y, radius * 2, radius * 2))
         self.radius = int(self.SF * radius)
         self.color = color
         self.comp = comp
         self.on = comp.get_state()
 
-    def draw(self):
+    def draw(self) -> None:
         cx = self.x + self.radius  # center x
         cy = self.y + self.radius  # center y
         self.on = self.comp.get_state()
@@ -38,6 +44,6 @@ class ShockElement(Element):
         pygame.draw.polygon(self.screen, (0, 0, 0), ptlist, 1)  # top white line
         pygame.draw.circle(self.screen, col, (cx, cy), self.radius, 2)
 
-    def mouse_up(self, event):
+    def mouse_up(self, event: pygame.event.Event) -> None:
         self.on = not self.on
         self.comp.toggle(self.on)

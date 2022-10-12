@@ -1,3 +1,9 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from GUIs.GUI import GUI
+    from Components.Toggle import Toggle
+
 import pygame as pygame
 
 from Elements.Element import Element
@@ -6,7 +12,7 @@ from GUIs import Colors
 
 
 class FoodLightElement(Element):
-    def __init__(self, tg, x, y, w, h, on_color=Colors.lightgray, comp=None, line_color=Colors.black, SF=None):
+    def __init__(self, tg: GUI, x: int, y: int, w: int, h: int, on_color: tuple[int, int, int] = Colors.lightgray, comp: Toggle = None, line_color: tuple[int, int, int] = Colors.black, SF: float = None):
         super().__init__(tg, x, y, pygame.Rect(x, y, w, h), SF)
         self.on_color = on_color
         self.off_color = (int(on_color[0] * .2), int(on_color[1] * .2), int(on_color[2] * .2))
@@ -16,7 +22,7 @@ class FoodLightElement(Element):
         self.w = self.SF * w
         self.h = self.SF * h
 
-    def draw(self):
+    def draw(self) -> None:
         self.on = self.comp.get_state()
         if self.on:
             pygame.draw.rect(self.screen, self.on_color, self.rect,  0)
@@ -35,6 +41,6 @@ class FoodLightElement(Element):
                        pygame.Rect(self.x - self.h / 8, self.y + self.h / 2 - self.h / 8, self.h / 8 * 2,
                                    self.h / 8 * 2), self.x, self.y + self.h / 2, self.h / 8)
 
-    def mouse_up(self, event):
+    def mouse_up(self, event: pygame.event.Event) -> None:
         self.on = not self.on
         self.comp.toggle(self.on)

@@ -1,3 +1,8 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from Sources.Source import Source
+
 from Components.Component import Component
 
 
@@ -13,8 +18,6 @@ class ByteOutput(Component):
             The ID of this Component
         component_address : str
             The location of this Component for its Source
-        metadata : str
-            String containing any metadata associated with this Component
 
         Attributes
         ----------
@@ -31,16 +34,17 @@ class ByteOutput(Component):
             Returns Component.Type.DIGITAL_OUTPUT
     """
 
-    def __init__(self, source, component_id, component_address):
+    def __init__(self, source: Source, component_id: str, component_address: str):
         self.state = 0
         super().__init__(source, component_id, component_address)
 
-    def send(self, msg):
+    def send(self, msg: int) -> None:
         self.source.write_component(self.id, msg)
         self.state = msg
 
-    def get_state(self):
+    def get_state(self) -> int:
         return self.state
 
-    def get_type(self):
+    @staticmethod
+    def get_type() -> Component.Type:
         return Component.Type.DIGITAL_OUTPUT

@@ -1,9 +1,16 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from Workstation.WorkstationGUI import WorkstationGUI
+    from Events.EventLogger import EventLogger
+
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 import pkgutil
 import os
 import csv
 from datetime import datetime
+
 from Workstation.IconButton import IconButton
 from Workstation.ConfigurationDialog import ConfigurationDialog
 from Events.TextEventLogger import TextEventLogger
@@ -12,7 +19,7 @@ from Events.GUIEventLogger import GUIEventLogger
 
 
 class ChamberWidget(QGroupBox):
-    def __init__(self, wsg, chamber_index, task_index, sn="default", afp="", pfp="", prompt="", event_loggers=([], []),
+    def __init__(self, wsg: WorkstationGUI, chamber_index: int, task_index: int, sn: str = "default", afp: str = "", pfp: str = "", prompt: str = "", event_loggers: tuple[list[EventLogger], list[list[str]]] = ([], []),
                  parent=None):
         super(ChamberWidget, self).__init__(parent)
         self.fd = None
@@ -120,7 +127,7 @@ class ChamberWidget(QGroupBox):
         self.prompt = prompt
 
         # Widget corresponding to event loggers
-        self.event_loggers = [TextEventLogger()] + event_loggers[0]
+        self.event_loggers = [TextEventLogger(), *event_loggers[0]]
         for el in self.event_loggers:
             if isinstance(el, GUIEventLogger):
                 el.set_chamber(self)
@@ -133,7 +140,7 @@ class ChamberWidget(QGroupBox):
         self.task = self.workstation.tasks[int(chamber_index) - 1]
         self.output_file_changed()
 
-    def refresh(self):
+    def refresh(self) -> None:
         """
         Updates the representation of the Task with the Workstation based on any changes made in the GUI.
         """
@@ -144,7 +151,7 @@ class ChamberWidget(QGroupBox):
         self.task = self.workstation.tasks[int(self.chamber_id.text()) - 1]
         self.output_file_changed()
 
-    def get_file_path(self, le, dir_type):
+    def get_file_path(self, le: QLineEdit, dir_type: str):
         """
         Creates a file browser dialog to select a Protocol or Address File.
 
@@ -160,19 +167,18 @@ class ChamberWidget(QGroupBox):
         self.fd.setFileMode(QFileDialog.ExistingFile)
         self.fd.setViewMode(QFileDialog.List)
         self.fd.setNameFilter("Python files (*.py)")
-        self.fd.setDirectory("{}/py-behav/{}/{}/".format(desktop, self.task_name.currentText(),
-                                                                            dir_type))
+        self.fd.setDirectory("{}/py-behav/{}/{}/".format(desktop, self.task_name.currentText(), dir_type))
         self.fd.setWindowTitle('Select File')
         self.fd.accept = lambda: self.open_file(le)
         self.fd.show()
 
-    def open_file(self, le):
+    def open_file(self, le: QLineEdit) -> None:
         if len(self.fd.selectedFiles()[0]) > 0:  # If a file was selected
             le.setText(self.fd.selectedFiles()[0])
             self.refresh()  # Update the Task representation with the new file
         super(QFileDialog, self.fd).accept()
 
-    def play_pause(self):
+    def play_pause(self) -> None:
         """
         On click function for the play/pause button. Behavior is different if task has yet to be started, is currently running, or is paused.
         """
@@ -200,7 +206,7 @@ class ChamberWidget(QGroupBox):
             self.play_button.setIcon(QIcon(self.play_button.icon))
             self.task.pause__()  # Pause the task
 
-    def play_helper(self):
+    def play_helper(self) -> None:
         # Change the play to a pause button
         self.play_button.icon = 'Workstation/icons/pause.svg'
         self.play_button.hover_icon = 'Workstation/icons/pause_hover.svg'
@@ -218,7 +224,7 @@ class ChamberWidget(QGroupBox):
             super(QMessageBox, self.pd).accept()
             self.pd = None
 
-    def stop(self):
+    def stop(self) -> None:
         """
         On click function for the stop button.
         """
@@ -236,7 +242,7 @@ class ChamberWidget(QGroupBox):
         self.output_file_path.setEnabled(True)
         self.workstation.stop_task(int(self.chamber_id.text()) - 1)  # Stop the task with the Workstation
 
-    def subject_changed(self):
+    def subject_changed(self) -> None:
         """
         Callback for when the name of the subject is changed in the GUI.
         """
@@ -248,7 +254,7 @@ class ChamberWidget(QGroupBox):
                                                 datetime.now().strftime("%m-%d-%Y")))
         self.output_file_changed()  # Signal to saving systems that the output directory has changed
 
-    def output_file_changed(self):
+    def output_file_changed(self) -> None:
         """
         File for handling changes to the desired output directory
         """
@@ -258,7 +264,7 @@ class ChamberWidget(QGroupBox):
             if isinstance(el, GUIEventLogger):  # Handle the change for GUIEventLoggers
                 el.set_chamber(self)
 
-    def contextMenuEvent(self, event):
+    def contextMenuEvent(self, _):
         """
         Create the right click menu for the ChamberWidget.
 
@@ -276,7 +282,7 @@ class ChamberWidget(QGroupBox):
             edit_config.triggered.connect(self.edit_configuration)
             menu.popup(QCursor.pos())
 
-    def save_configuration(self):
+    def save_configuration(self) -> None:
         desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
         # Create the Configuration folder if it does not already exist
         if not os.path.exists("{}/py-behav/Configurations/".format(desktop)):
@@ -304,6 +310,6 @@ class ChamberWidget(QGroupBox):
                         f"||{w}||" for w in self.logger_params[i - 1]) + "))"
                 w.writerow(["EventLoggers", el_text])
 
-    def edit_configuration(self):
+    def edit_configuration(self) -> None:
         self.ld = ConfigurationDialog(self)
         self.ld.show()

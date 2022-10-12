@@ -1,14 +1,18 @@
+from __future__ import annotations
 import time
 from abc import ABCMeta, abstractmethod
 import importlib
 from enum import Enum
 import runpy
+from typing import Any, Type, overload
 
-from Components import *
+from Components.Component import Component
 from Events.StateChangeEvent import StateChangeEvent
 from Events.InitialStateEvent import InitialStateEvent
 from Events.FinalStateEvent import FinalStateEvent
+from Sources.Source import Source
 from Utilities.AddressFile import AddressFile
+from Workstation.Workstation import Workstation
 
 
 class Task:
@@ -51,8 +55,14 @@ class Task:
     class SessionStates(Enum):
         PAUSED = 0
 
-    # ws, metadata, sources, address_file="", protocol=""
-    # task, components, protocol
+    @overload
+    def __init__(self, ws: Workstation, metadata: dict[str, Any], sources: dict[str, Source], address_file: str = "", protocol: str = ""):
+        ...
+
+    @overload
+    def __init__(self, task: Task, components: list[Component], protocol: str):
+        ...
+
     def __init__(self, *args):
         self.events = []  # List of Events from the current task loop
         self.state = None  # The current task state
@@ -173,20 +183,20 @@ class Task:
                         setattr(self, cons, file_globals['protocol'][cons])
         self.init()
 
-    def init(self):
+    def init(self) -> None:
         pass
 
     @abstractmethod
-    def init_state(self):
+    def init_state(self) -> Enum:
         raise NotImplementedError
 
-    def change_state(self, new_state, metadata=None):
+    def change_state(self, new_state: Enum, metadata: Any = None) -> None:
         self.entry_time = self.cur_time
         # Add a StateChangeEvent to the events list indicated the pair of States representing the transition
         self.events.append(StateChangeEvent(self, self.state, new_state, metadata))
         self.state = new_state
 
-    def start__(self):
+    def start__(self) -> None:
         self.state = self.init_state()
         for key, value in self.get_variables().items():
             setattr(self, key, value)
@@ -195,20 +205,20 @@ class Task:
         self.entry_time = self.start_time = self.cur_time = time.time()
         self.events.append(InitialStateEvent(self, self.state))
 
-    def start(self):
+    def start(self) -> None:
         pass
 
-    def pause__(self):
+    def pause__(self) -> None:
         self.paused = True
         self.time_into_trial = self.time_in_state()
         self.events.append(StateChangeEvent(self, self.state, self.SessionStates.PAUSED, None))
         self.ws.log_events(self.metadata["chamber"])
         self.pause()
 
-    def pause(self):
+    def pause(self) -> None:
         pass
 
-    def resume__(self):
+    def resume__(self) -> None:
         self.resume()
         self.paused = False
         time_temp = time.time()
@@ -217,44 +227,44 @@ class Task:
         self.entry_time = self.cur_time - self.time_into_trial
         self.events.append(StateChangeEvent(self, self.SessionStates.PAUSED, self.state, None))
 
-    def resume(self):
+    def resume(self) -> None:
         pass
 
-    def stop__(self):
+    def stop__(self) -> None:
         self.started = False
         self.events.append(FinalStateEvent(self, self.state))
         self.stop()
 
-    def stop(self):
+    def stop(self) -> None:
         pass
 
-    def main_loop__(self):
+    def main_loop__(self) -> None:
         self.cur_time = time.time()
         self.main_loop()
 
-    def main_loop(self):
+    def main_loop(self) -> None:
         pass
 
-    def time_elapsed(self):
+    def time_elapsed(self) -> float:
         return self.cur_time - self.start_time - self.time_paused
 
-    def time_in_state(self):
+    def time_in_state(self) -> float:
         return self.cur_time - self.entry_time
 
     # noinspection PyMethodMayBeStatic
-    def get_constants(self):
+    def get_constants(self) -> dict[str, Any]:
         return {}
 
     # noinspection PyMethodMayBeStatic
-    def get_variables(self):
+    def get_variables(self) -> dict[str, Any]:
         return {}
 
     @staticmethod
-    def get_components():
+    def get_components() -> dict[str, list[Type[Component]]]:
         return {}
 
     @abstractmethod
-    def is_complete(self):
+    def is_complete(self) -> bool:
         raise NotImplementedError
 
 

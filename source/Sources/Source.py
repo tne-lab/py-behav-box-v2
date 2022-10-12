@@ -1,3 +1,9 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING, Any
+if TYPE_CHECKING:
+    from Components.Component import Component
+    from Tasks.Task import Task
+
 from abc import ABCMeta, abstractmethod
 
 
@@ -20,18 +26,19 @@ class Source:
     """
 
     @abstractmethod
-    def register_component(self, task, component): raise NotImplementedError
+    def register_component(self, task: Task, component: Component) -> None:
+        raise NotImplementedError
 
-    def close_source(self):
+    def close_source(self) -> None:
         pass
 
-    def close_component(self, component_id):
-        pass
-
-    @abstractmethod
-    def read_component(self, component_id):
+    def close_component(self, component_id: str) -> None:
         pass
 
     @abstractmethod
-    def write_component(self, component_id, msg):
+    def read_component(self, component_id: str) -> Any:
+        pass
+
+    @abstractmethod
+    def write_component(self, component_id: str, msg: Any) -> None:
         pass

@@ -1,3 +1,8 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from Workstation.WorkstationGUI import WorkstationGUI
+
 import csv
 import importlib
 import re
@@ -8,7 +13,7 @@ import os
 
 
 class AddTaskDialog(QDialog):
-    def __init__(self, wsg):
+    def __init__(self, wsg: WorkstationGUI):
         super().__init__()
 
         self.wsg = wsg
@@ -48,18 +53,19 @@ class AddTaskDialog(QDialog):
         self.layout.addWidget(self.control_buttons)
         self.setLayout(self.layout)
 
-    def accept(self):
+    def accept(self) -> None:
         if self.configuration_path is not None:  # If a configuration file was provided
             with open(self.configuration_path, newline='') as csvfile:  # Open the configuration file
                 config_reader = csv.reader(csvfile, delimiter=',', quotechar='|')
                 # Default task values
-                chamber = task = subject = afp = pfp = ""
+                chamber = 0
+                task = subject = afp = pfp = ""
                 event_loggers = []
                 logger_params = []
                 # Check for each relevant row in the configuration
                 for row in config_reader:
                     if row[0] == "Chamber":
-                        chamber = row[1]
+                        chamber = int(row[1])
                     elif row[0] == "Subject":
                         subject = row[1]
                     elif row[0] == "Task":
@@ -87,7 +93,7 @@ class AddTaskDialog(QDialog):
             self.wsg.add_task(self.chamber.currentText(), self.task.currentIndex())
         super(AddTaskDialog, self).accept()
 
-    def load_config(self):
+    def load_config(self) -> None:
         desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
         file_name = QFileDialog.getOpenFileName(self, 'Select File',
                                                 "{}/py-behav/Configurations/".format(desktop),

@@ -1,11 +1,15 @@
-import pygame
+from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from GUIs.GUI import GUI
 
+import pygame
 from Elements.Element import Element
 from GUIs import Colors
 
 
 class ButtonElement(Element):
-    def __init__(self, tg, x, y, w, h, text, f_size=12, SF=None):
+    def __init__(self, tg: GUI, x: int, y: int, w: int, h: int, text: str, f_size: int = 12, SF: float = None):
         super().__init__(tg, x, y, pygame.Rect(x-3, y-3, w+6, h+6), SF)
         self.w = int(self.SF * w)
         self.h = int(self.SF * h)
@@ -19,7 +23,7 @@ class ButtonElement(Element):
         self.face_color = (150, 150, 150)
         self.clicked = False
 
-    def draw(self):
+    def draw(self) -> None:
         ln_color = Colors.black
         # draw box
         pygame.draw.rect(self.screen, ln_color, self.rect)
@@ -41,8 +45,8 @@ class ButtonElement(Element):
         msg_y = (self.rect.height - msg_ht) / 2
         self.screen.blit(msg_in_font, self.rect.move(msg_x, msg_y))
 
-    def mouse_up(self, _):
+    def mouse_up(self, event: pygame.event.Event) -> None:
         self.clicked = False
 
-    def mouse_down(self, _):
+    def mouse_down(self, _) -> None:
         self.clicked = True

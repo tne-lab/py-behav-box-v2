@@ -1,3 +1,9 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from Events.EventLogger import EventLogger
+    from Workstation.Workstation import Workstation
+
 from PyQt5.QtWidgets import *
 from PyQt5 import QtCore
 from PyQt5.QtCore import *
@@ -8,7 +14,7 @@ from Workstation.ChamberWidget import ChamberWidget
 
 
 class WorkstationGUI(QWidget):
-    def __init__(self, workstation):
+    def __init__(self, workstation: Workstation):
         QWidget.__init__(self)
         self.sd = None
         self.td = None
@@ -64,17 +70,17 @@ class WorkstationGUI(QWidget):
         self.move(0, 0)
         self.show()
 
-    def settings_dialog(self):
+    def settings_dialog(self) -> None:
         # Opens the SettingsDialog for adjusting py-behav settings
         self.sd = SettingsDialog(self.workstation)
         self.sd.show()
 
-    def task_dialog(self):
+    def task_dialog(self) -> None:
         # Opens the AddTaskDialog for adding a new task to a chamber
         self.td = AddTaskDialog(self)
         self.td.show()
 
-    def add_task(self, chamber_index, task_index, subject="default", afp="", pfp="", prompt="", event_loggers=None):
+    def add_task(self, chamber_index: int, task_index: int, subject: str = "default", afp: str = "", pfp: str = "", prompt: str = "", event_loggers: tuple[list[EventLogger], list[list[str]]] = None) -> None:
         """
         Adds a ChamberWidget to the GUI corresponding to a new task
 
@@ -108,7 +114,7 @@ class WorkstationGUI(QWidget):
             self.emsg.setWindowTitle("Error")
             self.emsg.show()
 
-    def remove_task(self, chamber_index):
+    def remove_task(self, chamber_index: int) -> None:
         """
         Removes a task
 

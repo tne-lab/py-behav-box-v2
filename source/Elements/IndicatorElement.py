@@ -1,3 +1,8 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from GUIs.GUI import GUI
+
 import pygame
 
 from Elements.draw_light import draw_light
@@ -6,16 +11,17 @@ from GUIs import Colors
 
 
 class IndicatorElement(Element):
-    def __init__(self, tg, x, y, radius, on_color=Colors.green, off_color=Colors.red):
+    def __init__(self, tg: GUI, x: int, y: int, radius: int, on_color: tuple[int, int, int] = Colors.green, off_color: tuple[int, int, int] = Colors.red):
         super().__init__(tg, x, y, pygame.Rect(x, y, radius * 2, radius * 2))
         self.radius = int(self.SF * radius)
         self.on_color = on_color
         self.off_color = off_color
 
-    def on(self):
+    # noinspection PyMethodMayBeStatic
+    def on(self) -> bool:
         return True
 
-    def draw(self):
+    def draw(self) -> None:
         cx = self.x + self.radius  # center x
         cy = self.y + self.radius  # center y
 

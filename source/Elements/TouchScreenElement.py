@@ -4,7 +4,7 @@ from Elements.Element import Element
 from GUIs import Colors
 
 
-class TouchScreenElement(Element):
+class TouchScreenElement(Element):  # Not implemented
     def __init__(self, screen, x, y, w, h, active_rect, tsc=None):
         super().__init__(screen, x, y, pygame.Rect(x, y, w, h))
         self.w = w

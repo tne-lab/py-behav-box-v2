@@ -1,18 +1,23 @@
-from abc import ABCMeta
+from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    import numpy as np
+
+from abc import ABCMeta, abstractmethod
 from Components.Component import Component
 
 
 class Stimmer(Component):
     __metaclass__ = ABCMeta
 
-    def parametrize(self, pnum, outs, per, dur, amps, durs):
-        pass
+    @abstractmethod
+    def parametrize(self, pnum: int, outs: list[int], per: int, dur: int, amps: np.ndarray, durs: list[int]) -> None:
+        raise NotImplementedError
 
-    def start(self, pnum, stype):
-        pass
+    @abstractmethod
+    def start(self, pnum: int, stype: str) -> None:
+        raise NotImplementedError
 
-    def get_state(self):
-        pass
-
-    def get_type(self):
+    @staticmethod
+    def get_type() -> Component.Type:
         return Component.Type.OUTPUT

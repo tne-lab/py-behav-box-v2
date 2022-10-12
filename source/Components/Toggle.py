@@ -1,3 +1,8 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from Sources.Source import Source
+
 from Components.Component import Component
 
 
@@ -31,16 +36,17 @@ class Toggle(Component):
             Returns Component.Type.DIGITAL_OUTPUT
     """
 
-    def __init__(self, source, component_id, component_address):
+    def __init__(self, source: Source, component_id: str, component_address: str):
         self.state = False
         super().__init__(source, component_id, component_address)
 
-    def toggle(self, on):
+    def toggle(self, on: bool) -> None:
         self.write(on)
         self.state = on
 
-    def get_state(self):
+    def get_state(self) -> bool:
         return self.state
 
-    def get_type(self):
+    @staticmethod
+    def get_type() -> Component.Type:
         return Component.Type.DIGITAL_OUTPUT

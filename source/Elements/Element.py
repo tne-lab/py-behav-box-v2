@@ -1,3 +1,8 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from GUIs.GUI import GUI
+
 from abc import ABCMeta, abstractmethod
 
 import pygame
@@ -44,7 +49,7 @@ class Element:
         Draws the Element on screen
     """
 
-    def __init__(self, tg, x, y, rect, SF=None):
+    def __init__(self, tg: GUI, x: int, y: int, rect: pygame.Rect, SF: float = None):
         if SF is None:
             self.SF = tg.SF
         else:
@@ -55,13 +60,13 @@ class Element:
         self.rect = pygame.Rect(int(rect.x * self.SF), int(rect.y * self.SF), int(rect.width * self.SF), int(rect.height * self.SF))
         self.selected = False
 
-    def mouse_down(self, event):
+    def mouse_down(self, event: pygame.event.Event) -> None:
         pass
 
-    def mouse_up(self, event):
+    def mouse_up(self, event: pygame.event.Event) -> None:
         pass
 
-    def handle_event(self, event):
+    def handle_event(self, event: pygame.event.Event) -> bool:
         cur_x, cur_y = pygame.mouse.get_pos()
         offset = self.screen.get_offset()  # Correct the position based on the location of the screen
         cur_x -= offset[0]
@@ -81,5 +86,5 @@ class Element:
         return False  # Event not handled
 
     @abstractmethod
-    def draw(self):
+    def draw(self) -> None:
         raise NotImplementedError

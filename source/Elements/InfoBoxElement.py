@@ -1,3 +1,8 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from GUIs.GUI import GUI
+
 import pygame
 
 from Elements.Element import Element
@@ -5,7 +10,7 @@ from Elements.Element import Element
 
 class InfoBoxElement(Element):
 
-    def __init__(self, screen, x, y, w, h, label, label_pos, text, f_size=14, SF=None):
+    def __init__(self, screen: GUI, x: int, y: int, w: int, h: int, label: str, label_pos: str, text: str, f_size: int = 14, SF: float = None):
         super().__init__(screen, x, y, pygame.Rect(x, y, w, h), SF)
         self.label_pos = label_pos  # 'TOP','LEFT','RIGHT', or 'BOTTOM'
         self.surface_color = (255, 255, 255)
@@ -21,10 +26,10 @@ class InfoBoxElement(Element):
         self.pt3 = self.x+w, self.y+h
         self.pt4 = self.x, self.y+h
 
-    def get_text(self):
+    def get_text(self) -> str:
         return self.text
 
-    def draw(self):
+    def draw(self) -> None:
         self.text = self.get_text()
         # Draw Box
         pygame.draw.rect(self.screen, (0, 0, 0), self.border)

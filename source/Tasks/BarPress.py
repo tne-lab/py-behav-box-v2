@@ -1,7 +1,10 @@
 from enum import Enum
 
 import random
+from typing import Type
+
 from Components.BinaryInput import BinaryInput
+from Components.Component import Component
 from Components.Toggle import Toggle
 from Components.TimedToggle import TimedToggle
 from Components.Video import Video

@@ -1,3 +1,8 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from Workstation.Workstation import Workstation
+
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 import pkgutil
@@ -6,7 +11,7 @@ import inspect
 
 
 class SettingsDialog(QDialog):
-    def __init__(self, workstation):
+    def __init__(self, workstation: Workstation):
         super().__init__()
         self.asd = None
         self.workstation = workstation
@@ -53,17 +58,17 @@ class SettingsDialog(QDialog):
         self.layout.addWidget(self.control_buttons)
         self.setLayout(self.layout)
     
-    def accept(self):
+    def accept(self) -> None:
         settings = QSettings()
         settings.setValue("n_chamber", self.n_chamber.text())
         self.workstation.n_chamber = int(self.n_chamber.text())
         self.workstation.compute_chambergui()
         super(SettingsDialog, self).accept()
 
-    def on_source_clicked(self, _):
+    def on_source_clicked(self, _) -> None:
         self.remove_button.setDisabled(False)
 
-    def remove_source(self):
+    def remove_source(self) -> None:
         st = self.source_list.currentItem().text()
         st_name = st.split(" (")[0]
         settings = QSettings()
@@ -81,13 +86,13 @@ class SettingsDialog(QDialog):
         settings = QSettings()
         settings.setValue("sources", source_string[0:si] + source_string[se+1:])
 
-    def add_source(self):
+    def add_source(self) -> None:
         self.asd = AddSourceDialog(self)
         self.asd.show()
 
 
 class AddSourceDialog(QDialog):
-    def __init__(self, sd):
+    def __init__(self, sd: SettingsDialog):
         super(AddSourceDialog, self).__init__()
         self.sd = sd
         self.spd = None
@@ -122,7 +127,7 @@ class AddSourceDialog(QDialog):
         self.setLayout(self.layout)
         self.params = []
 
-    def set_params(self):
+    def set_params(self) -> None:
         source_type = getattr(importlib.import_module("Sources." + self.source.currentText()), self.source.currentText())
         all_params = inspect.getfullargspec(source_type.__init__)
         if len(all_params.args) > 1:
@@ -131,7 +136,7 @@ class AddSourceDialog(QDialog):
         else:
             self.accept()
 
-    def accept(self):
+    def accept(self) -> None:
         source_type = getattr(importlib.import_module("Sources." + self.source.currentText()),
                               self.source.currentText())
         settings = QSettings()
@@ -145,7 +150,7 @@ class AddSourceDialog(QDialog):
 
 
 class SourceParametersDialog(QDialog):
-    def __init__(self, asd, all_params):
+    def __init__(self, asd: AddSourceDialog, all_params: inspect.FullArgSpec):
         super().__init__()
         self.asd = asd
 
@@ -174,12 +179,12 @@ class SourceParametersDialog(QDialog):
         self.layout.addWidget(self.control_buttons)
         self.setLayout(self.layout)
 
-    def accept(self):
+    def accept(self) -> None:
         for p in self.params:
             self.asd.params.append(p.text())
         super(SourceParametersDialog, self).accept()
         self.asd.accept()
 
-    def reject(self):
+    def reject(self) -> None:
         super(SourceParametersDialog, self).reject()
         self.asd.reject()

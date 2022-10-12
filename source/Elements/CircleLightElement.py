@@ -1,12 +1,17 @@
-import pygame
+from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from GUIs.GUI import GUI
+    from Components.Toggle import Toggle
 
+import pygame
 from Elements.draw_light import draw_light
 from Elements.Element import Element
 from GUIs import Colors
 
 
 class CircleLightElement(Element):
-    def __init__(self, tg, x, y, radius, on_color=Colors.lightgray, background_color=Colors.darkgray, comp=None, SF=None):
+    def __init__(self, tg: GUI, x: int, y: int, radius: int, on_color: tuple[int, int, int] = Colors.lightgray, background_color: tuple[int, int, int] = Colors.darkgray, comp: Toggle = None, SF: float = None):
         super().__init__(tg, x, y, pygame.Rect(x, y, radius * 2, radius * 2), SF)
         self.radius = int(self.SF * radius)
         self.on_color = on_color
@@ -15,7 +20,7 @@ class CircleLightElement(Element):
         self.comp = comp
         self.on = comp.get_state()
 
-    def draw(self):
+    def draw(self) -> None:
         cx = self.x + self.radius  # center x
         cy = self.y + self.radius  # center y
         self.on = self.comp.get_state()
@@ -27,6 +32,6 @@ class CircleLightElement(Element):
         else:
             draw_light(self.screen, self.off_color, (0, 0, 0), self.rect, cx, cy, self.radius)
 
-    def mouse_up(self, event):
+    def mouse_up(self, event: pygame.event.Event) -> None:
         self.on = not self.on
         self.comp.toggle(self.on)

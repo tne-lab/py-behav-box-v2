@@ -1,3 +1,8 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from GUIs.GUI import GUI
+
 import pygame
 
 from Elements.Element import Element
@@ -37,12 +42,12 @@ class LabelElement(Element):
         Draws the label on screen
      """
 
-    def __init__(self, tg, x, y, w, h, text, f_size=20, SF=None):
+    def __init__(self, tg: GUI, x: int, y: int, w: int, h: int, text: str, f_size: int = 20, SF: float = None):
         super().__init__(tg, x, y, pygame.Rect(x, y, w, h), SF)
         self.text = text
         self.f_size = int(self.SF * f_size)
 
-    def draw(self):
+    def draw(self) -> None:
         txt_color = (255, 255, 255)  # Font color, could be made a parameter in the future
         msg_font = pygame.font.SysFont('arial', self.f_size)
         msg_in_font = msg_font.render(self.text, True, txt_color)  # Create the font object

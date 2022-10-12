@@ -1,3 +1,9 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from Events.EventLogger import EventLogger
+    from Tasks.Task import Task
+
 import importlib
 from pkgutil import iter_modules
 from inspect import isclass
@@ -5,11 +11,14 @@ import signal
 
 import math
 import atexit
+from typing import Type
 
-from GUIs import *
 from GUIs import Colors
 from Elements.LabelElement import LabelElement
 import pygame
+
+from Sources.EmptySource import EmptySource
+from Sources.EmptyTouchScreenSource import EmptyTouchScreenSource
 from Workstation.WorkstationGUI import WorkstationGUI
 
 from PyQt5.QtWidgets import *
@@ -71,8 +80,8 @@ class Workstation:
         if settings.contains("pygame/n_row"):
             self.n_row = int(settings.value("pygame/n_row"))
             self.n_col = int(settings.value("pygame/n_col"))
-            self.w = float(settings.value("pygame/w"))
-            self.h = float(settings.value("pygame/h"))
+            self.w = int(settings.value("pygame/w"))
+            self.h = int(settings.value("pygame/h"))
             self.task_gui = pygame.display.set_mode((self.w * self.n_col, self.h * self.n_row), pygame.RESIZABLE, 32)
         else:
             self.compute_chambergui()
@@ -85,22 +94,22 @@ class Workstation:
         signal.signal(signal.SIGINT, self.exit_handler)
         sys.exit(app.exec())
 
-    def compute_chambergui(self):
+    def compute_chambergui(self) -> None:
         settings = QSettings()
         szo = pygame.display.get_desktop_sizes()
         szo = szo[0]
         sz = (int(szo[0] * 5 / 6), int(szo[1] - 70))
         self.n_row = 1
         self.n_col = self.n_chamber
-        self.w = sz[0] / self.n_chamber
-        self.h = sz[0] / self.n_chamber * 2
+        self.w = math.floor(sz[0] / self.n_chamber)
+        self.h = math.floor(sz[0] / self.n_chamber * 2)
         if self.h > sz[1]:
             self.h = sz[1]
-            self.w = sz[1] / 2
-        while self.h < sz[1] / (self.n_row + 1) or self.n_col * self.w > sz[0]:
+            self.w = math.floor(sz[1] / 2)
+        while self.h < math.floor(sz[1] / (self.n_row + 1)) or self.n_col * self.w > sz[0]:
             self.n_row += 1
-            self.h = sz[1] / self.n_row
-            self.w = self.h / 2
+            self.h = math.floor(sz[1] / self.n_row)
+            self.w = math.floor(self.h / 2)
             self.n_col = math.ceil(self.n_chamber / self.n_row)
         settings.setValue("pygame/n_row", self.n_row)
         settings.setValue("pygame/n_col", self.n_col)
@@ -110,7 +119,7 @@ class Workstation:
         settings.setValue("pyqt/h", int(szo[1] - 70))
         self.task_gui = pygame.display.set_mode((self.w * self.n_col, self.h * self.n_row), pygame.RESIZABLE, 32)
 
-    def add_task(self, chamber, task_name, address_file, protocol, task_event_loggers):
+    def add_task(self, chamber: int, task_name: str, address_file: str, protocol: str, task_event_loggers: list[EventLogger]) -> None:
         """
         Creates a Task and adds it to the chamber.
 
@@ -133,6 +142,8 @@ class Workstation:
         metadata = {"chamber": chamber, "subject": "default"}
         self.tasks[chamber] = task(self, metadata, self.sources, address_file, protocol)  # Create the task
         self.event_loggers[chamber] = task_event_loggers
+        for logger in task_event_loggers:
+            logger.set_task(self.tasks[chamber])
         # Import the Task GUI
         gui = getattr(importlib.import_module("GUIs." + task_name + "GUI"), task_name + "GUI")
         # Position the GUI in pygame
@@ -142,7 +153,7 @@ class Workstation:
         self.guis[chamber] = gui(self.task_gui.subsurface(col * self.w, row * self.h, self.w, self.h),
                                  self.tasks[chamber])
 
-    def switch_task(self, task_base, task_name, protocol=None):
+    def switch_task(self, task_base: Task, task_name: Type[Task], protocol: str = None) -> Task:
         """
         Switch the active Task in a sequence.
 
@@ -167,7 +178,7 @@ class Workstation:
             new_task)
         return new_task
 
-    def remove_task(self, chamber, del_loggers=True):
+    def remove_task(self, chamber: int, del_loggers: bool = True) -> None:
         """
         Remove the Task from the specified chamber.
 
@@ -186,7 +197,7 @@ class Workstation:
         del self.event_loggers[chamber]
         del self.guis[chamber]
 
-    def start_task(self, chamber):
+    def start_task(self, chamber: int) -> None:
         """
         Start the Task in the specified chamber.
 
@@ -201,7 +212,7 @@ class Workstation:
             el.log_events(self.tasks[chamber].events)
         self.tasks[chamber].events = []
 
-    def stop_task(self, chamber):
+    def stop_task(self, chamber: int) -> None:
         """
         Stop the Task in the specified chamber.
 
@@ -215,7 +226,7 @@ class Workstation:
             el.log_events(self.tasks[chamber].events)
         self.tasks[chamber].events = []
 
-    def loop(self):
+    def loop(self) -> None:
         """
         Master event loop for all Tasks. Handles Task logic, GUI updates, and Task Events.
         """
@@ -237,12 +248,12 @@ class Workstation:
                          self.tasks[key].metadata["subject"], SF=1).draw()
         pygame.display.flip()  # Signal to pygame that the whole GUI has updated
 
-    def log_events(self, chamber):
+    def log_events(self, chamber: int) -> None:
         for el in self.event_loggers[chamber]:
             el.log_events(self.tasks[chamber].events)
         self.tasks[chamber].events = []
 
-    def exit_handler(self, *args):
+    def exit_handler(self, _):
         """
         Callback for when py-behav is closed.
         """

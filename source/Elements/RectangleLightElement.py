@@ -3,7 +3,7 @@ import pygame
 from Elements.Element import Element
 
 
-class RectangleLightElement(Element):
+class RectangleLightElement(Element):  # Not implemented
     def __init__(self, screen, x, y, w, h, on_color, background_color, lc=None):
         super().__init__(screen, x, y, pygame.Rect(x, y, w, h))
         self.w = w
