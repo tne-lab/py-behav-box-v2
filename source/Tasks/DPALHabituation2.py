@@ -29,7 +29,7 @@ class DPALHabituation2(Task):
         if self.state == self.States.INPUT:
             if init_poke == BinaryInput.ENTERED:
                 self.init_light.toggle(False)
-                self.food.dispense()
+                self.food.toggle(self.dispense_time)
                 self.tone.play_sound(1800, 1, 1)
                 self.change_state(self.States.INTER_TRIAL_INTERVAL)
         elif self.state == self.States.INTER_TRIAL_INTERVAL:

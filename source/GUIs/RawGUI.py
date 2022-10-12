@@ -22,16 +22,10 @@ class RawGUI(GUI):
             else:
                 return [str(0)]
 
-        ne = InfoBoxElement(self.task_gui, self.SF * 372, self.SF * 125, self.SF * 50, self.SF * 15, "NEXT EVENT",
-                            'BOTTOM', ['0'], int(self.SF * 14), self.SF)
+        ne = InfoBoxElement(self, 372, 125, 50, 15, "NEXT EVENT", 'BOTTOM', ['0'])
         ne.get_text = MethodType(next_event, ne)
         self.info_boxes.append(ne)
-        self.fan = FanElement(self.task_gui, self.SF * 210, self.SF * 20, self.SF * 40, task.fan)
-
-    def draw(self):
-        self.task_gui.fill(Colors.darkgray)
-        for el in self.get_elements():
-            el.draw()
+        self.fan = FanElement(self, 210, 20, 40, comp=task.fan)
 
     def get_elements(self) -> List[Element]:
         return [self.fan, *self.info_boxes]

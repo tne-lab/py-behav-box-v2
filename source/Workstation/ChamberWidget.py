@@ -1,9 +1,16 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from Workstation.WorkstationGUI import WorkstationGUI
+    from Events.EventLogger import EventLogger
+
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 import pkgutil
 import os
 import csv
 from datetime import datetime
+
 from Workstation.IconButton import IconButton
 from Workstation.ConfigurationDialog import ConfigurationDialog
 from Events.TextEventLogger import TextEventLogger
@@ -12,9 +19,12 @@ from Events.GUIEventLogger import GUIEventLogger
 
 
 class ChamberWidget(QGroupBox):
-    def __init__(self, wsg, chamber_index, task_index, sn="default", afp="", pfp="", prompt="", event_loggers=([], []),
+    def __init__(self, wsg: WorkstationGUI, chamber_index: int, task_index: int, sn: str = "default", afp: str = "", pfp: str = "", prompt: str = "", event_loggers: tuple[list[EventLogger], list[list[str]]] = ([], []),
                  parent=None):
         super(ChamberWidget, self).__init__(parent)
+        self.fd = None
+        self.ld = None
+        self.pd = None
         self.workstation = wsg.workstation
         self.wsg = wsg
         self.chamber = QVBoxLayout(self)
@@ -105,9 +115,10 @@ class ChamberWidget(QGroupBox):
         self.stop_button = IconButton('Workstation/icons/stop.svg', 'Workstation/icons/stop_hover.svg',
                                       'Workstation/icons/stop_disabled.svg')
         self.stop_button.setFixedWidth(30)
-        self.stop_button.setEnabled(False)
         self.stop_button.clicked.connect(self.stop)
         session_layout.addWidget(self.stop_button)
+        self.stop_button.setDisabled(True)
+        self.stop_button.setEnabled(False)
         row3.addWidget(session_box)
 
         self.chamber.addLayout(row3)
@@ -116,7 +127,7 @@ class ChamberWidget(QGroupBox):
         self.prompt = prompt
 
         # Widget corresponding to event loggers
-        self.event_loggers = [TextEventLogger()] + event_loggers[0]
+        self.event_loggers = [TextEventLogger(), *event_loggers[0]]
         for el in self.event_loggers:
             if isinstance(el, GUIEventLogger):
                 el.set_chamber(self)
@@ -129,7 +140,7 @@ class ChamberWidget(QGroupBox):
         self.task = self.workstation.tasks[int(chamber_index) - 1]
         self.output_file_changed()
 
-    def refresh(self):
+    def refresh(self) -> None:
         """
         Updates the representation of the Task with the Workstation based on any changes made in the GUI.
         """
@@ -140,7 +151,7 @@ class ChamberWidget(QGroupBox):
         self.task = self.workstation.tasks[int(self.chamber_id.text()) - 1]
         self.output_file_changed()
 
-    def get_file_path(self, le, dir_type):
+    def get_file_path(self, le: QLineEdit, dir_type: str):
         """
         Creates a file browser dialog to select a Protocol or Address File.
 
@@ -152,54 +163,68 @@ class ChamberWidget(QGroupBox):
             The type of file to look for (Protocols or AddressFiles)
         """
         desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
-        file_name = QFileDialog.getOpenFileName(self, 'Select File',
-                                                "{}/py-behav/{}/{}/".format(desktop, self.task_name.currentText(),
-                                                                            dir_type),
-                                                '*.csv')
-        if len(file_name[0]) > 0:  # If a file was selected
-            le.setText(file_name[0])
-            self.refresh()  # Update the Task representation with the new file
+        self.fd = QFileDialog(self)
+        self.fd.setFileMode(QFileDialog.ExistingFile)
+        self.fd.setViewMode(QFileDialog.List)
+        self.fd.setNameFilter("Python files (*.py)")
+        self.fd.setDirectory("{}/py-behav/{}/{}/".format(desktop, self.task_name.currentText(), dir_type))
+        self.fd.setWindowTitle('Select File')
+        self.fd.accept = lambda: self.open_file(le)
+        self.fd.show()
 
-    def play_pause(self):
+    def open_file(self, le: QLineEdit) -> None:
+        if len(self.fd.selectedFiles()[0]) > 0:  # If a file was selected
+            le.setText(self.fd.selectedFiles()[0])
+            self.refresh()  # Update the Task representation with the new file
+        super(QFileDialog, self.fd).accept()
+
+    def play_pause(self) -> None:
         """
         On click function for the play/pause button. Behavior is different if task has yet to be started, is currently running, or is paused.
         """
         if not self.task.started:  # If the task has yet to be started
             if len(self.prompt) > 0:  # If there is a prompt that should be shown before the task starts
-                msg = QMessageBox()
-                msg.setIcon(QMessageBox.Warning)
-                msg.setText(self.prompt)
-                msg.setWindowTitle("Wait")
-                msg.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
-                msg.setDefaultButton(QMessageBox.Cancel)
-                if msg.exec_() == QMessageBox.Cancel:  # Stop the task from running if the prompt was cancelled
-                    return
-            # Change the play to a pause button
-            self.play_button.icon = 'Workstation/icons/pause.svg'
-            self.play_button.hover_icon = 'Workstation/icons/pause_hover.svg'
-            self.play_button.setIcon(QIcon(self.play_button.icon))
-            # Disable all task configuration options
-            self.stop_button.setEnabled(True)
-            self.subject.setEnabled(False)
-            self.task_name.setEnabled(False)
-            self.address_file_browse.setEnabled(False)
-            self.protocol_file_browse.setEnabled(False)
-            self.output_file_path.setEnabled(False)
-            self.workstation.start_task(int(self.chamber_id.text()) - 1)  # Start the task with the Workstation
+                self.pd = QMessageBox()
+                self.pd.setIcon(QMessageBox.Warning)
+                self.pd.setText(self.prompt)
+                self.pd.setWindowTitle("Wait")
+                self.pd.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+                self.pd.setDefaultButton(QMessageBox.Cancel)
+                self.pd.accept = self.play_helper
+            else:
+                self.play_helper()
         elif self.task.paused:  # If the task is currently paused
             # Change the pause to a play button
             self.play_button.icon = 'Workstation/icons/pause.svg'
             self.play_button.hover_icon = 'Workstation/icons/pause_hover.svg'
             self.play_button.setIcon(QIcon(self.play_button.icon))
-            self.task.resume()  # Resume the task
+            self.task.resume__()  # Resume the task
         else:  # The task is currently playing
             # Change the play to a pause button
             self.play_button.icon = 'Workstation/icons/play.svg'
             self.play_button.hover_icon = 'Workstation/icons/play_hover.svg'
             self.play_button.setIcon(QIcon(self.play_button.icon))
-            self.task.pause()  # Pause the task
+            self.task.pause__()  # Pause the task
 
-    def stop(self):
+    def play_helper(self) -> None:
+        # Change the play to a pause button
+        self.play_button.icon = 'Workstation/icons/pause.svg'
+        self.play_button.hover_icon = 'Workstation/icons/pause_hover.svg'
+        self.play_button.setIcon(QIcon(self.play_button.icon))
+        # Disable all task configuration options
+        self.stop_button.setDisabled(False)
+        self.stop_button.setEnabled(True)
+        self.subject.setEnabled(False)
+        self.task_name.setEnabled(False)
+        self.address_file_browse.setEnabled(False)
+        self.protocol_file_browse.setEnabled(False)
+        self.output_file_path.setEnabled(False)
+        self.workstation.start_task(int(self.chamber_id.text()) - 1)  # Start the task with the Workstation
+        if self.pd is not None:
+            super(QMessageBox, self.pd).accept()
+            self.pd = None
+
+    def stop(self) -> None:
         """
         On click function for the stop button.
         """
@@ -207,7 +232,8 @@ class ChamberWidget(QGroupBox):
         self.play_button.icon = 'Workstation/icons/play.svg'
         self.play_button.hover_icon = 'Workstation/icons/play_hover.svg'
         self.play_button.setIcon(QIcon(self.play_button.icon))
-        self.stop_button.setEnabled(False)  # Disable the stop button
+        self.stop_button.setDisabled(True)  # Disable the stop button
+        self.stop_button.setEnabled(False)
         # Re-enable all task configuration options
         self.subject.setEnabled(True)
         self.task_name.setEnabled(True)
@@ -216,7 +242,7 @@ class ChamberWidget(QGroupBox):
         self.output_file_path.setEnabled(True)
         self.workstation.stop_task(int(self.chamber_id.text()) - 1)  # Stop the task with the Workstation
 
-    def subject_changed(self):
+    def subject_changed(self) -> None:
         """
         Callback for when the name of the subject is changed in the GUI.
         """
@@ -228,15 +254,17 @@ class ChamberWidget(QGroupBox):
                                                 datetime.now().strftime("%m-%d-%Y")))
         self.output_file_changed()  # Signal to saving systems that the output directory has changed
 
-    def output_file_changed(self):
+    def output_file_changed(self) -> None:
         """
         File for handling changes to the desired output directory
         """
         for el in self.event_loggers:  # Allow all EventLoggers to handle the change
             if isinstance(el, FileEventLogger):  # Handle the change for FileEventLoggers
                 el.output_folder = self.output_file_path.text()
+            if isinstance(el, GUIEventLogger):  # Handle the change for GUIEventLoggers
+                el.set_chamber(self)
 
-    def contextMenuEvent(self, event):
+    def contextMenuEvent(self, _):
         """
         Create the right click menu for the ChamberWidget.
 
@@ -247,40 +275,41 @@ class ChamberWidget(QGroupBox):
         if not self.task.started:  # If the task is not currently running
             menu = QMenu(self)
             save_config = menu.addAction("Save Configuration")  # Saves the current configuration of the chamber
+            save_config.triggered.connect(self.save_configuration)
             clear_chamber = menu.addAction("Clear Chamber")  # Alerts the Workstation to remove the Task
+            clear_chamber.triggered.connect(lambda: self.wsg.remove_task(self.chamber_id.text()))
             edit_config = menu.addAction("Edit Configuration")  # Edits the Task configuration
-            action = menu.exec_(self.mapToGlobal(event.pos()))
-            if action == save_config:  # If the user requests to save the configuration
-                desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
-                # Create the Configuration folder if it does not already exist
-                if not os.path.exists("{}/py-behav/Configurations/".format(desktop)):
-                    os.makedirs("{}/py-behav/Configurations/".format(desktop))
-                # Create a file dialog so the user can choose the save location
-                file_name = QFileDialog.getSaveFileName(self, 'Save Configuration',
-                                                        "{}/py-behav/Configurations/{}-{}-{}.csv".format(desktop,
-                                                                                                         self.chamber_id.text(),
-                                                                                                         self.subject.text(),
-                                                                                                         self.task_name.currentText()),
-                                                        '*.csv')
-                if len(file_name[0]) > 1:
-                    with open(file_name[0], "w", newline='') as out:  # Save all configuration variables
-                        w = csv.writer(out)
-                        w.writerow(["Chamber", self.chamber_id.text()])  # Index of the chamber
-                        w.writerow(["Subject", self.subject.text()])  # The name of the subject
-                        w.writerow(["Task", self.task_name.currentText()])  # The current Task
-                        w.writerow(["Address File", self.address_file_path.text()])  # The Address File used
-                        w.writerow(["Protocol", self.protocol_path.text()])  # The Protocol used
-                        w.writerow(["Prompt", self.prompt])  # The prompt to show before the task starts
-                        el_text = ""
-                        for i in range(1,
-                                       len(self.event_loggers)):  # Save the necessary information for each associated EventLogger
-                            el_text += type(self.event_loggers[i]).__name__ + "((" + ''.join(
-                                f"||{w}||" for w in self.logger_params[i - 1]) + "))"
-                        w.writerow(["EventLoggers", el_text])
-            elif action == clear_chamber:  # Alert the Workstation to remove the task
-                self.wsg.remove_task(self.chamber_id.text())
-            elif action == edit_config:  # Create a dialog to edit the configuration
-                ld = ConfigurationDialog(self)
-                ld.exec()
-                self.prompt = ld.prompt.text()  # Update the prompt from the configuration
-                self.refresh()
+            edit_config.triggered.connect(self.edit_configuration)
+            menu.popup(QCursor.pos())
+
+    def save_configuration(self) -> None:
+        desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
+        # Create the Configuration folder if it does not already exist
+        if not os.path.exists("{}/py-behav/Configurations/".format(desktop)):
+            os.makedirs("{}/py-behav/Configurations/".format(desktop))
+        # Create a file dialog so the user can choose the save location
+        file_name = QFileDialog.getSaveFileName(self, 'Save Configuration',
+                                                "{}/py-behav/Configurations/{}-{}-{}.csv".format(desktop,
+                                                                                                 self.chamber_id.text(),
+                                                                                                 self.subject.text(),
+                                                                                                 self.task_name.currentText()),
+                                                '*.csv')
+        if len(file_name[0]) > 1:
+            with open(file_name[0], "w", newline='') as out:  # Save all configuration variables
+                w = csv.writer(out)
+                w.writerow(["Chamber", self.chamber_id.text()])  # Index of the chamber
+                w.writerow(["Subject", self.subject.text()])  # The name of the subject
+                w.writerow(["Task", self.task_name.currentText()])  # The current Task
+                w.writerow(["Address File", self.address_file_path.text()])  # The Address File used
+                w.writerow(["Protocol", self.protocol_path.text()])  # The Protocol used
+                w.writerow(["Prompt", self.prompt])  # The prompt to show before the task starts
+                el_text = ""
+                for i in range(1,
+                               len(self.event_loggers)):  # Save the necessary information for each associated EventLogger
+                    el_text += type(self.event_loggers[i]).__name__ + "((" + ''.join(
+                        f"||{w}||" for w in self.logger_params[i - 1]) + "))"
+                w.writerow(["EventLoggers", el_text])
+
+    def edit_configuration(self) -> None:
+        self.ld = ConfigurationDialog(self)
+        self.ld.show()

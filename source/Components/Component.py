@@ -1,5 +1,12 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from Sources.Source import Source
+
 from abc import ABCMeta, abstractmethod
 from enum import Enum
+from Sources.Source import Source
+from typing import Any
 
 
 class Component:
@@ -36,30 +43,38 @@ class Component:
     """
 
     class Type(Enum):
-        DIGITAL_INPUT = 0  # The Component solely provides digital input
+        DIGITAL_INPUT = 0   # The Component solely provides digital input
         DIGITAL_OUTPUT = 1  # The Component solely receives digital output
-        ANALOG_INPUT = 2  # The Component solely provides analog input
-        ANALOG_OUTPUT = 3  # The Component solely receives analog output
-        INPUT = 4  # Arbitrary input type
-        OUTPUT = 5  # Arbitrary output type
-        BOTH = 2  # The Component both inputs and outputs (arbitrary type)
+        ANALOG_INPUT = 2    # The Component solely provides analog input
+        ANALOG_OUTPUT = 3   # The Component solely receives analog output
+        INPUT = 4           # Arbitrary input type
+        OUTPUT = 5          # Arbitrary output type
+        BOTH = 6            # The Component both inputs and outputs (arbitrary type)
 
-    def __init__(self, source, component_id, component_address, metadata=""):
+    def __init__(self, source: Source, component_id: str, component_address: str):
         self.id = component_id  # The unique identifier for the component or set of related components
         self.address = component_address  # The platform-specific address for the component
         self.source = source  # The source that is used to identify the component
-        c_vars = metadata.split("|")
-        if len(c_vars[0]) > 0:
-            for v in c_vars:
-                vals = v.split("=")
-                setattr(self, vals[0], eval(vals[1]))
+
+    def write(self, msg: Any):
+        self.source.write_component(self.id, msg)
+
+    def read(self) -> Any:
+        return self.source.read_component(self.id)
+
+    def initialize(self, metadata: dict) -> None:
+        for key in metadata:
+            setattr(self, key, metadata[key])
 
     @abstractmethod
-    def get_state(self): raise NotImplementedError
+    def get_state(self) -> Any:
+        raise NotImplementedError
 
+    @staticmethod
     @abstractmethod
-    def get_type(self): raise NotImplementedError
+    def get_type() -> Type:
+        raise NotImplementedError
 
-    def close(self):
+    def close(self) -> None:
         self.source.close_component(self.id)
 

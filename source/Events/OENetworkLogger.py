@@ -1,7 +1,13 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from Events.Event import Event
+
 import zmq
 from datetime import datetime
 import os
 import time
+
 from Events.GUIEventLogger import GUIEventLogger
 from Events.InputEvent import InputEvent
 from Events.StateChangeEvent import StateChangeEvent
@@ -10,12 +16,14 @@ from Events.FinalStateEvent import FinalStateEvent
 from Events.OEEvent import OEEvent
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
+
+from Workstation.ChamberWidget import ChamberWidget
 from Workstation.IconButton import IconButton
 
 
 class OENetworkLogger(GUIEventLogger):
 
-    def __init__(self, address, port, nbits=8):
+    def __init__(self, address: str, port: str, nbits: int = 8):
         super().__init__()
         context = zmq.Context()
         self.event_count = 0
@@ -74,7 +82,7 @@ class OENetworkLogger(GUIEventLogger):
         self.acq = False
         self.rec = False
 
-    def set_chamber(self, cw):
+    def set_chamber(self, cw: ChamberWidget) -> None:
         super(OENetworkLogger, self).set_chamber(cw)
         desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
         self.rec_dir.setText("{}/py-behav/{}/Data/{}/{}/".format(desktop,
@@ -83,7 +91,7 @@ class OENetworkLogger(GUIEventLogger):
                                                                  datetime.now().strftime(
                                                                      "%m-%d-%Y")))
 
-    def acquisition(self):
+    def acquisition(self) -> None:
         if not self.acq:
             self.acq_button.icon = 'Workstation/icons/stop_play.svg'
             self.acq_button.hover_icon = 'Workstation/icons/stop_play_hover.svg'
@@ -102,7 +110,7 @@ class OENetworkLogger(GUIEventLogger):
             self.log_events([OEEvent(self.cw.task, "stopAcquisition")])
             self.acq = False
 
-    def record(self):
+    def record(self) -> None:
         if not self.rec:
             self.acq_button.icon = 'Workstation/icons/stop_play.svg'
             self.acq_button.hover_icon = 'Workstation/icons/stop_play_hover.svg'
@@ -120,14 +128,14 @@ class OENetworkLogger(GUIEventLogger):
             self.log_events([OEEvent(self.cw.task, "stopRecord")])
             self.rec = False
 
-    def get_file_path(self):
+    def get_file_path(self) -> None:
         desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
         file_name = QFileDialog.getExistingDirectory(self.oe_group, 'Select Folder', "{}/py-behav/{}/".format(desktop,
                                                                                                               self.cw.task_name.currentText()))
         if len(file_name) > 0:
             self.rec_dir.setText(file_name)
 
-    def send_ttl_event_code(self, ec):
+    def send_ttl_event_code(self, ec: int) -> None:
         # Convert the code to binary
         bc = [int(x) for x in bin(ec)[2:]]
         bc.reverse()
@@ -146,17 +154,17 @@ class OENetworkLogger(GUIEventLogger):
             self.socket.send(b"".join([b'TTL Channel=', str(i + 1).encode('ascii'), b' on=0']))
             self.receive()
 
-    def send_string(self, msg):
+    def send_string(self, msg: str) -> None:
         self.socket.send(msg.encode("utf-8"))
         self.receive()
 
-    def receive(self):
+    def receive(self) -> None:
         try:
             self.socket.recv(flags=zmq.NOBLOCK)
         except zmq.ZMQError:
             pass
 
-    def log_events(self, events):
+    def log_events(self, events: list[Event]) -> None:
         for e in events:
             if isinstance(e, OEEvent):
                 if e.event_type == 'startAcquisition':
@@ -193,8 +201,8 @@ class OENetworkLogger(GUIEventLogger):
                                                                e.input_event.value, e.input_event.name,
                                                                str(e.metadata)))
 
-    def close(self):
+    def close(self) -> None:
         self.socket.close()
 
-    def get_widget(self):
+    def get_widget(self) -> QWidget:
         return self.oe_group

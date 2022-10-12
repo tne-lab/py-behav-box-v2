@@ -1,3 +1,8 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from Workstation.Workstation import Workstation
+
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 import pkgutil
@@ -6,8 +11,9 @@ import inspect
 
 
 class SettingsDialog(QDialog):
-    def __init__(self, workstation):
+    def __init__(self, workstation: Workstation):
         super().__init__()
+        self.asd = None
         self.workstation = workstation
 
         self.setWindowTitle("Settings")
@@ -51,11 +57,18 @@ class SettingsDialog(QDialog):
         self.layout.addWidget(source_box)
         self.layout.addWidget(self.control_buttons)
         self.setLayout(self.layout)
+    
+    def accept(self) -> None:
+        settings = QSettings()
+        settings.setValue("n_chamber", self.n_chamber.text())
+        self.workstation.n_chamber = int(self.n_chamber.text())
+        self.workstation.compute_chambergui()
+        super(SettingsDialog, self).accept()
 
-    def on_source_clicked(self, _):
+    def on_source_clicked(self, _) -> None:
         self.remove_button.setDisabled(False)
 
-    def remove_source(self):
+    def remove_source(self) -> None:
         st = self.source_list.currentItem().text()
         st_name = st.split(" (")[0]
         settings = QSettings()
@@ -66,41 +79,29 @@ class SettingsDialog(QDialog):
         else:
             si -= 1
         se = source_string.find(")", si)
+        self.workstation.sources[st_name].close_source()
         del self.workstation.sources[st_name]
         self.source_list.takeItem(self.source_list.currentRow())
         self.remove_button.setDisabled(False)
         settings = QSettings()
         settings.setValue("sources", source_string[0:si] + source_string[se+1:])
 
-    def add_source(self):
-        sd = AddSourceDialog()
-        if sd.exec():
-            source_type = getattr(importlib.import_module("Sources." + sd.source.currentText()), sd.source.currentText())
-            all_params = inspect.getfullargspec(source_type.__init__)
-            params = []
-            if len(all_params.args) > 1:
-                spd = SourceParametersDialog(sd.name.text(), sd.source.currentText(), all_params)
-                if spd.exec():
-                    for p in spd.params:
-                        params.append(p.text())
-            settings = QSettings()
-            source_string = settings.value("sources")
-            source_string = source_string[:-1] + ', "{}": {}({})'.format(sd.name.text(), sd.source.currentText(), ','.join(f'"{w}"' for w in params)) + "}"
-            settings.setValue("sources", source_string)
-            self.workstation.sources[sd.name.text()] = source_type(*params)
-            QListWidgetItem("{} ({})".format(sd.name.text(), sd.source.currentText()), self.source_list)
-
+    def add_source(self) -> None:
+        self.asd = AddSourceDialog(self)
+        self.asd.show()
 
 
 class AddSourceDialog(QDialog):
-    def __init__(self):
+    def __init__(self, sd: SettingsDialog):
         super(AddSourceDialog, self).__init__()
+        self.sd = sd
+        self.spd = None
         self.setWindowTitle("Add Source")
 
         control = QDialogButtonBox.Ok | QDialogButtonBox.Cancel
 
         self.control_buttons = QDialogButtonBox(control)
-        self.control_buttons.accepted.connect(self.accept)
+        self.control_buttons.accepted.connect(self.set_params)
         self.control_buttons.rejected.connect(self.reject)
         self.configuration_path = None
 
@@ -124,13 +125,36 @@ class AddSourceDialog(QDialog):
         self.layout.addWidget(source_box)
         self.layout.addWidget(self.control_buttons)
         self.setLayout(self.layout)
+        self.params = []
+
+    def set_params(self) -> None:
+        source_type = getattr(importlib.import_module("Sources." + self.source.currentText()), self.source.currentText())
+        all_params = inspect.getfullargspec(source_type.__init__)
+        if len(all_params.args) > 1:
+            self.spd = SourceParametersDialog(self, all_params)
+            self.spd.show()
+        else:
+            self.accept()
+
+    def accept(self) -> None:
+        source_type = getattr(importlib.import_module("Sources." + self.source.currentText()),
+                              self.source.currentText())
+        settings = QSettings()
+        source_string = settings.value("sources")
+        source_string = source_string[:-1] + ', "{}": {}({})'.format(self.name.text(), self.source.currentText(),
+                                                                     ','.join(f'"{w}"' for w in self.params)) + "}"
+        settings.setValue("sources", source_string)
+        self.sd.workstation.sources[self.name.text()] = source_type(*self.params)
+        QListWidgetItem("{} ({})".format(self.name.text(), self.source.currentText()), self.sd.source_list)
+        super(AddSourceDialog, self).accept()
 
 
 class SourceParametersDialog(QDialog):
-    def __init__(self, name, source_type, all_params):
+    def __init__(self, asd: AddSourceDialog, all_params: inspect.FullArgSpec):
         super().__init__()
+        self.asd = asd
 
-        self.setWindowTitle("{} ({})".format(name, source_type))
+        self.setWindowTitle("{} ({})".format(self.asd.name, self.asd.source.currentText()))
 
         control = QDialogButtonBox.Ok | QDialogButtonBox.Cancel
 
@@ -154,3 +178,13 @@ class SourceParametersDialog(QDialog):
             self.params.append(param)
         self.layout.addWidget(self.control_buttons)
         self.setLayout(self.layout)
+
+    def accept(self) -> None:
+        for p in self.params:
+            self.asd.params.append(p.text())
+        super(SourceParametersDialog, self).accept()
+        self.asd.accept()
+
+    def reject(self) -> None:
+        super(SourceParametersDialog, self).reject()
+        self.asd.reject()

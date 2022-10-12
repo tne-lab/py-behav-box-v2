@@ -1,4 +1,10 @@
-from abc import ABCMeta, abstractmethod
+from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from Events.Event import Event
+    from Tasks.Task import Task
+
+from abc import ABCMeta
 
 
 class EventLogger:
@@ -17,13 +23,17 @@ class EventLogger:
     """
 
     def __init__(self):
+        self.task = None
         self.event_count = 0
 
-    def start(self):
+    def start(self) -> None:
         self.event_count = 0
 
-    @abstractmethod
-    def close(self): raise NotImplementedError
+    def close(self) -> None:
+        pass
 
-    @abstractmethod
-    def log_events(self, events): raise NotImplementedError
+    def log_event(self, events: list[Event]) -> None:
+        pass
+
+    def set_task(self, task: Task) -> None:
+        self.task = task

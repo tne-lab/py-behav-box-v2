@@ -21,10 +21,10 @@ class DPALInitTouchGUI(GUI):
 
         def feed_mouse_up(self, _):
             self.clicked = False
-            task.food.dispense()
+            task.food.toggle(task.dispense_time)
 
         def pellets_text(self):
-            return [str(task.food.pellets)]
+            return [str(task.food.count)]
 
         def trial_count_text(self):
             return [str(task.cur_trial+1)]

@@ -25,9 +25,6 @@ class EmptyTouchScreenSource(Source):
     def register_component(self, _, component):
         self.components[component.id] = component.address
 
-    def close_source(self):
-        pass
-
     def read_component(self, component_id):
         return []
 

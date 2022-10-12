@@ -1,3 +1,8 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from Events.Event import Event
+
 import time
 import math
 
@@ -11,17 +16,15 @@ from Utilities.dictionary_to_save_string import dictionary_to_save_string
 
 class CSVEventLogger(FileEventLogger):
 
-    def __init__(self):
-        super().__init__(None)
-
-    def get_file_path(self):
+    def get_file_path(self) -> str:
         return "{}{}.csv".format(self.output_folder, math.floor(time.time() * 1000))
 
-    def start(self):
+    def start(self) -> None:
         super(CSVEventLogger, self).start()
+        # self.log_file.write("Subject,{}".format(self.task.))
         self.log_file.write("Trial,Time,Type,Code,State,Metadata\n")
 
-    def log_events(self, events):
+    def log_events(self, events: list[Event]) -> None:
         for e in events:
             self.event_count += 1
             if isinstance(e, InitialStateEvent):

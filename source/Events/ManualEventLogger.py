@@ -30,16 +30,10 @@ class ManualEventLogger(GUIEventLogger):
         input_layout.addWidget(self.send)
         manual_layout.addLayout(input_layout)
 
-    def send_event(self):
+    def send_event(self) -> None:
         temp_enum = Enum('TempEnum', {'MANUAL': int(self.code_input.text())})
         self.cw.task.events.append(
             InputEvent(self.cw.task, temp_enum.MANUAL, {"desc": self.manual_input.text()}))
 
-    def log_events(self, events):
-        pass
-
-    def get_widget(self):
+    def get_widget(self) -> QWidget:
         return self.widget
-
-    def close(self):
-        pass

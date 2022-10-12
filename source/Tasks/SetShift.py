@@ -2,6 +2,8 @@ import random
 from enum import Enum
 
 from Components.BinaryInput import BinaryInput
+from Components.Toggle import Toggle
+from Components.TimedToggle import TimedToggle
 from Events.InputEvent import InputEvent
 
 from Tasks.Task import Task
@@ -14,8 +16,6 @@ class SetShift(Task):
         INTER_TRIAL_INTERVAL = 2
 
     class Inputs(Enum):
-        TROUGH_ENTERED = 0
-        TROUGH_EXIT = 1
         FRONT_ENTERED = 2
         FRONT_EXIT = 3
         MIDDLE_ENTERED = 4
@@ -23,29 +23,50 @@ class SetShift(Task):
         REAR_ENTERED = 6
         REAR_EXIT = 7
 
-    def __init__(self, *args):
-        super().__init__(*args)
-        self.cur_trial = 0
-        self.cur_rule = 0
-        self.cur_block = 0
+    @staticmethod
+    def get_components():
+        return {
+            'nose_pokes': [BinaryInput, BinaryInput, BinaryInput],
+            'nose_poke_lights': [Toggle, Toggle, Toggle],
+            'food': [TimedToggle],
+            'house_light': [Toggle]
+        }
+
+    # noinspection PyMethodMayBeStatic
+    def get_constants(self):
+        return {
+            'max_duration': 90,
+            'inter_trial_interval': 7,
+            'response_duration': 3,
+            'n_random_start': 10,
+            'n_random_end': 5,
+            'rule_sequence': [0, 1, 0, 2, 0, 1, 0, 2],
+            'correct_to_switch': 5,
+            'light_sequence': random.sample([True for _ in range(27)] + [False for _ in range(28)], 55),
+            'dispense_time': 0.7
+        }
+
+    # noinspection PyMethodMayBeStatic
+    def get_variables(self):
+        return {
+            'cur_trial': 0,
+            'cur_rule': 0,
+            'cur_block': 0
+        }
+
+    def init_state(self):
+        return self.States.INITIATION
 
     def start(self):
-        self.cur_trial = 0
-        self.cur_rule = 0
-        self.cur_block = 0
-        self.state = self.States.INITIATION
         self.nose_poke_lights[1].toggle(True)
         self.house_light.toggle(True)
-        super(SetShift, self).start()
 
     def stop(self):
-        super(SetShift, self).stop()
         for i in range(3):
             self.nose_poke_lights[i].toggle(False)
         self.house_light.toggle(False)
 
     def main_loop(self):
-        super().main_loop()
         pokes = []
         for i in range(3):
             pokes.append(self.nose_pokes[i].check())
@@ -77,7 +98,7 @@ class SetShift(Task):
                 if self.cur_trial < self.n_random_start or self.cur_trial >= self.n_random_start + self.correct_to_switch * len(
                         self.rule_sequence):
                     if random.random() < 0.5:
-                        self.food.dispense()
+                        self.food.toggle(self.dispense_time)
                         metadata["accuracy"] = "correct"
                     else:
                         metadata["accuracy"] = "incorrect"
@@ -128,26 +149,13 @@ class SetShift(Task):
             if self.time_in_state() > self.inter_trial_interval:
                 self.nose_poke_lights[1].toggle(True)
                 self.change_state(self.States.INITIATION)
-        return self.events
-
-    def get_variables(self):
-        return {
-            'max_duration': 90,
-            'inter_trial_interval': 7,
-            'response_duration': 3,
-            'n_random_start': 10,
-            'n_random_end': 5,
-            'rule_sequence': [0, 1, 0, 2, 0, 1, 0, 2],
-            'correct_to_switch': 5,
-            'light_sequence': random.sample([True for _ in range(27)] + [False for _ in range(28)], 55)
-        }
 
     def is_complete(self):
         return self.cur_trial == self.n_random_start + self.n_random_end + self.correct_to_switch * len(
             self.rule_sequence) or self.time_elapsed() > self.max_duration * 60
 
     def correct(self):
-        self.food.dispense()
+        self.food.toggle(self.dispense_time)
         if self.cur_block + 1 == self.correct_to_switch:
             self.cur_rule += 1
             self.cur_block = 0

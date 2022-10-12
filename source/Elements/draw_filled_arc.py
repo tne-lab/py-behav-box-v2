@@ -2,7 +2,7 @@ import math
 import pygame
 
 
-def draw_filled_arc(screen, center, arc_angle, r, init_angle, col, ns=100):
+def draw_filled_arc(screen: pygame.Surface, center: tuple[int, int], arc_angle: float, r: float, init_angle: float, col: tuple[int, int, int], ns: int = 100) -> None:
     """
     Draws an object on the screen corresponding to a filled circular segment
 

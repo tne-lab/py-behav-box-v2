@@ -1,16 +1,20 @@
 from typing import List
 from types import MethodType
+from enum import Enum
 
 from Elements.CircleLightElement import CircleLightElement
 from Elements.Element import Element
 from Elements.NosePokeElement import NosePokeElement
 from Elements.ButtonElement import ButtonElement
 from Elements.InfoBoxElement import InfoBoxElement
+from Events.InputEvent import InputEvent
 from GUIs import Colors
 from GUIs.GUI import GUI
 
 
 class SetShiftGUI(GUI):
+    class Inputs(Enum):
+        GUI_PELLET = 0
 
     def __init__(self, task_gui, task):
         super().__init__(task_gui, task)
@@ -20,32 +24,28 @@ class SetShiftGUI(GUI):
 
         def feed_mouse_up(self, _):
             self.clicked = False
-            task.food.dispense()
+            task.food.toggle(task.dispense_time)
+            task.events.append(InputEvent(task, SetShiftGUI.Inputs.GUI_PELLET))
 
         def pellets_text(self):
-            return [str(task.food.pellets)]
+            return [str(task.food.count)]
 
         def trial_count_text(self):
             return [str(task.cur_trial+1)]
 
         for i in range(3):
-            npl = CircleLightElement(self.task_gui, self.SF * (50 + (i+1)*(25+60)), self.SF * 60, self.SF * 30, Colors.lightgray, Colors.darkgray, task.nose_poke_lights[i])
+            npl = CircleLightElement(self, 50 + (i+1)*(25+60), 60, 30, comp=task.nose_poke_lights[i])
             self.np_lights.append(npl)
-            npi = NosePokeElement(self.task_gui, self.SF * (50 + (i+1) * (25 + 60)), self.SF * 150, self.SF * 30, task.nose_pokes[i])
+            npi = NosePokeElement(self, 50 + (i+1) * (25 + 60), 150, 30, comp=task.nose_pokes[i])
             self.np_inputs.append(npi)
-        self.feed_button = ButtonElement(self.task_gui, self.SF * 225, self.SF * 500, self.SF * 50, self.SF * 20, "FEED", task.food, int(self.SF * 12))
+        self.feed_button = ButtonElement(self, 225, 500, 50, 20, "FEED")
         self.feed_button.mouse_up = MethodType(feed_mouse_up, self.feed_button)
-        pellets = InfoBoxElement(self.task_gui, self.SF * 225, self.SF * 450, self.SF * 50, self.SF * 15, "PELLETS", 'BOTTOM', ['0'], int(self.SF * 14), self.SF)
+        pellets = InfoBoxElement(self, 225, 450, 50, 15, "PELLETS", 'BOTTOM', ['0'])
         pellets.get_text = MethodType(pellets_text, pellets)
         self.info_boxes.append(pellets)
-        trial_count = InfoBoxElement(self.task_gui, self.SF * 400, self.SF * 500, self.SF * 50, self.SF * 15, "TRIAL", 'BOTTOM', ['0'], int(self.SF * 14), self.SF)
+        trial_count = InfoBoxElement(self, 400, 500, 50, 15, "TRIAL", 'BOTTOM', ['0'])
         trial_count.get_text = MethodType(trial_count_text, trial_count)
         self.info_boxes.append(trial_count)
-
-    def draw(self):
-        self.task_gui.fill(Colors.darkgray)
-        for el in self.get_elements():
-            el.draw()
 
     def get_elements(self) -> List[Element]:
         return [*self.np_lights, *self.np_inputs, self.feed_button, *self.info_boxes]

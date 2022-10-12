@@ -82,9 +82,6 @@ class VideoSource(Source):
     def read_component(self, component_id):
         return self.cur_frames[component_id]
 
-    def write_component(self, component_id, msg):
-        pass
-
     def run(self):
         # While video is being acquired
         while self.available:

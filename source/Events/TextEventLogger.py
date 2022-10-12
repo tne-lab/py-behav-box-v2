@@ -1,3 +1,10 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from Events.Event import Event
+
+from PyQt5.QtWidgets import QWidget
+
 from Events.GUIEventLogger import GUIEventLogger
 from Events.InputEvent import InputEvent
 from Events.StateChangeEvent import StateChangeEvent
@@ -16,7 +23,7 @@ class TextEventLogger(GUIEventLogger):
         self.event_log.verticalScrollBar().rangeChanged.connect(
             lambda: self.event_log.verticalScrollBar().setValue(self.event_log.verticalScrollBar().maximum()))
 
-    def log_events(self, events):
+    def log_events(self, events: list[Event]):
         cur_text = self.event_log.text()
         if len(events) > 0 and self.event_count > 0:
             cur_text += "\n"
@@ -43,12 +50,9 @@ class TextEventLogger(GUIEventLogger):
         if len(events) > 0:
             self.event_log.setText(cur_text)
 
-    def get_widget(self):
+    def get_widget(self) -> QWidget:
         return self.event_log
 
-    def start(self):
+    def start(self) -> None:
         super(TextEventLogger, self).start()
         self.event_log.setText("")
-
-    def close(self):
-        pass

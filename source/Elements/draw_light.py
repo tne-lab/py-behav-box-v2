@@ -2,7 +2,7 @@ import math
 import pygame
 
 
-def draw_light(screen, color, line_color, rect, cx, cy, radius):
+def draw_light(screen: pygame.Surface, color: tuple[int, int, int], line_color: tuple[int, int, int], rect: pygame.Rect, cx: int, cy: int, radius: float) -> None:
     """
     Draws an object on the screen corresponding to a light
 

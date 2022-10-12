@@ -19,11 +19,15 @@ class SerialSource(Source):
         del self.components[component_id]
 
     def close_source(self):
-        for component in self.components:
-            self.close_component(component.id)
+        for component in self.components.values():
+            self.close_component(component)
 
     def read_component(self, component_id):
         return self.coms[component_id].readline()
 
     def write_component(self, component_id, msg):
-        self.coms[component_id].write(bytes(str(msg), 'utf-8'))
+        if hasattr(self.components[component_id], "terminator"):
+            term = self.components[component_id].terminator
+        else:
+            term = ""
+        self.coms[component_id].write(bytes(str(msg) + term, 'utf-8'))

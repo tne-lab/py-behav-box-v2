@@ -1,3 +1,9 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from GUIs.GUI import GUI
+    from Components.BinaryInput import BinaryInput
+
 import pygame as pygame
 import math
 
@@ -6,15 +12,15 @@ from GUIs import Colors
 
 
 class BarPressElement(Element):
-    def __init__(self, screen, x, y, w, h, lc=None):
-        super().__init__(screen, x, y, pygame.Rect(x, y, w, h))
-        self.w = w
-        self.h = h
-        self.pressed = lc.get_state()
-        self.lc = lc
+    def __init__(self, tg: GUI, x: int, y: int, w: int, h: int, comp: BinaryInput = None, SF: float = None):
+        super().__init__(tg, x, y, pygame.Rect(x, y, w, h), SF)
+        self.w = int(self.SF * w)
+        self.h = int(self.SF * h)
+        self.pressed = comp.get_state()
+        self.comp = comp
 
-    def draw(self):
-        self.pressed = self.lc.get_state()
+    def draw(self) -> None:
+        self.pressed = self.comp.get_state()
         pygame.draw.rect(self.screen, Colors.black, self.rect, 0)
         pygame.draw.rect(self.screen, Colors.gray, pygame.Rect(self.x + 2, self.y + 2, self.w - 4, self.h / 6), 0)
         if not self.pressed:
@@ -36,10 +42,10 @@ class BarPressElement(Element):
             pygame.draw.rect(self.screen, Colors.gray,
                              pygame.Rect(self.x + 2, self.y + 2 + 4 * self.h / 6, self.w - 4, self.h / 6), 0)
 
-    def mouse_up(self, event):
+    def mouse_up(self, event: pygame.event.Event) -> None:
         self.pressed = False
-        self.lc.toggle(self.pressed)
+        self.comp.toggle(self.pressed)
 
-    def mouse_down(self, event):
+    def mouse_down(self, _) -> None:
         self.pressed = True
-        self.lc.toggle(self.pressed)
+        self.comp.toggle(self.pressed)

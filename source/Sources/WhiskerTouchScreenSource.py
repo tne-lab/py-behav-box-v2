@@ -142,9 +142,6 @@ class WhiskerTouchScreenSource(Source, WhiskerTwistedTask):
             except:
                 print('trying to start touchscreen, if stuck check whiskerTouch main')
 
-    def close_source(self):
-        pass
-
     def read_component(self, component_id):
         touches = []
         while not self.back_q.empty():

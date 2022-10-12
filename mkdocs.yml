@@ -1,0 +1,20 @@
+site_name: Pybehave
+site_author: Evan Dastin-van Rijn
+
+theme:
+  name: readthedocs
+
+repo_url: https://github.com/tne-lab/py-behav-box-v2
+
+nav:
+- Home: index.md
+- User Guide:
+    - Workstation interface: workstation.md
+    - Programming tasks: tasks.md
+    - Designing task interfaces: guis.md
+    - Local configuration: protocols_addressfiles.md
+    - Logging events: events.md
+    - Developing components: components.md
+    - Connecting to hardware: sources.md
+
+copyright: Copyright &copy; 2021 - 2022 Translational Neuroengineering Laboratory

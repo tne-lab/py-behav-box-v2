@@ -16,8 +16,7 @@ class ClosedLoopSequenceGUI(SequenceGUI):
         def event_countup(self):
             return [str(round(task.time_elapsed() / 60, 2))]
 
-        ec = InfoBoxElement(self.task_gui, self.SF * 372, self.SF * 500, self.SF * 50, self.SF * 15, "SESSION TIME", 'BOTTOM',
-                            ['0'], int(self.SF * 14), self.SF)
+        ec = InfoBoxElement(self, 372, 500, 50, 15, "SESSION TIME", 'BOTTOM', ['0'])
         ec.get_text = MethodType(event_countup, ec)
         self.info_boxes.append(ec)
 

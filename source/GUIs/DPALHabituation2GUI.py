@@ -20,10 +20,10 @@ class DPALHabituation2GUI(GUI):
 
         def feed_mouse_up(self, _):
             self.clicked = False
-            task.food.dispense()
+            task.food.toggle(task.dispense_time)
 
         def pellets_text(self):
-            return [str(task.food.pellets)]
+            return [str(task.food.count)]
 
         self.food_poke = NosePokeElement(self.task_gui, self.SF * 220, self.SF * 90, self.SF * 30, task.init_poke)
         self.feed_button = ButtonElement(self.task_gui, self.SF * 225, self.SF * 210, self.SF * 50, self.SF * 20, "FEED", task.food, int(self.SF * 12))

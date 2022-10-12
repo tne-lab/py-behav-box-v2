@@ -3,9 +3,14 @@ from random import randrange
 from enum import Enum
 
 from Components.BinaryInput import BinaryInput
+from Components.TouchScreen import TouchScreen
+from Components.TimedToggle import TimedToggle
+from Components.Toggle import Toggle
+from Components.Video import Video
+from Components.Speaker import Speaker
 from Events.InputEvent import InputEvent
 from Tasks.Task import Task
-from Utilities.touch_in_region import touch_in_region
+from Components.TouchScreen import touch_in_region
 
 
 class DPAL(Task):
@@ -23,26 +28,57 @@ class DPAL(Task):
         REAR_TOUCH = 4
         ERROR_TOUCH = 5
 
-    def __init__(self, *args):
-        super().__init__(*args)
+    @staticmethod
+    def get_components():
+        return {
+            'init_poke': [BinaryInput],
+            'init_light': [Toggle],
+            'cage_light': [Toggle],
+            'food': [TimedToggle],
+            'touch_screen': [TouchScreen],
+            'tone': [Speaker],
+            'fan': [Toggle],
+            'video': [Video]
+        }
+
+    # noinspection PyMethodMayBeStatic
+    def get_constants(self):
+        return {
+            'max_duration': 60,
+            'max_correct': 100,
+            'inter_trial_interval': 10,
+            'timeout_duration': 5,
+            'images': ['6B.bmp', '6A.bmp', '2A.bmp'],
+            'coords': [(61, 10), (371, 10), (681, 10)],
+            'img_dim': (290, 290),
+            'dead_height': 0
+        }
+
+    # noinspection PyMethodMayBeStatic
+    def get_variables(self):
+        desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
+        return {
+            "image_folder": "{}/py-behav/DPAL/Images/".format(desktop),
+            "cur_trial": 0,
+            "correct_img": None,
+            "incorrect_img": None,
+            "incorrect_location": None,
+            'dispense_time': 0.7
+        }
+
+    def init_state(self):
+        return self.States.INITIATION
+
+    def init(self):
         for i in range(len(self.coords)):
             self.coords[i] = (self.coords[i][0], self.coords[i][1] + self.dead_height)
-        desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
-        self.image_folder = "{}/py-behav/DPAL/Images/".format(desktop)
-        self.cur_trial = 0
-        self.fan.toggle(True)
-        self.correct_img = None
-        self.incorrect_img = None
-        self.incorrect_location = None
         self.generate_images()
 
     def start(self):
-        self.state = self.States.INITIATION
+        self.fan.toggle(True)
         self.init_light.toggle(True)
-        super(DPAL, self).start()
 
     def main_loop(self):
-        super().main_loop()
         init_poke = self.init_poke.check()
         if init_poke == BinaryInput.ENTERED:
             self.events.append(InputEvent(self, self.Inputs.INIT_ENTERED))
@@ -75,7 +111,7 @@ class DPAL(Task):
                 self.touch_screen.refresh()
         elif self.state == self.States.STIMULUS_PRESENTATION:
             if len(touch_locs) > 0 and touch_locs[0] == self.correct_img + 1:
-                self.food.dispense()
+                self.food.toggle(self.dispense_time)
                 self.touch_screen.remove_image(self.image_folder + self.images[self.correct_img])
                 self.touch_screen.remove_image(self.image_folder + self.images[self.incorrect_img])
                 self.touch_screen.refresh()
@@ -98,18 +134,6 @@ class DPAL(Task):
             if self.time_in_state() > self.inter_trial_interval:
                 self.init_light.toggle(True)
                 self.change_state(self.States.INITIATION)
-
-    def get_variables(self):
-        return {
-            'max_duration': 60,
-            'max_correct': 100,
-            'inter_trial_interval': 10,
-            'timeout_duration': 5,
-            'images': ['6B.bmp', '6A.bmp', '2A.bmp'],
-            'coords': [(61, 10), (371, 10), (681, 10)],
-            'img_dim': (290, 290),
-            'dead_height': 0
-        }
 
     def is_complete(self):
         return self.cur_trial >= self.max_correct or self.time_elapsed() > self.max_duration * 60

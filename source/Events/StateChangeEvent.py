@@ -1,3 +1,9 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING, Any
+if TYPE_CHECKING:
+    from Tasks.Task import Task
+    from enum import Enum
+
 from Events.Event import Event
 
 
@@ -13,7 +19,7 @@ class StateChangeEvent(Event):
             Enumerated variable representing the new state of the Task
     """
 
-    def __init__(self, task, initial_state, new_state, metadata=None):
+    def __init__(self, task: Task, initial_state: Enum, new_state: Enum, metadata: Any = None):
         super().__init__(task, metadata)
         self.initial_state = initial_state
         self.new_state = new_state

@@ -1,3 +1,8 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from Sources.Source import Source
+
 from Components.Component import Component
 
 
@@ -7,11 +12,11 @@ class BinaryInput(Component):
     ENTERED = 1
     EXIT = 2
 
-    def __init__(self, source, component_id, component_address, metadata=""):
+    def __init__(self, source: Source, component_id: str, component_address: str):
         self.state = False
-        super().__init__(source, component_id, component_address, metadata)
+        super().__init__(source, component_id, component_address)
 
-    def check(self):
+    def check(self) -> int:
         value = self.source.read_component(self.id)
         if value == self.state:
             repeat = True
@@ -25,11 +30,13 @@ class BinaryInput(Component):
         else:
             return self.NO_CHANGE
 
-    def get_state(self):
+    def get_state(self) -> bool:
         return self.state
 
-    def toggle(self, on):
+    # For simulation control
+    def toggle(self, on: bool) -> None:
         self.source.write_component(self.id, on)
 
-    def get_type(self):
+    @staticmethod
+    def get_type() -> Component.Type:
         return Component.Type.DIGITAL_INPUT

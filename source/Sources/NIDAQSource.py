@@ -73,7 +73,7 @@ class NIDAQSource(Source):
             # elif component.get_type() == Component.Type.ANALOG_INPUT:
             #     task.ai_channels.add_ai_voltage_chan(self.dev + component.address)
             #     self.streams[component.id] = stream_writers.AnalogSingleChannelReader(task.in_stream)
-            self.components[component.id] = component
+        self.components[component.id] = component
 
     def close_source(self):
         for c in self.tasks.values():

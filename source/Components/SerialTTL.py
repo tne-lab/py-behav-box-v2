@@ -1,7 +1,7 @@
 from Components.Component import Component
 
 
-class SerialTTL(Component):
+class SerialTTL(Component):  # Not implemented
     def __init__(self, source, component_id, component_address, metadata=""):
         super().__init__(source, component_id, component_address, metadata)
         self.nchan = metadata.nchan

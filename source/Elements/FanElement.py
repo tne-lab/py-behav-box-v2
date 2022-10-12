@@ -1,3 +1,9 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from GUIs.GUI import GUI
+    from Components.Toggle import Toggle
+
 import pygame
 import math
 
@@ -7,16 +13,17 @@ from GUIs import Colors
 
 
 class FanElement(Element):
-    def __init__(self, screen, x, y, radius, tc=None):
-        super().__init__(screen, x, y, pygame.Rect(x, y, radius * 2, radius * 2))
-        self.radius = radius
-        self.tc = tc
-        self.on = tc.get_state()
 
-    def draw(self):
+    def __init__(self, tg: GUI, x: int, y: int, radius: int, comp: Toggle = None):
+        super().__init__(tg, x, y, pygame.Rect(x, y, radius * 2, radius * 2))
+        self.radius = int(self.SF * radius)
+        self.comp = comp
+        self.on = comp.get_state()
+
+    def draw(self) -> None:
         cx = self.x + self.radius  # center x
         cy = self.y + self.radius  # center y
-        self.on = self.tc.get_state()
+        self.on = self.comp.get_state()
         sf = self.radius / 40
         if self.on:
             col = Colors.lightgray
@@ -32,6 +39,6 @@ class FanElement(Element):
         draw_filled_arc(self.screen, (cx - (5 + 35 * sf / 2) / math.sqrt(2), cy + (5 + 35 * sf / 2) / math.sqrt(2)),
                         math.pi, 35 * sf / 2, 5 * math.pi / 4, col)
 
-    def mouse_up(self, event):
+    def mouse_up(self, event: pygame.event.Event) -> None:
         self.on = not self.on
-        self.tc.toggle(self.on)
+        self.comp.toggle(self.on)
