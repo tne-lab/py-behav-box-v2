@@ -65,7 +65,7 @@ class AddTaskDialog(QDialog):
                 # Check for each relevant row in the configuration
                 for row in config_reader:
                     if row[0] == "Chamber":
-                        chamber = int(row[1])
+                        chamber = row[1]
                     elif row[0] == "Subject":
                         subject = row[1]
                     elif row[0] == "Task":

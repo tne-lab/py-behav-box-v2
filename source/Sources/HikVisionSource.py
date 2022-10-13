@@ -26,6 +26,8 @@ class HikVisionSource(Source):
 
     def close_component(self, component_id):
         del self.components[component_id]
+        del self.tasks[component_id]
+        del self.out_paths[component_id]
 
     def close_source(self):
         for component in self.components:
@@ -36,20 +38,21 @@ class HikVisionSource(Source):
             hikutils.putXML(self.server, 'ContentMgmt/record/control/manual/start/tracks/' + str(self.components[
                                                                                                      component_id].address))
         else:
-            hikutils.putXML(self.server, 'ContentMgmt/record/control/manual/stop/tracks/' + str(self.components[
-                                                                                                    component_id].address))
-            hikutils.putXML(self.server, 'ContentMgmt/record/control/manual/stop/tracks/' + str(self.components[
-                                                                                                    component_id].address))
-            resp = self.server.ContentMgmt.search.getAllRecordingsForID(self.components[component_id].address)
-            vid = resp['CMSearchResult']['matchList']['searchMatchItem'][-1]
-            vt = threading.Thread(target=self.download, args=[component_id, vid])
+            vt = threading.Thread(target=self.download, args=[component_id])
             vt.start()
 
-    def download(self, component_id, vid):
+    def download(self, component_id):
+        op = self.out_paths[component_id]
+        addr = str(self.components[component_id].address)
+        name = self.components[component_id].name
+        subj = self.tasks[component_id].metadata["subject"]
+        hikutils.putXML(self.server, 'ContentMgmt/record/control/manual/stop/tracks/' + addr)
+        hikutils.putXML(self.server, 'ContentMgmt/record/control/manual/stop/tracks/' + addr)
+        resp = self.server.ContentMgmt.search.getAllRecordingsForID(addr)
+        vid = resp['CMSearchResult']['matchList']['searchMatchItem'][-1]
         dwnld = self.server.ContentMgmt.search.downloadURI(vid['mediaSegmentDescriptor']['playbackURI'])
-        output_folder = self.out_paths[component_id].format(self.tasks[component_id].metadata["subject"],
-                                                            datetime.now().strftime("%m-%d-%Y"))
+        output_folder = op.format(subj, datetime.now().strftime("%m-%d-%Y"))
         if not os.path.exists(output_folder):
             os.makedirs(output_folder)
-        with open(output_folder + self.components[component_id].name + ".mp4", 'wb') as file:
+        with open(output_folder + name + ".mp4", 'wb') as file:
             file.write(dwnld.content)

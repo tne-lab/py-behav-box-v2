@@ -19,7 +19,7 @@ from Events.GUIEventLogger import GUIEventLogger
 
 
 class ChamberWidget(QGroupBox):
-    def __init__(self, wsg: WorkstationGUI, chamber_index: int, task_index: int, sn: str = "default", afp: str = "", pfp: str = "", prompt: str = "", event_loggers: tuple[list[EventLogger], list[list[str]]] = ([], []),
+    def __init__(self, wsg: WorkstationGUI, chamber_index: str, task_index: int, sn: str = "default", afp: str = "", pfp: str = "", prompt: str = "", event_loggers: tuple[list[EventLogger], list[list[str]]] = ([], []),
                  parent=None):
         super(ChamberWidget, self).__init__(parent)
         self.fd = None

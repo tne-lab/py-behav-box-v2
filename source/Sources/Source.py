@@ -35,10 +35,8 @@ class Source:
     def close_component(self, component_id: str) -> None:
         pass
 
-    @abstractmethod
     def read_component(self, component_id: str) -> Any:
         pass
 
-    @abstractmethod
     def write_component(self, component_id: str, msg: Any) -> None:
         pass
