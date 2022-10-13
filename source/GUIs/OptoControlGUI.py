@@ -5,7 +5,6 @@ from Elements.CircleLightElement import CircleLightElement
 from Elements.Element import Element
 from Elements.ButtonElement import ButtonElement
 from Elements.InfoBoxElement import InfoBoxElement
-from GUIs import Colors
 from GUIs.GUI import GUI
 
 
@@ -25,6 +24,9 @@ class OptoControlGUI(GUI):
         def noff_text(self):
             return [str(task.noff)]
 
+        def per_text(self):
+            return [str(task.per)]
+
         def amp_text(self):
             return [str(task.amp)]
 
@@ -41,6 +43,9 @@ class OptoControlGUI(GUI):
         noff = InfoBoxElement(self, 400, 300, 50, 15, "NOFF", 'BOTTOM', ['0'])
         noff.get_text = MethodType(noff_text, noff)
         self.info_boxes.append(noff)
+        per = InfoBoxElement(self, 50, 200, 50, 15, "PERIOD", 'BOTTOM', ['0'])
+        per.get_text = MethodType(per_text, per)
+        self.info_boxes.append(per)
         amp = InfoBoxElement(self, 50, 250, 50, 15, "AMP", 'BOTTOM', ['0'])
         amp.get_text = MethodType(amp_text, amp)
         self.info_boxes.append(amp)

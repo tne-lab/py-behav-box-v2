@@ -31,9 +31,11 @@ class OptoControl(Task):
     def get_constants(self):
         return {
             'delay': 3.5,
+            'periods': [7692],
             'pws': [1000, 5000],
             'amps': [1000, 2000, 3000],
-            'vid_enabled': True
+            'vid_enabled': True,
+            'block_len': 1
         }
 
     # noinspection PyMethodMayBeStatic
@@ -41,10 +43,12 @@ class OptoControl(Task):
         return {
             'pw': 0,
             'amp': 0,
-            'counts': np.zeros((len(self.pws), len(self.amps))),
+            'per': self.periods[0],
+            'counts': np.zeros((len(self.pws), len(self.amps), len(self.periods))),
             'complete': False,
             'nstim': 0,
-            'noff': 0
+            'noff': 0,
+            'trial_in_block': 0
         }
 
     def init_state(self):
@@ -55,8 +59,9 @@ class OptoControl(Task):
         stim_id = 1
         for i in range(self.counts.shape[0]):
             for j in range(self.counts.shape[1]):
-                self.stim.parametrize(stim_id, [0, 3], 7692, 100000000000, np.reshape(np.array([self.amps[j], 0]), (2, 1)), np.array([self.pws[i]]))
-                stim_id += 1
+                for k in range(self.counts.shape[2]):
+                    self.stim.parametrize(stim_id, [0, 3], self.periods[k], 100000000000, np.reshape(np.array([self.amps[j], 0]), (2, 1)), np.array([self.pws[i]]))
+                    stim_id += 1
 
     def start(self):
         self.stim.start(0)
@@ -82,21 +87,27 @@ class OptoControl(Task):
                 self.change_state(self.States.DELAY)
         elif self.state == self.States.DELAY:
             if self.time_in_state() > self.delay:
-                if self.pw == 0:
-                    min_count = np.amin(self.counts)
-                    valid_params = np.where(self.counts == min_count)
-                    test_ind = randint(0, len(valid_params[0]))-1
-                    self.counts[valid_params[0][test_ind], valid_params[1][test_ind]] += 1
-                    self.pw = self.pws[valid_params[0][test_ind]]
-                    self.amp = self.amps[valid_params[1][test_ind]]
-                    self.nstim += 1
-                    self.stim.start(len(self.amps)*valid_params[0][test_ind]+valid_params[1][test_ind]+1)
+                self.trial_in_block += 1
+                if self.trial_in_block == self.block_len:
+                    if self.pw == 0:
+                        min_count = np.amin(self.counts)
+                        valid_params = np.where(self.counts == min_count)
+                        test_ind = randint(0, len(valid_params[0]))-1
+                        self.counts[valid_params[0][test_ind], valid_params[1][test_ind], valid_params[2][test_ind]] += 1
+                        self.pw = self.pws[valid_params[0][test_ind]]
+                        self.amp = self.amps[valid_params[1][test_ind]]
+                        self.per = self.periods[valid_params[2][test_ind]]
+                        self.nstim += 1
+                        self.stim.start(len(self.amps)*valid_params[0][test_ind]+valid_params[1][test_ind]+valid_params[2][test_ind]+1)
+                    else:
+                        self.pw = 0
+                        self.amp = 0
+                        self.noff += 1
+                        self.stim.start(0)
+                    self.trial_in_block = 0
+                    self.change_state(self.States.IN_TRIAL, {"pw": self.pw, "amp": self.amp, "per": self.per})
                 else:
-                    self.pw = 0
-                    self.amp = 0
-                    self.noff += 1
-                    self.stim.start(0)
-                self.change_state(self.States.IN_TRIAL, {"pw": self.pw, "amp": self.amp})
+                    self.change_state(self.States.IN_TRIAL, None)
 
     def is_complete(self):
         return self.complete

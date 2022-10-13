@@ -80,10 +80,6 @@ class Task:
         for key, value in self.get_constants().items():
             setattr(self, key, value)
 
-        # Get all default values for task variables
-        for key, value in self.get_variables().items():
-            setattr(self, key, value)
-
         # If this task is being created as part of a Task sequence
         if isinstance(args[0], Task):
             # Assign variables from base Task
@@ -181,6 +177,11 @@ class Task:
                 for cons in file_globals['protocol']:
                     if hasattr(self, cons):
                         setattr(self, cons, file_globals['protocol'][cons])
+
+        # Get all default values for task variables
+        for key, value in self.get_variables().items():
+            setattr(self, key, value)
+
         self.init()
 
     def init(self) -> None:
