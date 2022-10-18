@@ -102,13 +102,12 @@ class VideoSource(Source):
                     del self.do_close[vid]
                     del self.tasks[vid]
                 # If the camera is available and more than a frame has passed since the last acquisition
-                elif self.caps[vid].isOpened() and time.perf_counter() - self.frame_times[vid] > 1 / int(
-                        self.components[vid].fr):
+                elif self.caps[vid].isOpened():
                     ret, self.cur_frames[vid] = self.caps[vid].read()  # Acquire the frame
                     # If a frame was returned
-                    if ret:
+                    if ret and time.perf_counter() - self.frame_times[vid] > 1 / int(self.components[vid].fr):
                         # Update the time when the last frame was acquired
-                        self.frame_times[vid] = self.frame_times[vid] + 1 / int(self.components[vid].fr)
+                        self.frame_times[vid] = time.perf_counter()
                         # Create a window for the video frame
                         cv2.namedWindow(self.components[vid].address)
                         cv2.imshow(self.components[vid].address, self.cur_frames[vid])
