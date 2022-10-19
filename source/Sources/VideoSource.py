@@ -72,6 +72,8 @@ class VideoSource(Source):
         self.tasks[component.id] = task
         if not self.caps[component.id].isOpened():
             print('error opening vid')
+        else:
+            self.caps[component.id].start()
 
     def close_source(self):
         self.available = False
