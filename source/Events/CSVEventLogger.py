@@ -28,6 +28,7 @@ class CSVEventLogger(FileEventLogger):
         for e in events:
             self.event_count += 1
             if isinstance(e, InitialStateEvent):
+                print(type(self.log_file))
                 self.log_file.write("{},{},Entry,{},{},{}\n".format(self.event_count, e.entry_time,
                                                                     e.initial_state.value, e.initial_state.name,
                                                                     str(e.metadata)))

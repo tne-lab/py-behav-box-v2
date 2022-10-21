@@ -60,12 +60,6 @@ class WorkstationGUI(QWidget):
         self.chambers = {}
         self.chamber_container.addStretch(1)
 
-        # Callback to pygame (once every millisecond)
-        self.timer = QTimer()
-        self.timer.timeout.connect(self.workstation.loop)
-        self.timer.setInterval(1)
-        self.timer.start()
-
         self.setLayout(self.chamber_container)
         self.move(0, 0)
         self.show()
