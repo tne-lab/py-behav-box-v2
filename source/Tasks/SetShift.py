@@ -29,7 +29,7 @@ class SetShift(Task):
             'nose_pokes': [BinaryInput, BinaryInput, BinaryInput],
             'nose_poke_lights': [Toggle, Toggle, Toggle],
             'food': [TimedToggle],
-            'house_light': [Toggle]
+            'house_light': [Toggle, Toggle]
         }
 
     # noinspection PyMethodMayBeStatic
@@ -59,12 +59,14 @@ class SetShift(Task):
 
     def start(self):
         self.nose_poke_lights[1].toggle(True)
-        self.house_light.toggle(True)
+        self.house_light[0].toggle(True)
+        self.house_light[1].toggle(True)
 
     def stop(self):
         for i in range(3):
             self.nose_poke_lights[i].toggle(False)
-        self.house_light.toggle(False)
+        self.house_light[0].toggle(False)
+        self.house_light[1].toggle(False)
 
     def main_loop(self):
         pokes = []

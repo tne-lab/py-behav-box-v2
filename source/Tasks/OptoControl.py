@@ -33,9 +33,13 @@ class OptoControl(Task):
             'delay': 3.5,
             'periods': [7692],
             'pws': [1000, 5000],
-            'amps': [1000, 2000, 3000],
+            'amps_0': [1000, 2000, 3000],
+            'amps_1': [0, 0, 0],
             'vid_enabled': True,
-            'block_len': 1
+            'block_len': 1,
+            'mode_0': 0,
+            'mode_1': 3,
+            'biphasic': False
         }
 
     # noinspection PyMethodMayBeStatic
@@ -44,7 +48,7 @@ class OptoControl(Task):
             'pw': 0,
             'amp': 0,
             'per': self.periods[0],
-            'counts': np.zeros((len(self.pws), len(self.amps), len(self.periods))),
+            'counts': np.zeros((len(self.pws), len(self.amps_0), len(self.periods))),
             'complete': False,
             'nstim': 0,
             'noff': 0,
@@ -60,7 +64,13 @@ class OptoControl(Task):
         for i in range(self.counts.shape[0]):
             for j in range(self.counts.shape[1]):
                 for k in range(self.counts.shape[2]):
-                    self.stim.parametrize(stim_id, [0, 3], self.periods[k], 100000000000, np.reshape(np.array([self.amps[j], 0]), (2, 1)), np.array([self.pws[i]]))
+                    if self.biphasic:
+                        self.stim.parametrize(stim_id, [self.mode_0, self.mode_1], self.periods[k], 100000000000,
+                                              np.array([[self.amps_0[j], -self.amps_0[j]], [self.amps_1[j], -self.amps_1[j]]]),
+                                              np.array([self.pws[i], self.pws[i]]))
+                    else:
+                        self.stim.parametrize(stim_id, [self.mode_0, self.mode_1], self.periods[k], 100000000000,
+                                              np.reshape(np.array([self.amps_0[j], self.amps_1[j]]), (2, 1)), np.array([self.pws[i]]))
                     stim_id += 1
 
     def start(self):
@@ -95,10 +105,10 @@ class OptoControl(Task):
                         test_ind = randint(0, len(valid_params[0]))-1
                         self.counts[valid_params[0][test_ind], valid_params[1][test_ind], valid_params[2][test_ind]] += 1
                         self.pw = self.pws[valid_params[0][test_ind]]
-                        self.amp = self.amps[valid_params[1][test_ind]]
+                        self.amp = self.amps_0[valid_params[1][test_ind]]
                         self.per = self.periods[valid_params[2][test_ind]]
                         self.nstim += 1
-                        self.stim.start(len(self.amps)*valid_params[0][test_ind]+valid_params[1][test_ind]+valid_params[2][test_ind]+1)
+                        self.stim.start(len(self.amps_0)*valid_params[0][test_ind]+valid_params[1][test_ind]+valid_params[2][test_ind]+1)
                     else:
                         self.pw = 0
                         self.amp = 0
