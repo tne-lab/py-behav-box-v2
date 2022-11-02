@@ -14,6 +14,7 @@ from Components.TouchScreen import touch_in_region
 
 
 class DPAL(Task):
+    """@DynamicAttrs"""
     class States(Enum):
         INITIATION = 0
         STIMULUS_PRESENTATION = 1

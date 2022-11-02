@@ -63,7 +63,7 @@ class TaskSequence(Task):
     def init_sequence(self) -> tuple[Type[Task], str]:
         raise NotImplementedError
 
-    def switch_task(self, task: Task, seq_state: Enum, protocol: str, metadata: Any = None) -> None:
+    def switch_task(self, task: Type[Task], seq_state: Enum, protocol: str, metadata: Any = None) -> None:
         self.cur_task.stop()
         self.log_sequence_events()
         self.change_state(seq_state, metadata)

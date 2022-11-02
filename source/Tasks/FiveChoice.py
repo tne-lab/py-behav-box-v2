@@ -9,6 +9,7 @@ from Tasks.Task import Task
 
 
 class FiveChoice(Task):
+    """@DynamicAttrs"""
     """
         Class defining the Five Choice Serial Reaction Time Task.
 

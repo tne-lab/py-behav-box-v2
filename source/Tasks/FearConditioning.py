@@ -9,6 +9,7 @@ from Tasks.Task import Task
 
 
 class FearConditioning(Task):
+    """@DynamicAttrs"""
     class States(Enum):
         INTER_TONE_INTERVAL = 0
         TONE = 1

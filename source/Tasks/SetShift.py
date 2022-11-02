@@ -10,6 +10,7 @@ from Tasks.Task import Task
 
 
 class SetShift(Task):
+    """@DynamicAttrs"""
     class States(Enum):
         INITIATION = 0
         RESPONSE = 1

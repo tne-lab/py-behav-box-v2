@@ -10,6 +10,7 @@ from Events.InputEvent import InputEvent
 
 
 class OptoControl(Task):
+    """@DynamicAttrs"""
     class States(Enum):
         IN_TRIAL = 0
         DELAY = 1

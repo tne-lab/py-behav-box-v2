@@ -10,6 +10,7 @@ from Events.OEEvent import OEEvent
 
 
 class ClosedLoop(Task):
+    """@DynamicAttrs"""
     class States(Enum):
         START_RECORD = 0
         CLOSED_LOOP = 1

@@ -4,6 +4,7 @@ from Components.Video import Video
 
 
 class VideoSync(Task):
+    """@DynamicAttrs"""
 
     class States(Enum):
         RECORDING = 0

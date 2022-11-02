@@ -9,6 +9,7 @@ from Events.InputEvent import InputEvent
 
 
 class ERP(Task):
+    """@DynamicAttrs"""
     class States(Enum):
         START_RECORD = 0
         ERP = 1

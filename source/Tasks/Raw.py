@@ -5,6 +5,7 @@ from Components.Toggle import Toggle
 
 
 class Raw(Task):
+    """@DynamicAttrs"""
     class States(Enum):
         ACTIVE = 0
 

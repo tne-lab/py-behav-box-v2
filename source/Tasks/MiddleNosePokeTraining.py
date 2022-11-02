@@ -9,6 +9,7 @@ from Events.InputEvent import InputEvent
 
 
 class MiddleNosePokeTraining(Task):
+    """@DynamicAttrs"""
     class States(Enum):
         ACTIVE = 0
         INTER_TRIAL_INTERVAL = 1

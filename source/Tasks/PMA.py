@@ -13,6 +13,7 @@ from Events.OEEvent import OEEvent
 
 
 class PMA(Task):
+    """@DynamicAttrs"""
     class States(Enum):
         INTER_TONE_INTERVAL = 0
         TONE = 1

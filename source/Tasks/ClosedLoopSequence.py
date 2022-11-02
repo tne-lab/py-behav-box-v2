@@ -8,6 +8,7 @@ from Tasks.PMA import PMA
 
 
 class ClosedLoopSequence(TaskSequence):
+    """@DynamicAttrs"""
     class States(Enum):
         PRE_RAW = 0
         PRE_ERP = 1
