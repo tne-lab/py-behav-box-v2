@@ -155,7 +155,7 @@ class Workstation:
         # Import the selected Task
         task_module = importlib.import_module("Tasks." + task_name)
         task = getattr(task_module, task_name)
-        metadata = {"chamber": chamber, "subject": "default"}
+        metadata = {"chamber": chamber, "subject": "default", "protocol": protocol, "address_file": address_file}
         try:
             self.tasks[chamber] = task(self, metadata, self.sources, address_file, protocol)  # Create the task
             self.event_loggers[chamber] = task_event_loggers
