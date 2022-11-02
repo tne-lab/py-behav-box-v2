@@ -19,7 +19,7 @@ class EmptyTouchScreenSource(Source):
         """
 
     def __init__(self, display_size):
-        self.components = {}
+        super(EmptyTouchScreenSource, self).__init__()
         self.display_size = ast.literal_eval(display_size)
 
     def register_component(self, _, component):

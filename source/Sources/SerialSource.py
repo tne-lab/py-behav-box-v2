@@ -6,8 +6,8 @@ from Sources.Source import Source
 class SerialSource(Source):
 
     def __init__(self):
+        super(SerialSource, self).__init__()
         self.coms = {}
-        self.components = {}
 
     def register_component(self, _, component):
         self.coms[component.id] = serial.Serial(port=component.address, baudrate=component.baudrate, timeout=component.timeout, write_timeout=0)

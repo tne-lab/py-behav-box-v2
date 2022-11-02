@@ -1,5 +1,8 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
+
+from Utilities.find_closing_paren import find_closing_paren
+
 if TYPE_CHECKING:
     from Workstation.Workstation import Workstation
 
@@ -36,11 +39,21 @@ class SettingsDialog(QDialog):
         source_box_layout = QVBoxLayout(self)
         self.source_list = QListWidget()
         for sn in workstation.sources:
-            QListWidgetItem("{} ({})".format(sn, type(workstation.sources[sn]).__name__), self.source_list)
+            ql = QListWidgetItem("{} ({})".format(sn, type(workstation.sources[sn]).__name__), self.source_list)
+            if workstation.sources[sn].is_available():
+                ql.setIcon(self.source_list.style().standardIcon(QStyle.SP_DialogApplyButton))
+            else:
+                ql.setIcon(self.source_list.style().standardIcon(QStyle.SP_DialogCancelButton))
         self.source_list.itemClicked.connect(self.on_source_clicked)
         source_box_layout.addWidget(self.source_list)
         source_as_layout = QHBoxLayout(self)
         source_as_layout.addStretch()
+        self.refresh_button = QPushButton()
+        self.refresh_button.setText("⟳")
+        self.refresh_button.setFixedWidth(30)
+        self.refresh_button.setDisabled(True)
+        self.refresh_button.clicked.connect(self.refresh_source)
+        source_as_layout.addWidget(self.refresh_button)
         self.remove_button = QPushButton()
         self.remove_button.setText("−")
         self.remove_button.setFixedWidth(30)
@@ -67,6 +80,26 @@ class SettingsDialog(QDialog):
 
     def on_source_clicked(self, _) -> None:
         self.remove_button.setDisabled(False)
+        self.refresh_button.setDisabled(False)
+
+    def refresh_source(self) -> None:
+        st = self.source_list.currentItem().text()
+        st_name = st.split(" (")[0]
+        if len(self.workstation.sources[st_name].components) == 0:
+            settings = QSettings()
+            source_string = settings.value("sources")
+            s_type = type(self.workstation.sources[st_name]).__name__
+            search_str = '\"'+st_name+'\": ' + s_type
+            open_ind = source_string.index(search_str) + len(search_str)
+            close_ind = find_closing_paren(source_string, open_ind) + 1
+            source_module = importlib.import_module("Sources." + s_type)
+            attribute = getattr(source_module, s_type)
+            globals()[s_type] = attribute
+            self.workstation.sources[st_name] = eval(type(self.workstation.sources[st_name]).__name__ + source_string[open_ind:close_ind])
+            if self.workstation.sources[st_name].is_available():
+                self.source_list.currentItem().setIcon(self.source_list.style().standardIcon(QStyle.SP_DialogApplyButton))
+            else:
+                self.source_list.currentItem().setIcon(self.source_list.style().standardIcon(QStyle.SP_DialogCancelButton))
 
     def remove_source(self) -> None:
         st = self.source_list.currentItem().text()
@@ -145,7 +178,11 @@ class AddSourceDialog(QDialog):
                                                                      ','.join(f'"{w}"' for w in self.params)) + "}"
         settings.setValue("sources", source_string)
         self.sd.workstation.sources[self.name.text()] = source_type(*self.params)
-        QListWidgetItem("{} ({})".format(self.name.text(), self.source.currentText()), self.sd.source_list)
+        ql = QListWidgetItem("{} ({})".format(self.name.text(), self.source.currentText()), self.sd.source_list)
+        if self.sd.workstation.sources[self.name.text()].is_available():
+            ql.setIcon(self.sd.source_list.style().standardIcon(QStyle.SP_DialogApplyButton))
+        else:
+            ql.setIcon(self.sd.source_list.style().standardIcon(QStyle.SP_DialogCancelButton))
         super(AddSourceDialog, self).accept()
 
 

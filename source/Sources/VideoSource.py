@@ -49,8 +49,8 @@ class VideoSource(Source):
     """
 
     def __init__(self):
+        super(VideoSource, self).__init__()
         self.available = True
-        self.components = {}
         self.caps = {}
         self.outs = {}
         self.out_paths = {}

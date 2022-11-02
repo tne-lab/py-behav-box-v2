@@ -6,6 +6,7 @@ from Sources.Source import Source
 class OESource(Source):
 
     def __init__(self, address, port, delay=0):
+        super(OESource, self).__init__()
         try:
             context = zmq.Context()
             self.socket = context.socket(zmq.SUB)
@@ -17,7 +18,6 @@ class OESource(Source):
             self.available = True
         except:
             self.available = False
-        self.components = {}
 
     def register_component(self, _, component):
         self.components[component.id] = component

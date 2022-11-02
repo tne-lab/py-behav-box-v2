@@ -18,7 +18,6 @@ class HikVisionSource(Source):
             self.available = True
         except:
             self.available = False
-        self.components = {}
         self.out_paths = {}
         self.tasks = {}
 

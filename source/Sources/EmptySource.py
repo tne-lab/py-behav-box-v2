@@ -25,7 +25,7 @@ class EmptySource(Source):
     """
 
     def __init__(self):
-        self.components = {}
+        super(EmptySource, self).__init__()
         self.values = {}
         self.next_id = 0
 

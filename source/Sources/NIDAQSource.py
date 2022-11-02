@@ -37,6 +37,7 @@ class NIDAQSource(Source):
     """
 
     def __init__(self, dev):
+        super(NIDAQSource, self).__init__()
         self.dev = dev
         try:
             dev_obj = system.Device(dev)
@@ -45,7 +46,6 @@ class NIDAQSource(Source):
         except:
             self.available = False
         self.tasks = {}
-        self.components = {}
         self.streams = {}
         self.ao_task = None
         self.ao_stream = None
