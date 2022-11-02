@@ -30,3 +30,6 @@ class EmptyTouchScreenSource(Source):
 
     def write_component(self, component_id, msg):
         pass
+
+    def is_available(self):
+        return True

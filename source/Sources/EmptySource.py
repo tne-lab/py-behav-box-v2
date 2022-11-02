@@ -39,3 +39,6 @@ class EmptySource(Source):
 
     def write_component(self, component_id, msg):
         self.values[component_id] = msg
+
+    def is_available(self):
+        return True

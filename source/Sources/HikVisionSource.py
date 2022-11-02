@@ -13,7 +13,11 @@ class HikVisionSource(Source):
         self.ip = ip
         self.user = user
         self.password = password
-        self.server = HikvisionServer(ip, user, password)
+        try:
+            self.server = HikvisionServer(ip, user, password)
+            self.available = True
+        except:
+            self.available = False
         self.components = {}
         self.out_paths = {}
         self.tasks = {}
@@ -56,3 +60,6 @@ class HikVisionSource(Source):
             os.makedirs(output_folder)
         with open(output_folder + name + ".mp4", 'wb') as file:
             file.write(dwnld.content)
+
+    def is_available(self):
+        return self.available

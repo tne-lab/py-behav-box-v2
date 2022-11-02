@@ -40,3 +40,7 @@ class Source:
 
     def write_component(self, component_id: str, msg: Any) -> None:
         pass
+
+    @abstractmethod
+    def is_available(self):
+        raise NotImplementedError

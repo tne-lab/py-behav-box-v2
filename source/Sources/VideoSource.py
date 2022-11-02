@@ -6,6 +6,7 @@ import time
 import cv2
 
 from Sources.Source import Source
+from Utilities.Exceptions import ComponentRegisterError
 
 
 class VideoSource(Source):
@@ -48,6 +49,7 @@ class VideoSource(Source):
     """
 
     def __init__(self):
+        self.available = True
         self.components = {}
         self.caps = {}
         self.outs = {}
@@ -55,7 +57,6 @@ class VideoSource(Source):
         self.cur_frames = {}
         self.frame_times = {}
         self.do_close = {}
-        self.available = True
         self.tasks = {}
         vt = threading.Thread(target=self.run, args=[])
         vt.start()
@@ -71,7 +72,8 @@ class VideoSource(Source):
         self.out_paths[component.id] = "{}\\py-behav\\{}\\Data\\{{}}\\{{}}\\".format(desktop, type(task).__name__)
         self.tasks[component.id] = task
         if not self.caps[component.id].isOpened():
-            print('error opening vid')
+            self.do_close[component.id] = True
+            raise ComponentRegisterError
         else:
             self.caps[component.id].start()
 
@@ -142,6 +144,9 @@ class VideoSource(Source):
             if self.outs[vid] is not None:
                 self.outs[vid].release()
 
+    def is_available(self):
+        return self.available
+
 
 class VideoThread(threading.Thread):
 
@@ -172,4 +177,3 @@ class VideoThread(threading.Thread):
     def release(self):
         self.stop()
         self.stream.release()
-

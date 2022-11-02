@@ -6,13 +6,17 @@ from Sources.Source import Source
 class OESource(Source):
 
     def __init__(self, address, port, delay=0):
-        context = zmq.Context()
-        self.socket = context.socket(zmq.SUB)
-        self.socket.connect("tcp://" + address + ":" + str(port))
-        self.poller = zmq.Poller()
-        self.poller.register(self.socket, zmq.POLLIN)
-        self.delay = int(delay)
-        self.socket.setsockopt(zmq.SUBSCRIBE, b'ttl')
+        try:
+            context = zmq.Context()
+            self.socket = context.socket(zmq.SUB)
+            self.socket.connect("tcp://" + address + ":" + str(port))
+            self.poller = zmq.Poller()
+            self.poller.register(self.socket, zmq.POLLIN)
+            self.delay = int(delay)
+            self.socket.setsockopt(zmq.SUBSCRIBE, b'ttl')
+            self.available = True
+        except:
+            self.available = False
         self.components = {}
 
     def register_component(self, _, component):
@@ -37,3 +41,6 @@ class OESource(Source):
 
     def write_component(self, component_id, msg):
         pass
+
+    def is_available(self):
+        return self.available

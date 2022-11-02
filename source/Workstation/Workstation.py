@@ -3,6 +3,7 @@ from __future__ import annotations
 import threading
 import time
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from Events.EventLogger import EventLogger
     from Tasks.Task import Task
@@ -23,12 +24,14 @@ import pygame
 from Sources.EmptySource import EmptySource
 from Sources.EmptyTouchScreenSource import EmptyTouchScreenSource
 from Workstation.WorkstationGUI import WorkstationGUI
+import Utilities.Exceptions as pyberror
 
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 import sys
 import os
 import ast
+import traceback
 from screeninfo import get_monitors
 
 
@@ -89,6 +92,7 @@ class Workstation:
         else:
             self.compute_chambergui()
 
+        self.ed = None
         self.guis = {}
         app = QApplication(sys.argv)
         self.wsg = WorkstationGUI(self)
@@ -152,20 +156,40 @@ class Workstation:
         task_module = importlib.import_module("Tasks." + task_name)
         task = getattr(task_module, task_name)
         metadata = {"chamber": chamber, "subject": "default"}
-        self.tasks[chamber] = task(self, metadata, self.sources, address_file, protocol)  # Create the task
-        self.event_loggers[chamber] = task_event_loggers
-        self.thread_events[chamber] = (threading.Event(), threading.Event(), threading.Event(), threading.Event(),
-                                       threading.Event(), threading.Event())
-        for logger in task_event_loggers:
-            logger.set_task(self.tasks[chamber])
-        # Import the Task GUI
-        gui = getattr(importlib.import_module("GUIs." + task_name + "GUI"), task_name + "GUI")
-        # Position the GUI in pygame
-        col = chamber % self.n_col
-        row = math.floor(chamber / self.n_col)
-        # Create the GUI
-        self.guis[chamber] = gui(self.task_gui.subsurface(col * self.w, row * self.h, self.w, self.h),
-                                 self.tasks[chamber])
+        try:
+            self.tasks[chamber] = task(self, metadata, self.sources, address_file, protocol)  # Create the task
+            self.event_loggers[chamber] = task_event_loggers
+            self.thread_events[chamber] = (threading.Event(), threading.Event(), threading.Event(), threading.Event(),
+                                           threading.Event(), threading.Event())
+            for logger in task_event_loggers:
+                logger.set_task(self.tasks[chamber])
+            # Import the Task GUI
+            gui = getattr(importlib.import_module("GUIs." + task_name + "GUI"), task_name + "GUI")
+            # Position the GUI in pygame
+            col = chamber % self.n_col
+            row = math.floor(chamber / self.n_col)
+            # Create the GUI
+            self.guis[chamber] = gui(self.task_gui.subsurface(col * self.w, row * self.h, self.w, self.h),
+                                     self.tasks[chamber])
+        except BaseException as e:
+            self.ed = QMessageBox()
+            self.ed.setIcon(QMessageBox.Critical)
+            self.ed.setWindowTitle("Error adding task")
+            if e is pyberror.ComponentRegisterError:
+                self.ed.setText("A Component failed to register")
+            elif e is pyberror.SourceUnavailableError:
+                self.ed.setText("A requested Source is currently unavailable")
+            elif e is pyberror.MalformedProtocolError:
+                self.ed.setText("Error raised when parsing Protocol file")
+            elif e is pyberror.MalformedAddressFileError:
+                self.ed.setText("Error raised when parsing AddressFile")
+            elif e is pyberror.InvalidComponentTypeError:
+                self.ed.setText("A Component in the AddressFile is an invalid type")
+            else:
+                self.ed.setText("Unhandled exception\n"+traceback.format_exc())
+            self.ed.setStandardButtons(QMessageBox.Ok)
+            self.ed.show()
+            self.wsg.remove_task(chamber + 1)
 
     def switch_task(self, task_base: Task, task_name: Type[Task], protocol: str = None) -> Task:
         """

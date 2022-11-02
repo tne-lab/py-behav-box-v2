@@ -13,6 +13,7 @@ from Events.FinalStateEvent import FinalStateEvent
 from Sources.Source import Source
 from Utilities.AddressFile import AddressFile
 from Workstation.Workstation import Workstation
+import Utilities.Exceptions as pyberror
 
 
 class Task:
@@ -100,8 +101,13 @@ class Task:
                     self.components.append(component)
             # Load protocol is provided
             if len(args) > 2 and args[2] is not None:
-                for key in args[2]:
-                    setattr(self, key, args[2][key])
+                try:
+                    file_globals = runpy.run_path(args[2])
+                except:
+                    raise pyberror.MalformedProtocolError
+                for cons in file_globals['protocol']:
+                    if hasattr(self, cons):
+                        setattr(self, cons, file_globals['protocol'][cons])
         else:  # If this is a standard Task
             self.ws = args[0]
             self.metadata = args[1]
@@ -116,7 +122,10 @@ class Task:
 
             # Open the provided AddressFile
             if isinstance(address_file, str) and len(address_file) > 0:
-                file_globals = runpy.run_path(address_file, {"AddressFile": AddressFile})
+                try:
+                    file_globals = runpy.run_path(address_file, {"AddressFile": AddressFile})
+                except:
+                    raise pyberror.MalformedAddressFileError
                 for cid in file_globals['addresses'].addresses:
                     if cid in component_definition:
                         comps = file_globals['addresses'].addresses[cid]
@@ -124,28 +133,34 @@ class Task:
                             # Import and instantiate the indicated Component with the provided ID and address
                             component_type = getattr(importlib.import_module("Components." + comp.component_type), comp.component_type)
                             if issubclass(component_type, component_definition[cid][i]):
-                                component = component_type(sources[comp.source_name], "{}-{}-{}".format(cid, str(self.metadata["chamber"]), str(i)), comp.component_address)
-                                if comp.metadata is not None:
-                                    component.initialize(comp.metadata)
-                                sources[comp.source_name].register_component(self, component)
-                                # If the ID has yet to be registered
-                                if not hasattr(self, cid):
-                                    # If the Component is part of a list
-                                    if len(comps) > 1:
-                                        # Create the list and add the Component at the specified index
-                                        component_list = [None] * int(len(comps))
+                                if sources[comp.source_name].is_available():
+                                    component = component_type(sources[comp.source_name], "{}-{}-{}".format(cid, str(self.metadata["chamber"]), str(i)), comp.component_address)
+                                    if comp.metadata is not None:
+                                        component.initialize(comp.metadata)
+                                    try:
+                                        sources[comp.source_name].register_component(self, component)
+                                    except:
+                                        raise pyberror.ComponentRegisterError
+                                    # If the ID has yet to be registered
+                                    if not hasattr(self, cid):
+                                        # If the Component is part of a list
+                                        if len(comps) > 1:
+                                            # Create the list and add the Component at the specified index
+                                            component_list = [None] * int(len(comps))
+                                            component_list[i] = component
+                                            setattr(self, cid, component_list)
+                                        else:  # If the Component is unique
+                                            setattr(self, cid, component)
+                                    else:  # If the Component is part of an already registered list
+                                        # Update the list with the Component at the specified index
+                                        component_list = getattr(self, cid)
                                         component_list[i] = component
                                         setattr(self, cid, component_list)
-                                    else:  # If the Component is unique
-                                        setattr(self, cid, component)
-                                else:  # If the Component is part of an already registered list
-                                    # Update the list with the Component at the specified index
-                                    component_list = getattr(self, cid)
-                                    component_list[i] = component
-                                    setattr(self, cid, component_list)
-                                self.components.append(component)
+                                    self.components.append(component)
+                                else:
+                                    raise pyberror.SourceUnavailableError
                             else:
-                                raise InvalidComponentTypeError
+                                raise pyberror.InvalidComponentTypeError
 
             for name in component_definition:
                 for i in range(len(component_definition[name])):
@@ -173,7 +188,10 @@ class Task:
 
             # If a Protocol is provided, replace all indicated variables with the values from the Protocol
             if isinstance(protocol, str) and len(protocol) > 0:
-                file_globals = runpy.run_path(protocol)
+                try:
+                    file_globals = runpy.run_path(protocol)
+                except:
+                    raise pyberror.MalformedProtocolError
                 for cons in file_globals['protocol']:
                     if hasattr(self, cons):
                         setattr(self, cons, file_globals['protocol'][cons])
@@ -267,7 +285,3 @@ class Task:
     @abstractmethod
     def is_complete(self) -> bool:
         raise NotImplementedError
-
-
-class InvalidComponentTypeError:
-    pass
