@@ -16,3 +16,7 @@ class MalformedAddressFileError(BaseException):
 
 class SourceUnavailableError(BaseException):
     pass
+
+
+class AddTaskError(BaseException):
+    pass

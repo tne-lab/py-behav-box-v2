@@ -98,13 +98,13 @@ class Workstation:
         self.wsg = WorkstationGUI(self)
         self.thread_events = {}
         self.event_notifier = threading.Event()
+        self.stopping = False
         guithread = threading.Thread(target=lambda: self.gui_loop())
         guithread.start()
         taskthread = threading.Thread(target=lambda: self.loop())
         taskthread.start()
         eventthread = threading.Thread(target=lambda: self.event_loop())
         eventthread.start()
-        self.stopping = False
         atexit.register(lambda: self.exit_handler())
         signal.signal(signal.SIGTERM, self.exit_handler)
         signal.signal(signal.SIGINT, self.exit_handler)
@@ -172,24 +172,25 @@ class Workstation:
             self.guis[chamber] = gui(self.task_gui.subsurface(col * self.w, row * self.h, self.w, self.h),
                                      self.tasks[chamber])
         except BaseException as e:
+            print(type(e).__name__)
             self.ed = QMessageBox()
             self.ed.setIcon(QMessageBox.Critical)
             self.ed.setWindowTitle("Error adding task")
-            if e is pyberror.ComponentRegisterError:
+            if isinstance(e, pyberror.ComponentRegisterError):
                 self.ed.setText("A Component failed to register")
-            elif e is pyberror.SourceUnavailableError:
+            elif isinstance(e, pyberror.SourceUnavailableError):
                 self.ed.setText("A requested Source is currently unavailable")
-            elif e is pyberror.MalformedProtocolError:
+            elif isinstance(e, pyberror.MalformedProtocolError):
                 self.ed.setText("Error raised when parsing Protocol file")
-            elif e is pyberror.MalformedAddressFileError:
+            elif isinstance(e, pyberror.MalformedAddressFileError):
                 self.ed.setText("Error raised when parsing AddressFile")
-            elif e is pyberror.InvalidComponentTypeError:
+            elif isinstance(e, pyberror.InvalidComponentTypeError):
                 self.ed.setText("A Component in the AddressFile is an invalid type")
             else:
                 self.ed.setText("Unhandled exception\n"+traceback.format_exc())
             self.ed.setStandardButtons(QMessageBox.Ok)
             self.ed.show()
-            self.wsg.remove_task(chamber + 1)
+            raise pyberror.AddTaskError
 
     def switch_task(self, task_base: Task, task_name: Type[Task], protocol: str = None) -> Task:
         """
@@ -230,19 +231,23 @@ class Workstation:
         remove_thread.start()
 
     def remove_task_(self, chamber: int, del_loggers: bool = True) -> None:
-        self.thread_events[chamber][0].set()
-        self.thread_events[chamber][1].wait()
-        self.thread_events[chamber][2].wait()
-        self.thread_events[chamber][4].wait()
-        if del_loggers:
-            for el in self.event_loggers[chamber]:  # Close all associated EventLoggers
-                el.close_()
-        for c in self.tasks[chamber].components:
-            c.close()
-        del self.tasks[chamber]
-        del self.event_loggers[chamber]
-        del self.guis[chamber]
-        del self.thread_events[chamber]
+        if chamber in self.thread_events:
+            self.thread_events[chamber][0].set()
+            self.thread_events[chamber][1].wait()
+            self.thread_events[chamber][2].wait()
+            self.thread_events[chamber][4].wait()
+            del self.thread_events[chamber]
+        if chamber in self.event_loggers:
+            if del_loggers:
+                for el in self.event_loggers[chamber]:  # Close all associated EventLoggers
+                    el.close_()
+            del self.event_loggers[chamber]
+        if chamber in self.tasks:
+            for c in self.tasks[chamber].components:
+                c.close()
+            del self.tasks[chamber]
+        if chamber in self.guis:
+            del self.guis[chamber]
 
     def start_task(self, chamber: int) -> None:
         """

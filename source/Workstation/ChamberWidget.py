@@ -1,5 +1,8 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
+
+from Utilities.Exceptions import AddTaskError
+
 if TYPE_CHECKING:
     from Workstation.WorkstationGUI import WorkstationGUI
     from Events.EventLogger import EventLogger
@@ -145,11 +148,14 @@ class ChamberWidget(QGroupBox):
         Updates the representation of the Task with the Workstation based on any changes made in the GUI.
         """
         self.workstation.remove_task(int(self.chamber_id.text()) - 1, False)
-        self.workstation.add_task(int(self.chamber_id.text()) - 1, self.task_name.currentText(),
-                                  self.address_file_path.text(),
-                                  self.protocol_path.text(), self.event_loggers)
-        self.task = self.workstation.tasks[int(self.chamber_id.text()) - 1]
-        self.output_file_changed()
+        try:
+            self.workstation.add_task(int(self.chamber_id.text()) - 1, self.task_name.currentText(),
+                                      self.address_file_path.text(),
+                                      self.protocol_path.text(), self.event_loggers)
+            self.task = self.workstation.tasks[int(self.chamber_id.text()) - 1]
+            self.output_file_changed()
+        except AddTaskError:
+            self.wsg.remove_task(int(self.chamber_id.text()))
 
     def get_file_path(self, le: QLineEdit, dir_type: str):
         """

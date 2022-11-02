@@ -1,5 +1,8 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
+
+from Utilities.Exceptions import AddTaskError
+
 if TYPE_CHECKING:
     from Events.EventLogger import EventLogger
     from Workstation.Workstation import Workstation
@@ -98,8 +101,11 @@ class WorkstationGUI(QWidget):
         if int(chamber_index) - 1 not in self.chambers:
             if event_loggers is None:
                 event_loggers = ([CSVEventLogger()], [[]])
-            self.chambers[int(chamber_index) - 1] = ChamberWidget(self, chamber_index, task_index, subject, afp, pfp, prompt, event_loggers)
-            self.chamber_container.insertWidget(self.n_active, self.chambers[int(chamber_index) - 1])
+            try:
+                self.chambers[int(chamber_index) - 1] = ChamberWidget(self, chamber_index, task_index, subject, afp, pfp, prompt, event_loggers)
+                self.chamber_container.insertWidget(self.n_active, self.chambers[int(chamber_index) - 1])
+            except AddTaskError:
+                self.remove_task(int(chamber_index) - 1)
             self.n_active += 1  # Increment the number of active chambers
         else:  # The chamber is already in use
             self.emsg = QMessageBox()
@@ -118,7 +124,8 @@ class WorkstationGUI(QWidget):
             The index of the task
         """
         self.workstation.remove_task(int(chamber_index) - 1)  # Remove the task from the main Workstation
-        self.chamber_container.removeWidget(self.chambers[int(chamber_index) - 1])  # Remove the widget
-        self.chambers[int(chamber_index) - 1].deleteLater()
-        del self.chambers[int(chamber_index) - 1]
+        if int(chamber_index) - 1 in self.chambers:
+            self.chamber_container.removeWidget(self.chambers[int(chamber_index) - 1])  # Remove the widget
+            self.chambers[int(chamber_index) - 1].deleteLater()
+            del self.chambers[int(chamber_index) - 1]
         self.n_active -= 1  # Decrement the number of active tasks

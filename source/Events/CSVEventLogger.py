@@ -24,15 +24,14 @@ class CSVEventLogger(FileEventLogger):
         self.log_file.write("Subject,{}".format(self.task.metadata["subject"])+"\n")
         self.log_file.write("Task,{}".format(type(self.task).__name__)+"\n")
         self.log_file.write("Chamber,{}".format(self.task.metadata["chamber"] + 1)+"\n")
-        self.log_file.write("Protocol,{}".format(self.task.metadata["protocol"])+"\n\n")
-        self.log_file.write("AddressFile,{}".format(self.task.metadata["address_file"])+"\n")
+        self.log_file.write("Protocol,{}".format(self.task.metadata["protocol"])+"\n")
+        self.log_file.write("AddressFile,{}".format(self.task.metadata["address_file"])+"\n\n")
         self.log_file.write("Trial,Time,Type,Code,State,Metadata\n")
 
     def log_events(self, events: list[Event]) -> None:
         for e in events:
             self.event_count += 1
             if isinstance(e, InitialStateEvent):
-                print(type(self.log_file))
                 self.log_file.write("{},{},Entry,{},{},{}\n".format(self.event_count, e.entry_time,
                                                                     e.initial_state.value, e.initial_state.name,
                                                                     str(e.metadata)))

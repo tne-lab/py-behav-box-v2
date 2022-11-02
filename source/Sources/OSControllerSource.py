@@ -1,4 +1,4 @@
-import time
+import threading
 
 import serial
 
@@ -10,10 +10,18 @@ from Components.Component import Component
 class OSControllerSource(Source):
 
     def __init__(self, com):
-        self.com = serial.Serial(port=com, baudrate=115200, timeout=0, write_timeout=0, dsrdtr=True)
-        self.com.dtr = True
-        self.com.reset_input_buffer()
-        self.com.reset_output_buffer()
+        super(OSControllerSource, self).__init__()
+        try:
+            self.com = serial.Serial(port=com, baudrate=115200, write_timeout=0, dsrdtr=True)
+            self.com.dtr = True
+            self.com.reset_input_buffer()
+            self.com.reset_output_buffer()
+            self.available = True
+            t = threading.Thread(target=self.read)
+            t.start()
+        except:
+            self.available = False
+        self.event = [threading.Event(), threading.Event()]
         self.components = {}
         self.input_ids = {}
         self.values = {}
@@ -26,19 +34,19 @@ class OSControllerSource(Source):
         self.values[component.id] = False
 
     def close_source(self):
+        self.event[0].set()
+        self.event[1].wait()
         self.com.__exit__()
 
+    def read(self):
+        while not self.event[0].is_set():
+            data = self.com.readline().decode('ascii')
+            input_id = str(data[1:-1])
+            if input_id in self.input_ids:
+                self.values[self.input_ids[input_id]] = not self.values[self.input_ids[input_id]]
+        self.event[1].set()
+
     def read_component(self, component_id):
-        # Read from Serial until no characters are remaining
-        while self.com.in_waiting > 0:
-            character = self.com.read().decode()
-            # If the command is complete
-            if character == "\n":
-                # Update the stored value
-                self.values[self.input_ids[str(self.buffer[1:])]] = not self.values[self.input_ids[str(self.buffer[1:])]]
-                self.buffer = ""
-            else:  # Otherwise, add to the buffer
-                self.buffer += character
         return self.values[component_id]
 
     def write_component(self, component_id, msg):
@@ -46,3 +54,6 @@ class OSControllerSource(Source):
         if not msg == self.values[component_id]:
             self.values[component_id] = msg
             self.com.write(("O"+str(self.components[component_id].address)+"\n").encode())
+
+    def is_available(self):
+        return self.available
