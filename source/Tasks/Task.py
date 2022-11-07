@@ -1,5 +1,6 @@
 from __future__ import annotations
 import time
+import traceback
 from abc import ABCMeta, abstractmethod
 import importlib
 from enum import Enum
@@ -140,6 +141,7 @@ class Task:
                                     try:
                                         sources[comp.source_name].register_component(self, component)
                                     except:
+                                        print(traceback.format_exc())
                                         raise pyberror.ComponentRegisterError
                                     # If the ID has yet to be registered
                                     if not hasattr(self, cid):
