@@ -233,10 +233,10 @@ class Workstation:
     def remove_task_(self, chamber: int, del_loggers: bool = True) -> None:
         if chamber in self.thread_events:
             self.thread_events[chamber][0].set()
+            self.event_notifier.set()
             self.thread_events[chamber][1].wait()
             self.thread_events[chamber][2].wait()
             self.thread_events[chamber][4].wait()
-            del self.thread_events[chamber]
         if chamber in self.event_loggers:
             if del_loggers:
                 for el in self.event_loggers[chamber]:  # Close all associated EventLoggers
@@ -248,6 +248,8 @@ class Workstation:
             del self.tasks[chamber]
         if chamber in self.guis:
             del self.guis[chamber]
+        if chamber in self.thread_events:
+            del self.thread_events[chamber]
 
     def start_task(self, chamber: int) -> None:
         """
@@ -289,12 +291,15 @@ class Workstation:
                             el.log_events(ecopy)
                 elif not self.thread_events[key][4].is_set():
                     self.thread_events[key][4].set()
+            time.sleep(0.0001)
 
     def loop(self) -> None:
         """
         Master event loop for all Tasks. Handles Task logic and Task Events.
         """
+        cps = 0
         while not self.stopping:
+            cps += 1
             events = pygame.event.get()  # Get mouse/keyboard events
             task_keys = list(self.tasks.keys())
             for key in task_keys:  # For each Task
@@ -308,6 +313,7 @@ class Workstation:
                             self.wsg.chambers[key].stop()
                 elif not self.thread_events[key][2].is_set():
                     self.thread_events[key][2].set()
+            time.sleep(0.0001)
 
     def gui_loop(self) -> None:
         last_frame = time.perf_counter()
@@ -328,6 +334,7 @@ class Workstation:
                         self.thread_events[key][1].set()
                 pygame.display.flip()  # Signal to pygame that the whole GUI has updated
                 last_frame = time.perf_counter()
+            time.sleep(0.0001)
 
     def exit_handler(self, *args):
         """
