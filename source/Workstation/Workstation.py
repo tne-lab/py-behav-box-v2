@@ -291,7 +291,7 @@ class Workstation:
                             el.log_events(ecopy)
                 elif not self.thread_events[key][4].is_set():
                     self.thread_events[key][4].set()
-            time.sleep(0.0001)
+            time.sleep(0)
 
     def loop(self) -> None:
         """
@@ -313,7 +313,7 @@ class Workstation:
                             self.wsg.chambers[key].stop()
                 elif not self.thread_events[key][2].is_set():
                     self.thread_events[key][2].set()
-            time.sleep(0.0001)
+            time.sleep(0)
 
     def gui_loop(self) -> None:
         last_frame = time.perf_counter()
@@ -334,7 +334,7 @@ class Workstation:
                         self.thread_events[key][1].set()
                 pygame.display.flip()  # Signal to pygame that the whole GUI has updated
                 last_frame = time.perf_counter()
-            time.sleep(0.0001)
+            time.sleep(0)
 
     def exit_handler(self, *args):
         """
