@@ -1,6 +1,11 @@
 import multiprocessing
+import time
+from multiprocessing.sharedctypes import RawArray, RawValue
+import os
 import threading
 import traceback
+
+import psutil
 
 from Sources.Source import Source
 
@@ -9,6 +14,24 @@ import ctypes
 import serial
 
 c_uint8 = ctypes.c_uint8
+
+
+class BytesPipeQueue:
+    def __init__(self, *args):
+        self.out_pipe, self.in_pipe = multiprocessing.Pipe(*args)
+
+    def put(self, item):
+        self.in_pipe.send_bytes(item)
+
+    def get(self):
+        if self.out_pipe.poll():
+            return self.out_pipe.recv_bytes()
+        else:
+            return bytes()
+
+    def close(self):
+        self.out_pipe.close()
+        self.in_pipe.close()
 
 
 class DigitalOutBits(ctypes.LittleEndianStructure):
@@ -87,25 +110,28 @@ class Reset(ctypes.Union):
 
 class ArduinoProcess(multiprocessing.Process):
 
-    def __init__(self, com, pipe, event):
+    def __init__(self, com, rq, wq, event):
         super(ArduinoProcess, self).__init__()
-        self.pipe = pipe
+        self.rq = rq
+        self.wq = wq
         self.com = com
         self.event = event
 
     def run(self):
+        p = psutil.Process(os.getpid())
+        p.nice(psutil.REALTIME_PRIORITY_CLASS)
         sp = serial.Serial(port=self.com, baudrate=500000, write_timeout=None, timeout=None, dsrdtr=True)
         sp.dtr = True
         sp.reset_input_buffer()
         sp.reset_output_buffer()
         while not self.event.is_set():
-            if self.pipe.poll():
-                msg = self.pipe.recv_bytes()
+            msg = self.rq.get()
+            if len(msg) > 0:
                 sp.write(msg)
             nb = sp.in_waiting
             if nb > 0:
                 msg = sp.read(nb)
-                self.pipe.send_bytes(msg)
+                self.wq.put(msg)
         sp.close()
 
 
@@ -114,10 +140,10 @@ class OSControllerSource(Source):
     def __init__(self, com):
         super(OSControllerSource, self).__init__()
         try:
-            conn1, conn2 = multiprocessing.Pipe(duplex=True)
-            self.pipe = conn1
+            self.wq = BytesPipeQueue()
+            self.rq = BytesPipeQueue()
             self.event = multiprocessing.Event()
-            self.sp = ArduinoProcess(com, conn2, self.event)
+            self.sp = ArduinoProcess(com, self.wq, self.rq, self.event)
             self.sp.start()
             self.available = True
             self.closing = False
@@ -143,7 +169,7 @@ class OSControllerSource(Source):
                 command.b.type = 2
             elif component.get_type() == Component.Type.ANALOG_INPUT:
                 command.b.type = 3
-            self.pipe.send_bytes(command.data.to_bytes(1, 'little'))
+            self.wq.put(command.data.to_bytes(1, 'little'))
         if component.get_type() == Component.Type.DIGITAL_INPUT or component.get_type() == Component.Type.DIGITAL_OUTPUT:
             self.values[component.id] = False
         else:
@@ -155,41 +181,42 @@ class OSControllerSource(Source):
     def close_source(self):
         reset = Reset()
         reset.b.command = 4
-        self.pipe.send_bytes(reset.data.to_bytes(1, 'little'))
+        self.wq.put(reset.data.to_bytes(1, 'little'))
         self.closing = True
         if self.available:
             self.event.set()
+            self.wq.close()
+            self.rq.close()
 
     def handle(self):
         cur_command = bytes()
         while not self.closing:
-            if self.pipe.poll():
-                req = self.pipe.recv_bytes()
-                for b in req:
-                    cur_command = cur_command + b.to_bytes(1, 'little')
-                    data = int.from_bytes(cur_command, 'little')
-                    cid = data & 0x7
-                    if cid == 0:
-                        address = data << 3 & 0x7
-                        input_id = str(address)
+            msg = self.rq.get()
+            for b in msg:
+                cur_command = cur_command + b.to_bytes(1, 'little')
+                data = int.from_bytes(cur_command, 'little')
+                cid = data & 0x7
+                if cid == 0:
+                    address = data << 3 & 0x7
+                    input_id = str(address)
+                    if input_id in self.input_ids:
+                        self.values[self.input_ids[input_id]] = not self.values[self.input_ids[input_id]]
+                    cur_command = bytes()
+                elif cid == 1:
+                    if len(cur_command) == 2:
+                        data2 = int.from_bytes(cur_command, 'little')
+                        command = AnalogIn()
+                        command.data = data2
+                        input_id = "A" + str(command.b.address)
                         if input_id in self.input_ids:
-                            self.values[self.input_ids[input_id]] = not self.values[self.input_ids[input_id]]
+                            self.values[self.input_ids[input_id]] = command.b.value
                         cur_command = bytes()
-                    elif cid == 1:
-                        if len(cur_command) == 2:
-                            data2 = int.from_bytes(cur_command, 'little')
-                            command = AnalogIn()
-                            command.data = data2
-                            input_id = "A" + str(command.b.address)
-                            if input_id in self.input_ids:
-                                self.values[self.input_ids[input_id]] = command.b.value
-                            cur_command = bytes()
-                    elif cid == 2:
-                        address = data << 3 & 0x3
-                        input_id = "A" + str(address)
-                        if input_id in self.input_ids:
-                            self.values[self.input_ids[input_id]] = not self.values[self.input_ids[input_id]]
-                        cur_command = bytes()
+                elif cid == 2:
+                    address = data << 3 & 0x3
+                    input_id = "A" + str(address)
+                    if input_id in self.input_ids:
+                        self.values[self.input_ids[input_id]] = not self.values[self.input_ids[input_id]]
+                    cur_command = bytes()
 
     def read_component(self, component_id):
         return self.values[component_id]
@@ -201,7 +228,7 @@ class OSControllerSource(Source):
                 command = GPIOOut()
                 command.b.command = 2
                 command.b.address = int(self.components[component_id].address[1])
-                self.pipe.send_bytes(command.data.to_bytes(1, 'little'))
+                self.wq.put(command.data.to_bytes(1, 'little'))
             elif self.components[component_id].address.startswith("O"):
                 command = AnalogOut()
                 command.b.command = 1
@@ -213,12 +240,12 @@ class OSControllerSource(Source):
                     scaled = 2.5
                 scaled = round(scaled * 65535 / 2.5)
                 command.b.value = scaled
-                self.pipe.send_bytes(command.data.to_bytes(3, 'little'))
+                self.wq.put(command.data.to_bytes(3, 'little'))
             else:
                 command = DigitalOut()
                 command.b.command = 0
                 command.b.address = int(self.components[component_id].address)
-                self.pipe.send_bytes(command.data.to_bytes(1, 'little'))
+                self.wq.put(command.data.to_bytes(1, 'little'))
         self.values[component_id] = msg
 
     def close_component(self, component_id: str) -> None:
@@ -227,7 +254,7 @@ class OSControllerSource(Source):
             command.b.command = 3
             command.b.address = int(self.components[component_id].address[1])
             command.b.type = 0
-            self.pipe.send_bytes(command.data.to_bytes(1, 'little'))
+            self.wq.put(command.data.to_bytes(1, 'little'))
 
     def is_available(self):
         return self.available

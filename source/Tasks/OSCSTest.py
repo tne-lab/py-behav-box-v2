@@ -26,7 +26,7 @@ class OSCSTest(Task):
     # noinspection PyMethodMayBeStatic
     def get_constants(self):
         return {
-            'duration': 2
+            'duration': 6
         }
 
     def init_state(self):
