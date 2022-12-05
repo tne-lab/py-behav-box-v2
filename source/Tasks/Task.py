@@ -233,7 +233,6 @@ class Task:
         self.paused = True
         self.time_into_trial = self.time_in_state()
         self.events.append(StateChangeEvent(self, self.state, self.SessionStates.PAUSED, None))
-        self.ws.log_events(self.metadata["chamber"])
         self.pause()
 
     def pause(self) -> None:
