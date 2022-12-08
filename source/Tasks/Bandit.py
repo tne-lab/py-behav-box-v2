@@ -2,6 +2,7 @@ import random
 from enum import Enum
 
 from Components.Video import Video
+from Components.TouchBinaryInput import TouchBinaryInput
 from Components.BinaryInput import BinaryInput
 from Components.Toggle import Toggle
 from Components.TimedToggle import TimedToggle
@@ -30,7 +31,7 @@ class Bandit(Task):
     @staticmethod
     def get_components():
         return {
-            'touches': [BinaryInput, BinaryInput, BinaryInput],
+            'touches': [TouchBinaryInput, TouchBinaryInput, TouchBinaryInput],
             'food_entry': [BinaryInput],
             'food': [TimedToggle],
             'food_light': [Toggle],
@@ -90,7 +91,7 @@ class Bandit(Task):
         trough = self.food_entry.check()
         if trough == BinaryInput.ENTERED:
             self.events.append(InputEvent(self, self.Inputs.FOOD_ENTERED))
-        else:
+        elif trough == BinaryInput.EXIT:
             self.events.append(InputEvent(self, self.Inputs.FOOD_EXIT))
         if self.state == self.States.INITIATION:  # The rat has not initiated the trial yet
             if trough == BinaryInput.ENTERED:
@@ -112,7 +113,6 @@ class Bandit(Task):
                     metadata["rewarded"] = "True"
                 else:
                     metadata["rewarded"] = "False"
-                self.cur_trial += 1
                 metadata["rule_index"] = -1
                 self.acc_seq.pop()
                 if self.cur_probs[loc] == 0.8:

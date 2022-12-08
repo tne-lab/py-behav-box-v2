@@ -18,7 +18,14 @@ class TouchBinaryInput(BinaryInput, ScreenInterface):
         self.hidden = None
 
     def check(self) -> int:
-        (value, pos) = self.source.read_component(self.id)
+        read = self.source.read_component(self.id)
+        if read is tuple:
+            value = read[0]
+            pos = read[1]
+        else:
+            value = read
+            pos = None
+
         if value == self.state:
             repeat = True
         else:
@@ -35,11 +42,11 @@ class TouchBinaryInput(BinaryInput, ScreenInterface):
 
     def show(self):
         if self.hidden:
-            self.source.write_component(True)
+            self.source.write_component(self.id, True)
 
     def hide(self):
         if not self.hidden:
-            self.source.write_component(False)
+            self.source.write_component(self.id, False)
 
     @staticmethod
     def get_type() -> Component.Type:

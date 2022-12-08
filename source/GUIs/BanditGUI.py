@@ -25,7 +25,7 @@ class BanditGUI(GUI):
             return [str(task.food.count)]
 
         def acc_text(self):
-            return [str(sum(task.acc_seq)/task.history)]
+            return [str(round(sum(task.acc_seq)/task.history*100,1))]
 
         for i in range(3):
             npi = NosePokeElement(self, 50 + (i + 1) * (25 + 60), 150, 30, comp=task.touches[i])
