@@ -31,7 +31,8 @@ class Bandit(Task):
     @staticmethod
     def get_components():
         return {
-            'touches': [TouchBinaryInput, TouchBinaryInput, TouchBinaryInput],
+            'lights': [Toggle,Toggle, Toggle],
+            'touches': [BinaryInput, BinaryInput, BinaryInput],
             'food_entry': [BinaryInput],
             'food': [TimedToggle],
             'food_light': [Toggle],
@@ -41,7 +42,7 @@ class Bandit(Task):
     # noinspection PyMethodMayBeStatic
     def get_constants(self):
         return {
-            'max_duration': 300,
+            'max_duration': 180,
             'inter_trial_interval': 7,
             'response_duration': 3,
             'start_probs': [0.8, 0.1, 0.3],
@@ -66,8 +67,8 @@ class Bandit(Task):
         self.food_light.toggle(True)
 
     def stop(self):
-        for touch in self.touches:
-            touch.hide()
+        for light in self.lights:
+            light.toggle(False)
         self.food_light.toggle(False)
 
     def main_loop(self):
@@ -95,8 +96,8 @@ class Bandit(Task):
             self.events.append(InputEvent(self, self.Inputs.FOOD_EXIT))
         if self.state == self.States.INITIATION:  # The rat has not initiated the trial yet
             if trough == BinaryInput.ENTERED:
-                for touch in self.touches:
-                    touch.show()
+                for light in self.lights:
+                    light.toggle(True)
                 self.food_light.toggle(False)
                 self.change_state(self.States.RESPONSE)
         elif self.state == self.States.RESPONSE:  # The rat has initiated a trial and must choose the correct option
@@ -129,14 +130,14 @@ class Bandit(Task):
                     self.cur_probs[swap[1]] = temp
                     metadata["reversal"] = self.cur_probs
                     self.acc_seq = [0]*self.history
-                for touch in self.touches:
-                    touch.hide()
+                for light in self.lights:
+                    light.toggle(False)
                 self.change_state(self.States.INTER_TRIAL_INTERVAL, metadata)
             elif self.time_in_state() > self.response_duration:
                 metadata["accuracy"] = "none"
                 metadata["rewarded"] = "none"
-                for touch in self.touches:
-                    touch.hide()
+                for light in self.lights:
+                    light.toggle(False)
                 self.change_state(self.States.INTER_TRIAL_INTERVAL, metadata)
         elif self.state == self.States.INTER_TRIAL_INTERVAL:
             if self.time_in_state() > self.inter_trial_interval:

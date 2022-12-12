@@ -1,5 +1,6 @@
 import socket
 import threading
+import traceback
 
 from Components.Component import Component
 from Sources.Source import Source
@@ -10,14 +11,16 @@ class WhiskerLineSource(Source):
     def __init__(self, address='localhost', port=3233):
         super(WhiskerLineSource, self).__init__()
         try:
+            self.available = True
             self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.client.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-            self.client.connect((address, port))
+            self.client.connect((address, int(port)))
             self.running = threading.Event()
             rt = threading.Thread(target=lambda: self.read())
             rt.start()
             self.vals = {}
         except:
+            traceback.print_exc()
             self.available = False
 
     def read(self):

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import threading
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
 if TYPE_CHECKING:
     from Events.EventLogger import EventLogger
@@ -135,7 +135,7 @@ class Workstation:
         settings.setValue("pyqt/h", int(szo[1] - 70))
         self.task_gui = pygame.display.set_mode((self.w * self.n_col, self.h * self.n_row), pygame.RESIZABLE, 32)
 
-    def add_task(self, chamber: int, task_name: str, address_file: str, protocol: str, task_event_loggers: list[EventLogger]) -> None:
+    def add_task(self, chamber: int, task_name: str, address_file: str, protocol: str, task_event_loggers: List[EventLogger]) -> None:
         """
         Creates a Task and adds it to the chamber.
 

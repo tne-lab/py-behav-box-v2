@@ -41,8 +41,9 @@ class Toggle(Component):
         super().__init__(source, component_id, component_address)
 
     def toggle(self, on: bool) -> None:
-        self.write(on)
-        self.state = on
+        if on != self.state:
+            self.write(on)
+            self.state = on
 
     def get_state(self) -> bool:
         return self.state

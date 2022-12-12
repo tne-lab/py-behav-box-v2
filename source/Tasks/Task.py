@@ -5,7 +5,7 @@ from abc import ABCMeta, abstractmethod
 import importlib
 from enum import Enum
 import runpy
-from typing import Any, Type, overload
+from typing import Any, Type, overload, Dict, List
 
 from Components.Component import Component
 from Events.StateChangeEvent import StateChangeEvent
@@ -58,11 +58,11 @@ class Task:
         PAUSED = 0
 
     @overload
-    def __init__(self, ws: Workstation, metadata: dict[str, Any], sources: dict[str, Source], address_file: str = "", protocol: str = ""):
+    def __init__(self, ws: Workstation, metadata: Dict[str, Any], sources: Dict[str, Source], address_file: str = "", protocol: str = ""):
         ...
 
     @overload
-    def __init__(self, task: Task, components: list[Component], protocol: str):
+    def __init__(self, task: Task, components: List[Component], protocol: str):
         ...
 
     def __init__(self, *args):
@@ -272,15 +272,15 @@ class Task:
         return self.cur_time - self.entry_time
 
     # noinspection PyMethodMayBeStatic
-    def get_constants(self) -> dict[str, Any]:
+    def get_constants(self) -> Dict[str, Any]:
         return {}
 
     # noinspection PyMethodMayBeStatic
-    def get_variables(self) -> dict[str, Any]:
+    def get_variables(self) -> Dict[str, Any]:
         return {}
 
     @staticmethod
-    def get_components() -> dict[str, list[Type[Component]]]:
+    def get_components() -> Dict[str, List[Type[Component]]]:
         return {}
 
     @abstractmethod

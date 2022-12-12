@@ -15,6 +15,7 @@ class BanditGUI(GUI):
     def __init__(self, task_gui, task):
         super().__init__(task_gui, task)
         self.np_inputs = []
+        self.np_lights = []
         self.info_boxes = []
 
         def feed_mouse_up(self, _):
@@ -28,6 +29,8 @@ class BanditGUI(GUI):
             return [str(round(sum(task.acc_seq)/task.history*100,1))]
 
         for i in range(3):
+            npl = CircleLightElement(self, 50 + (i + 1) * (25 + 60), 60, 30, comp=task.lights[i])
+            self.np_lights.append(npl)
             npi = NosePokeElement(self, 50 + (i + 1) * (25 + 60), 150, 30, comp=task.touches[i])
             self.np_inputs.append(npi)
         self.food_poke = NosePokeElement(self, 220, 360, 30, comp=task.food_entry)
@@ -42,4 +45,4 @@ class BanditGUI(GUI):
         self.food_light = FoodLightElement(self, 200, 250, 100, 90, comp=task.food_light)
 
     def get_elements(self) -> List[Element]:
-        return [*self.np_inputs, self.food_poke, self.food_light, self.feed_button, *self.info_boxes]
+        return [*self.np_lights, *self.np_inputs, self.food_poke, self.food_light, self.feed_button, *self.info_boxes]
