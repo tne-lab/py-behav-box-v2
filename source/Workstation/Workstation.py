@@ -237,18 +237,18 @@ class Workstation:
             self.thread_events[chamber][1].wait()
             self.thread_events[chamber][2].wait()
             self.thread_events[chamber][4].wait()
-        if chamber in self.event_loggers:
+        if chamber in self.event_loggers.keys():
             if del_loggers:
                 for el in self.event_loggers[chamber]:  # Close all associated EventLoggers
                     el.close_()
             del self.event_loggers[chamber]
-        if chamber in self.tasks:
+        if chamber in self.tasks.keys():
             for c in self.tasks[chamber].components:
                 c.close()
             del self.tasks[chamber]
-        if chamber in self.guis:
+        if chamber in self.guis.keys():
             del self.guis[chamber]
-        if chamber in self.thread_events:
+        if chamber in self.thread_events.keys():
             del self.thread_events[chamber]
 
     def start_task(self, chamber: int) -> None:

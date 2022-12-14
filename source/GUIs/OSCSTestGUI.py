@@ -18,7 +18,7 @@ class OSCSTestGUI(GUI):
         self.info_boxes = []
 
         def analog_in(self):
-            return str(task.ain.get_state())
+            return str(task.ain[0].get_state())
 
         def get_digital_in(self):
             return task.din.get_state()
