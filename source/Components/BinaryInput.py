@@ -1,20 +1,23 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
+
+from Components.Input import Input
+
 if TYPE_CHECKING:
     from Sources.Source import Source
 
 from Components.Component import Component
 
 
-class BinaryInput(Component):
+class BinaryInput(Input):
 
     NO_CHANGE = 0
     ENTERED = 1
     EXIT = 2
 
     def __init__(self, source: Source, component_id: str, component_address: str):
-        self.state = False
         super().__init__(source, component_id, component_address)
+        self.state = False
 
     def check(self) -> int:
         value = self.source.read_component(self.id)
@@ -29,9 +32,6 @@ class BinaryInput(Component):
             return self.EXIT
         else:
             return self.NO_CHANGE
-
-    def get_state(self) -> bool:
-        return self.state
 
     # For simulation control
     def toggle(self, on: bool) -> None:

@@ -28,6 +28,3 @@ class ParametricStim(Stimmer):
     def start(self, pnum: int, stype: str = "T") -> None:
         self.state = True
         self.source.write_component(self.id, "{}{}".format(stype, pnum))
-
-    def get_state(self) -> bool:
-        return self.state

@@ -55,6 +55,7 @@ class Component:
         self.id = component_id  # The unique identifier for the component or set of related components
         self.address = component_address  # The platform-specific address for the component
         self.source = source  # The source that is used to identify the component
+        self.state = None
 
     def write(self, msg: Any):
         self.source.write_component(self.id, msg)
@@ -66,9 +67,8 @@ class Component:
         for key in metadata:
             setattr(self, key, metadata[key])
 
-    @abstractmethod
     def get_state(self) -> Any:
-        raise NotImplementedError
+        return self.state
 
     @staticmethod
     @abstractmethod

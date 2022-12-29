@@ -53,7 +53,8 @@ class OptoControl(Task):
             'complete': False,
             'nstim': 0,
             'noff': 0,
-            'trial_in_block': 0
+            'trial_in_block': 0,
+            'stim_change': False
         }
 
     def init_state(self):
@@ -84,41 +85,45 @@ class OptoControl(Task):
         if self.vid_enabled:
             self.cam.stop()
 
-    def main_loop(self):
+    def handle_input(self) -> None:
         front_active = self.front_light.check()
         rear_active = self.rear_light.check()
-        stim_change = False
+        self.stim_change = False
         if front_active == BinaryInput.ENTERED or rear_active == BinaryInput.ENTERED:
             self.events.append(InputEvent(self, self.Inputs.LIGHT_ON))
         elif front_active == BinaryInput.EXIT or rear_active == BinaryInput.EXIT:
             self.events.append(InputEvent(self, self.Inputs.LIGHT_OFF))
-            stim_change = True
-        if self.state == self.States.IN_TRIAL:
-            if stim_change:
-                self.change_state(self.States.DELAY)
-        elif self.state == self.States.DELAY:
-            if self.time_in_state() > self.delay:
-                self.trial_in_block += 1
-                if self.trial_in_block == self.block_len:
-                    if self.pw == 0:
-                        min_count = np.amin(self.counts)
-                        valid_params = np.where(self.counts == min_count)
-                        test_ind = randint(0, len(valid_params[0]))-1
-                        self.counts[valid_params[0][test_ind], valid_params[1][test_ind], valid_params[2][test_ind]] += 1
-                        self.pw = self.pws[valid_params[0][test_ind]]
-                        self.amp = self.amps_0[valid_params[1][test_ind]]
-                        self.per = self.periods[valid_params[2][test_ind]]
-                        self.nstim += 1
-                        self.stim.start(len(self.amps_0)*valid_params[0][test_ind]+valid_params[1][test_ind]+valid_params[2][test_ind]+1)
-                    else:
-                        self.pw = 0
-                        self.amp = 0
-                        self.noff += 1
-                        self.stim.start(0)
-                    self.trial_in_block = 0
-                    self.change_state(self.States.IN_TRIAL, {"pw": self.pw, "amp": self.amp, "per": self.per})
+            self.stim_change = True
+
+    def IN_TRIAL(self):
+        if self.stim_change:
+            self.change_state(self.States.DELAY)
+
+    def DELAY(self):
+        if self.time_in_state() > self.delay:
+            self.trial_in_block += 1
+            if self.trial_in_block == self.block_len:
+                if self.pw == 0:
+                    min_count = np.amin(self.counts)
+                    valid_params = np.where(self.counts == min_count)
+                    test_ind = randint(0, len(valid_params[0])) - 1
+                    self.counts[valid_params[0][test_ind], valid_params[1][test_ind], valid_params[2][test_ind]] += 1
+                    self.pw = self.pws[valid_params[0][test_ind]]
+                    self.amp = self.amps_0[valid_params[1][test_ind]]
+                    self.per = self.periods[valid_params[2][test_ind]]
+                    self.nstim += 1
+                    self.stim.start(
+                        len(self.amps_0) * valid_params[0][test_ind] + valid_params[1][test_ind] + valid_params[2][
+                            test_ind] + 1)
                 else:
-                    self.change_state(self.States.IN_TRIAL, None)
+                    self.pw = 0
+                    self.amp = 0
+                    self.noff += 1
+                    self.stim.start(0)
+                self.trial_in_block = 0
+                self.change_state(self.States.IN_TRIAL, {"pw": self.pw, "amp": self.amp, "per": self.per})
+            else:
+                self.change_state(self.States.IN_TRIAL, None)
 
     def is_complete(self):
         return self.complete

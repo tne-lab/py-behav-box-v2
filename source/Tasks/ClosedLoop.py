@@ -46,7 +46,8 @@ class ClosedLoop(Task):
             'last_pulse_time': 0,
             'pulse_count': 0,
             'stim_last': False,
-            'complete': False
+            'complete': False,
+            'thr': None
         }
 
     def init_state(self):
@@ -57,17 +58,20 @@ class ClosedLoop(Task):
         self.sham.parametrize(0, 1, self.stim_dur, self.period, np.array(self.amps), self.pws)
         self.events.append(OEEvent(self, "startRecording", {"pre": "ClosedLoop"}))
 
-    def main_loop(self):
-        thr = self.threshold.check()
-        if self.state == self.States.START_RECORD:
-            if self.time_in_state() > self.record_lockout:
-                self.change_state(self.States.CLOSED_LOOP)
-        elif self.state == self.States.CLOSED_LOOP and self.cur_time - self.last_pulse_time > self.min_pulse_separation and self.time_in_state() > self.duration * 60:
+    def handle_input(self) -> None:
+        self.thr = self.threshold.check()
+
+    def START_RECORD(self):
+        if self.time_in_state() > self.record_lockout:
+            self.change_state(self.States.CLOSED_LOOP)
+
+    def CLOSED_LOOP(self):
+        if self.cur_time - self.last_pulse_time > self.min_pulse_separation and self.time_in_state() > self.duration * 60:
             self.change_state(self.States.STOP_RECORD)
             self.events.append(OEEvent(self, "stopRecording"))
         else:
             if self.cur_time - self.last_pulse_time > self.min_pulse_separation:
-                if thr == BinaryInput.ENTERED:
+                if self.thr == BinaryInput.ENTERED:
                     if not self.stim_last:
                         self.events.append(InputEvent(self, self.Inputs.STIM))
                         self.stim.start(0)

@@ -6,7 +6,6 @@ from Components.BinaryInput import BinaryInput
 from Components.Toggle import Toggle
 from Components.TimedToggle import TimedToggle
 from Components.Video import Video
-from Components.ByteOutput import ByteOutput
 from Events.InputEvent import InputEvent
 from Tasks.Task import Task
 
@@ -28,7 +27,7 @@ class BarPress(Task):
             'cage_light': [Toggle],
             'food': [TimedToggle],
             'fan': [Toggle],
-            'lever_out': [ByteOutput],
+            'lever_out': [Toggle],
             'food_light': [Toggle],
             'cam': [Video]
         }

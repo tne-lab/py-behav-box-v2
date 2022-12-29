@@ -1,5 +1,8 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
+
+from Components.Output import Output
+
 if TYPE_CHECKING:
     import numpy as np
 
@@ -7,7 +10,7 @@ from abc import ABCMeta, abstractmethod
 from Components.Component import Component
 
 
-class Stimmer(Component):
+class Stimmer(Output):
     __metaclass__ = ABCMeta
 
     @abstractmethod

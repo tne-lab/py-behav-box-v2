@@ -1,12 +1,15 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
+
+from Components.Output import Output
+
 if TYPE_CHECKING:
     from Sources.Source import Source
 
 from Components.Component import Component
 
 
-class Toggle(Component):
+class Toggle(Output):
     """
         Class defining a Toggle component in the operant chamber.
 
@@ -37,16 +40,13 @@ class Toggle(Component):
     """
 
     def __init__(self, source: Source, component_id: str, component_address: str):
-        self.state = False
         super().__init__(source, component_id, component_address)
+        self.state = False
 
     def toggle(self, on: bool) -> None:
         if on != self.state:
             self.write(on)
             self.state = on
-
-    def get_state(self) -> bool:
-        return self.state
 
     @staticmethod
     def get_type() -> Component.Type:
