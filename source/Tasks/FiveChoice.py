@@ -71,13 +71,14 @@ class FiveChoice(Task):
             "nose_poke_lights": [Toggle, Toggle, Toggle, Toggle, Toggle],
             "food_trough": [BinaryInput],
             "food": [TimedToggle],
-            "food_light": [Toggle]
+            "food_light": [Toggle],
+            "house_light": [Toggle]
         }
 
     # noinspection PyMethodMayBeStatic
     def get_constants(self):
         return {
-            'max_duration': 30,  # The max time the task can take in seconds
+            'max_duration': 30,  # The max time the task can take in minutes
             'max_trials': 100,  # The maximum number of trials the rat can do
             'inter_trial_interval': 5,  # Time between initiation and stimulus presentation
             'stimulus_duration': 0.5,  # Time the stimulus is presented for
@@ -99,9 +100,11 @@ class FiveChoice(Task):
         return self.States.INITIATION
 
     def start(self):
+        self.house_light.toggle(True)
         self.food_light.toggle(True)
 
     def stop(self):
+        self.house_light.toggle(False)
         self.food_light.toggle(False)
         for light in self.nose_poke_lights:
             light.toggle(False)
@@ -147,6 +150,7 @@ class FiveChoice(Task):
 
     def INTER_TRIAL_INTERVAL(self):
         if any(map(lambda x: x == BinaryInput.ENTERED, self.pokes)):  # The rat failed to withold a response
+            self.house_light.toggle(False)
             self.change_state(self.States.POST_RESPONSE_INTERVAL, {"response": "premature"})
         elif self.time_in_state() > self.inter_trial_interval:  # The rat waited the necessary time
             self.nose_poke_lights[self.sequence[self.cur_trial]].toggle(True)  # Turn the stimulus light on
@@ -159,6 +163,7 @@ class FiveChoice(Task):
                 self.food.toggle(self.dispense_time)
                 metadata = {"response": "correct"}
             else:
+                self.house_light.toggle(False)
                 metadata = {"response": "incorrect"}
             self.nose_poke_lights[self.sequence[self.cur_trial]].toggle(False)  # Turn the stimulus light off
             self.change_state(self.States.POST_RESPONSE_INTERVAL, metadata)
@@ -174,12 +179,15 @@ class FiveChoice(Task):
                 metadata = {"response": "correct"}
             else:
                 metadata = {"response": "incorrect"}
+                self.house_light.toggle(False)
             self.change_state(self.States.POST_RESPONSE_INTERVAL, metadata)
         elif self.time_in_state() > self.limited_hold_duration:  # The rat failed to respond
+            self.house_light.toggle(False)
             self.change_state(self.States.POST_RESPONSE_INTERVAL, {"response": "none"})
 
     def POST_RESPONSE_INTERVAL(self):
         if self.time_in_state() > self.post_response_interval:  # The post response period has ended
+            self.house_light.toggle(True)
             self.change_state(self.States.INITIATION)
             self.food_light.toggle(True)  # Turn the food light on
             self.cur_trial += 1

@@ -1,7 +1,8 @@
+import collections
 import pickle
 import runpy
 from multiprocessing import Process, Pipe
-from typing import Any
+from typing import OrderedDict
 import os.path
 
 from Sources.Source import Source
@@ -52,7 +53,7 @@ class BayesContainer:
         self.params = np.empty(1, len(bb.param_ranges))
         self.restarts = bb.restarts
         self.param_ranges = bb.param_ranges
-        self.test_params = np.array(np.meshgrid(*bb.param_ranges)).T.reshape(-1, len(bb.param_ranges))
+        self.test_params = np.array(np.meshgrid(*bb.param_ranges.values())).T.reshape(-1, len(bb.param_ranges))
         self.gaussian_process = None
 
     def fit(self, refit_hyper=False):
@@ -70,11 +71,13 @@ class BayesContainer:
         mean_prediction, std_prediction = self.gaussian_process.predict(self.test_params, return_std=True)
         soft_max = np.cumsum(np.power(math.e, mean_prediction - std_prediction) / np.sum(
             np.power(math.e, mean_prediction - std_prediction)))
-        return self.test_params[np.argmin(np.abs(soft_max - np.random.rand()))]
+        keys = list(self.param_ranges.keys())
+        new_params = self.test_params[np.argmin(np.abs(soft_max - np.random.rand()))]
+        return collections.OrderedDict([(keys[i], new_params[i]) for i in range(len(new_params))])
 
-    def add_data(self, outcome, params):
+    def add_data(self, outcome, params: OrderedDict):
         np.append(self.outcome, outcome).reshape(-1, 1)
-        np.append(self.params, params).reshape(-1, len(self.param_ranges))
+        np.append(self.params, list(params.values())).reshape(-1, len(self.param_ranges))
 
     def save(self):
         with open(self.path, 'wb') as f:
@@ -138,13 +141,12 @@ class BayesOptSource(Source):
         self.components[component.id] = component
         self.outq.put({'command': 'Register', 'id': component.id, 'file': component.address})
 
-    def write_component(self, component_id: str, msg: Any) -> None:
+    def write_component(self, component_id: str, msg: OrderedDict) -> None:
         self.outq.put(msg)
 
-    def read_component(self, component_id: str) -> Any:
+    def read_component(self, component_id: str) -> OrderedDict:
         if self.inq.poll():
-            params = self.inq.get()
-            self.next_params[component_id] = params
+            self.next_params[component_id] = self.inq.get()
         return self.next_params[component_id]
 
     def close_source(self) -> None:
