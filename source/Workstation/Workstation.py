@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import threading
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
 if TYPE_CHECKING:
     from Events.EventLogger import EventLogger
@@ -135,7 +135,7 @@ class Workstation:
         settings.setValue("pyqt/h", int(szo[1] - 70))
         self.task_gui = pygame.display.set_mode((self.w * self.n_col, self.h * self.n_row), pygame.RESIZABLE, 32)
 
-    def add_task(self, chamber: int, task_name: str, address_file: str, protocol: str, task_event_loggers: list[EventLogger]) -> None:
+    def add_task(self, chamber: int, task_name: str, address_file: str, protocol: str, task_event_loggers: List[EventLogger]) -> None:
         """
         Creates a Task and adds it to the chamber.
 
@@ -237,18 +237,18 @@ class Workstation:
             self.thread_events[chamber][1].wait()
             self.thread_events[chamber][2].wait()
             self.thread_events[chamber][4].wait()
-        if chamber in self.event_loggers:
+        if chamber in self.event_loggers.keys():
             if del_loggers:
                 for el in self.event_loggers[chamber]:  # Close all associated EventLoggers
                     el.close_()
             del self.event_loggers[chamber]
-        if chamber in self.tasks:
+        if chamber in self.tasks.keys():
             for c in self.tasks[chamber].components:
                 c.close()
             del self.tasks[chamber]
-        if chamber in self.guis:
+        if chamber in self.guis.keys():
             del self.guis[chamber]
-        if chamber in self.thread_events:
+        if chamber in self.thread_events.keys():
             del self.thread_events[chamber]
 
     def start_task(self, chamber: int) -> None:

@@ -1,178 +1,62 @@
-import multiprocessing
-import time
-from multiprocessing.sharedctypes import RawArray, RawValue
-import os
+import socket
 import threading
+import time
 import traceback
-
-import psutil
 
 from Sources.Source import Source
 
 from Components.Component import Component
-import ctypes
-import serial
 
-c_uint8 = ctypes.c_uint8
-
-
-class BytesPipeQueue:
-    def __init__(self, *args):
-        self.out_pipe, self.in_pipe = multiprocessing.Pipe(*args)
-
-    def put(self, item):
-        self.in_pipe.send_bytes(item)
-
-    def get(self):
-        if self.out_pipe.poll():
-            return self.out_pipe.recv_bytes()
-        else:
-            return bytes()
-
-    def close(self):
-        self.out_pipe.close()
-        self.in_pipe.close()
-
-
-class DigitalOutBits(ctypes.LittleEndianStructure):
-    _fields_ = [
-        ("command", c_uint8, 3),
-        ("address", c_uint8, 5)
-    ]
-
-
-class DigitalOut(ctypes.Union):
-    _fields_ = [("b", DigitalOutBits),
-                ("data", c_uint8)]
-
-
-class AnalogOutBits(ctypes.LittleEndianStructure):
-    _fields_ = [
-        ("command", ctypes.c_uint32, 3),
-        ("address", ctypes.c_uint32, 2),
-        ("value", ctypes.c_uint32, 16)
-    ]
-
-
-class AnalogOut(ctypes.Union):
-    _fields_ = [("b", AnalogOutBits),
-                ("data", ctypes.c_uint32)]
-
-
-class AnalogInBits(ctypes.LittleEndianStructure):
-    _fields_ = [
-        ("command", ctypes.c_uint16, 3),
-        ("address", ctypes.c_uint16, 2),
-        ("value", ctypes.c_uint16, 10)
-    ]
-
-
-class AnalogIn(ctypes.Union):
-    _fields_ = [("b", AnalogInBits),
-                ("data", ctypes.c_uint16)]
-
-
-class GPIOOutBits(ctypes.LittleEndianStructure):
-    _fields_ = [
-        ("command", c_uint8, 3),
-        ("address", c_uint8, 2)
-    ]
-
-
-class GPIOOut(ctypes.Union):
-    _fields_ = [("b", GPIOOutBits),
-                ("data", c_uint8)]
-
-
-class RegisterGPIOBits(ctypes.LittleEndianStructure):
-    _fields_ = [
-        ("command", c_uint8, 3),
-        ("address", c_uint8, 2),
-        ("type", c_uint8, 2)
-    ]
-
-
-class RegisterGPIO(ctypes.Union):
-    _fields_ = [("b", RegisterGPIOBits),
-                ("data", c_uint8)]
-
-
-class ResetBits(ctypes.LittleEndianStructure):
-    _fields_ = [
-        ("command", c_uint8, 3)
-    ]
-
-
-class Reset(ctypes.Union):
-    _fields_ = [("b", RegisterGPIOBits),
-                ("data", c_uint8)]
-
-
-class ArduinoProcess(multiprocessing.Process):
-
-    def __init__(self, com, rq, wq, event, available):
-        super(ArduinoProcess, self).__init__()
-        self.rq = rq
-        self.wq = wq
-        self.com = com
-        self.event = event
-        self.available = available
-
-    def run(self):
-        try:
-            p = psutil.Process(os.getpid())
-            p.nice(psutil.HIGH_PRIORITY_CLASS)
-            with serial.Serial(port=self.com, baudrate=500000, write_timeout=None, timeout=None, dsrdtr=True) as sp:
-                sp.dtr = True
-                sp.reset_input_buffer()
-                sp.reset_output_buffer()
-                while not self.event.is_set():
-                    msg = self.rq.get()
-                    if len(msg) > 0:
-                        sp.write(msg)
-                    nb = sp.in_waiting
-                    if nb > 0:
-                        msg = sp.read(nb)
-                        self.wq.put(msg)
-        except:
-            self.available.value = False
+from Utilities.Exceptions import ComponentRegisterError
 
 
 class OSControllerSource(Source):
 
-    def __init__(self, com):
+    def __init__(self, address='localhost', port=9296):
         super(OSControllerSource, self).__init__()
-        self.available = multiprocessing.Value(ctypes.c_bool, True)
         try:
-            self.wq = BytesPipeQueue()
-            self.rq = BytesPipeQueue()
-            self.event = multiprocessing.Event()
-            self.sp = ArduinoProcess(com, self.wq, self.rq, self.event, self.available)
-            self.sp.start()
+            self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.client.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+            self.client.connect((address, int(port)))
+            self.client.setblocking(False)
+            self.available = True
+            self.last_read = 0
             self.closing = False
-            t = threading.Thread(target=lambda: self.handle())
-            t.start()
+            clear_thread = threading.Thread(target=lambda: self.clear())
+            clear_thread.start()
         except:
             traceback.print_exc()
-            self.available.value = False
+            self.available = False
         self.components = {}
         self.input_ids = {}
         self.values = {}
         self.buffer = ""
 
+    def clear(self):
+        while not self.closing:
+            if time.perf_counter() - self.last_read > 0.25:
+                while True:
+                    try:
+                        msg = self.client.recv(4096).decode()
+                        if len(msg) < 1024:
+                            break
+                    except BlockingIOError:
+                        break
+            time.sleep(0.25)
+
     def register_component(self, _, component):
         self.components[component.id] = component
-        if component.address.startswith("A"):
-            command = RegisterGPIO()
-            command.b.command = 3
-            command.b.address = int(component.address[1])
+        if "A" in component.address:
+            parts = component.address.split('_')
             if component.get_type() == Component.Type.DIGITAL_OUTPUT:
-                command.b.type = 1
+                tp = 1
             elif component.get_type() == Component.Type.DIGITAL_INPUT:
-                command.b.type = 2
+                tp = 2
             elif component.get_type() == Component.Type.ANALOG_INPUT:
-                command.b.type = 3
-            self.wq.put(command.data.to_bytes(1, 'little'))
+                tp = 3
+            else:
+                raise ComponentRegisterError
+            self.client.send('RegGPIO {} {} {}\n'.format(parts[0], parts[1], tp).encode('utf-8'))
         if component.get_type() == Component.Type.DIGITAL_INPUT or component.get_type() == Component.Type.DIGITAL_OUTPUT:
             self.values[component.id] = False
         else:
@@ -182,82 +66,63 @@ class OSControllerSource(Source):
             self.input_ids[component.address] = component.id
 
     def close_source(self):
-        reset = Reset()
-        reset.b.command = 4
-        self.wq.put(reset.data.to_bytes(1, 'little'))
         self.closing = True
-        if self.available:
-            self.event.set()
-            self.wq.close()
-            self.rq.close()
-
-    def handle(self):
-        cur_command = bytes()
-        while not self.closing:
-            msg = self.rq.get()
-            for b in msg:
-                cur_command = cur_command + b.to_bytes(1, 'little')
-                data = int.from_bytes(cur_command, 'little')
-                cid = data & 0x7
-                if cid == 0:
-                    address = data >> 3 & 0x7
-                    input_id = str(address)
-                    if input_id in self.input_ids:
-                        self.values[self.input_ids[input_id]] = not self.values[self.input_ids[input_id]]
-                    cur_command = bytes()
-                elif cid == 1:
-                    if len(cur_command) == 2:
-                        data2 = int.from_bytes(cur_command, 'little')
-                        command = AnalogIn()
-                        command.data = data2
-                        input_id = "A" + str(command.b.address)
-                        if input_id in self.input_ids:
-                            self.values[self.input_ids[input_id]] = command.b.value
-                        cur_command = bytes()
-                elif cid == 2:
-                    address = data >> 3 & 0x3
-                    input_id = "A" + str(address)
-                    if input_id in self.input_ids:
-                        self.values[self.input_ids[input_id]] = not self.values[self.input_ids[input_id]]
-                    cur_command = bytes()
+        coms = []
+        for component in self.components:
+            parts = component.address.split('_')
+            if parts[0] not in coms:
+                self.client.send('Reset {}\n'.format(parts[0]).encode('utf-8'))
+                coms.append(parts[0])
 
     def read_component(self, component_id):
+        msg = ""
+        try:
+            while True:
+                rmsg = self.client.recv(4096)
+                msg += rmsg.decode()
+                if len(rmsg) < 4096:
+                    break
+        except BlockingIOError:
+            pass
+        if len(msg) > 0:
+            msgs = msg[:-1].split('\n')
+        else:
+            msgs = []
+        for msg in msgs:
+            comps = msg.split(' ')
+            cid = comps[1] + '_' + comps[2]
+            if cid in self.input_ids:
+                if comps[0] == 'DIn':
+                    self.values[self.input_ids[cid]] = not self.values[self.input_ids[cid]]
+                elif comps[0] == 'AIn':
+                    self.values[self.input_ids[cid]] = int(comps[3])
+                elif comps[0] == 'GPIOIn':
+                    self.values[self.input_ids[cid]] = not self.values[self.input_ids[cid]]
         return self.values[component_id]
 
     def write_component(self, component_id, msg):
         # If the intended value for the component differs from the current value, change it
+        print(time.perf_counter())
         if not msg == self.values[component_id]:
-            if self.components[component_id].address.startswith("A"):
-                command = GPIOOut()
-                command.b.command = 2
-                command.b.address = int(self.components[component_id].address[1])
-                self.wq.put(command.data.to_bytes(1, 'little'))
-            elif self.components[component_id].address.startswith("O"):
-                command = AnalogOut()
-                command.b.command = 1
-                command.b.address = int(self.components[component_id].address[1])
+            parts = self.components[component_id].address.split('_')
+            if 'A' in self.components[component_id].address:
+                self.client.send('GPIOOut {} {}\n'.format(parts[0], parts[1]).encode('utf-8'))
+            elif 'O' in self.components[component_id].address:
                 scaled = msg
                 if scaled < 0:
                     scaled = 0
                 elif scaled > 2.5:
                     scaled = 2.5
                 scaled = round(scaled * 65535 / 2.5)
-                command.b.value = scaled
-                self.wq.put(command.data.to_bytes(3, 'little'))
+                self.client.send('AOut {} {} {}\n'.format(parts[0], parts[1], scaled).encode('utf-8'))
             else:
-                command = DigitalOut()
-                command.b.command = 0
-                command.b.address = int(self.components[component_id].address)
-                self.wq.put(command.data.to_bytes(1, 'little'))
+                self.client.send('DOut {} {}\n'.format(parts[0], parts[1]).encode('utf-8'))
         self.values[component_id] = msg
 
     def close_component(self, component_id: str) -> None:
-        if self.components[component_id].address.startswith("A"):
-            command = RegisterGPIO()
-            command.b.command = 3
-            command.b.address = int(self.components[component_id].address[1])
-            command.b.type = 0
-            self.wq.put(command.data.to_bytes(1, 'little'))
+        if 'A' in self.components[component_id].address:
+            parts = self.components[component_id].address.split('_')
+            self.client.send('RegGPIO {} {} {}\n'.format(parts[0], parts[1], 0).encode('utf-8'))
 
     def is_available(self):
-        return self.available.value
+        return self.available

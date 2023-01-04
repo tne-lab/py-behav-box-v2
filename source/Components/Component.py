@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict
 if TYPE_CHECKING:
     from Sources.Source import Source
 
@@ -62,7 +62,7 @@ class Component:
     def read(self) -> Any:
         return self.source.read_component(self.id)
 
-    def initialize(self, metadata: dict) -> None:
+    def initialize(self, metadata: Dict) -> None:
         for key in metadata:
             setattr(self, key, metadata[key])
 

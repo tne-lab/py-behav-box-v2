@@ -17,7 +17,7 @@ class OSCSTest(Task):
         return {
             "dout": [Toggle],
             "din": [BinaryInput],
-            "ain": [AnalogInput],
+            "ain": [AnalogInput, AnalogInput],
             "gpioout": [Toggle],
             "gpioin": [BinaryInput],
             "aout": [AnalogOutput]
@@ -45,6 +45,7 @@ class OSCSTest(Task):
             self.dout.toggle(False)
         # self.gpioin.check()
         # self.ain.check()
+        # self.din.check()
         # if self.time_elapsed() % 1 > 0.5:
         #     self.aout.set(2.5)
         #     self.dout.toggle(False)

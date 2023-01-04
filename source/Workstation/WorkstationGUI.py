@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Tuple, List
 
 from Utilities.Exceptions import AddTaskError
 
@@ -77,7 +77,7 @@ class WorkstationGUI(QWidget):
         self.td = AddTaskDialog(self)
         self.td.show()
 
-    def add_task(self, chamber_index: int, task_index: int, subject: str = "default", afp: str = "", pfp: str = "", prompt: str = "", event_loggers: tuple[list[EventLogger], list[list[str]]] = None) -> None:
+    def add_task(self, chamber_index: int, task_index: int, subject: str = "default", afp: str = "", pfp: str = "", prompt: str = "", event_loggers: Tuple[List[EventLogger], List[List[str]]] = None) -> None:
         """
         Adds a ChamberWidget to the GUI corresponding to a new task
 
