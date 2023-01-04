@@ -110,48 +110,51 @@ class Reset(ctypes.Union):
 
 class ArduinoProcess(multiprocessing.Process):
 
-    def __init__(self, com, rq, wq, event):
+    def __init__(self, com, rq, wq, event, available):
         super(ArduinoProcess, self).__init__()
         self.rq = rq
         self.wq = wq
         self.com = com
         self.event = event
+        self.available = available
 
     def run(self):
-        p = psutil.Process(os.getpid())
-        p.nice(psutil.REALTIME_PRIORITY_CLASS)
-        sp = serial.Serial(port=self.com, baudrate=500000, write_timeout=None, timeout=None, dsrdtr=True)
-        sp.dtr = True
-        sp.reset_input_buffer()
-        sp.reset_output_buffer()
-        while not self.event.is_set():
-            msg = self.rq.get()
-            if len(msg) > 0:
-                sp.write(msg)
-            nb = sp.in_waiting
-            if nb > 0:
-                msg = sp.read(nb)
-                self.wq.put(msg)
-        sp.close()
+        try:
+            p = psutil.Process(os.getpid())
+            p.nice(psutil.HIGH_PRIORITY_CLASS)
+            with serial.Serial(port=self.com, baudrate=500000, write_timeout=None, timeout=None, dsrdtr=True) as sp:
+                sp.dtr = True
+                sp.reset_input_buffer()
+                sp.reset_output_buffer()
+                while not self.event.is_set():
+                    msg = self.rq.get()
+                    if len(msg) > 0:
+                        sp.write(msg)
+                    nb = sp.in_waiting
+                    if nb > 0:
+                        msg = sp.read(nb)
+                        self.wq.put(msg)
+        except:
+            self.available.value = False
 
 
 class OSControllerSource(Source):
 
     def __init__(self, com):
         super(OSControllerSource, self).__init__()
+        self.available = multiprocessing.Value(ctypes.c_bool, True)
         try:
             self.wq = BytesPipeQueue()
             self.rq = BytesPipeQueue()
             self.event = multiprocessing.Event()
-            self.sp = ArduinoProcess(com, self.wq, self.rq, self.event)
+            self.sp = ArduinoProcess(com, self.wq, self.rq, self.event, self.available)
             self.sp.start()
-            self.available = True
             self.closing = False
             t = threading.Thread(target=lambda: self.handle())
             t.start()
         except:
             traceback.print_exc()
-            self.available = False
+            self.available.value = False
         self.components = {}
         self.input_ids = {}
         self.values = {}
@@ -197,7 +200,7 @@ class OSControllerSource(Source):
                 data = int.from_bytes(cur_command, 'little')
                 cid = data & 0x7
                 if cid == 0:
-                    address = data << 3 & 0x7
+                    address = data >> 3 & 0x7
                     input_id = str(address)
                     if input_id in self.input_ids:
                         self.values[self.input_ids[input_id]] = not self.values[self.input_ids[input_id]]
@@ -212,7 +215,7 @@ class OSControllerSource(Source):
                             self.values[self.input_ids[input_id]] = command.b.value
                         cur_command = bytes()
                 elif cid == 2:
-                    address = data << 3 & 0x3
+                    address = data >> 3 & 0x3
                     input_id = "A" + str(address)
                     if input_id in self.input_ids:
                         self.values[self.input_ids[input_id]] = not self.values[self.input_ids[input_id]]
@@ -257,4 +260,4 @@ class OSControllerSource(Source):
             self.wq.put(command.data.to_bytes(1, 'little'))
 
     def is_available(self):
-        return self.available
+        return self.available.value

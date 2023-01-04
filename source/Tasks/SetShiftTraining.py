@@ -9,7 +9,7 @@ from Components.Toggle import Toggle
 from Events.InputEvent import InputEvent
 
 
-class MiddleNosePokeTraining(Task):
+class SetShiftTraining(Task):
     """@DynamicAttrs"""
     class States(Enum):
         INITIATION = 0
@@ -31,36 +31,40 @@ class MiddleNosePokeTraining(Task):
             'nose_pokes': [BinaryInput, BinaryInput, BinaryInput],
             'nose_poke_lights': [Toggle, Toggle, Toggle],
             'food': [TimedToggle],
-            'house_light': [Toggle]
+            'house_light': [Toggle, Toggle],
+            'feed_press': [BinaryInput]
         }
 
     # noinspection PyMethodMayBeStatic
     def get_constants(self):
         return {
-            "pokes": 0,
             'dispense_time': 0.7,
-            'training_stage': 'middle'
+            'training_stage': 'middle',
+            'max_duration': 1.5,
+            'pokes_to_complete': 20,
+            'inter_trial_interval': 7,
+            'timeout': 20
         }
 
     # noinspection PyMethodMayBeStatic
     def get_variables(self):
         return {
-            'max_duration': 1.5,
-            'pokes_to_complete': 20,
-            'inter_trial_interval': 15
+            'pokes': 0
         }
 
     def init_state(self):
         return self.States.INTER_TRIAL_INTERVAL
 
     def start(self):
-        self.house_light.toggle(True)
-        self.house_light2.toggle(True)
+        self.house_light[0].toggle(True)
+        self.house_light[1].toggle(True)
 
     def stop(self):
-        self.house_light.toggle(False)
-        self.house_light2.toggle(False)
+        self.house_light[0].toggle(False)
+        self.house_light[1].toggle(False)
+        self.nose_poke_lights[0].toggle(False)
         self.nose_poke_lights[1].toggle(False)
+        self.nose_poke_lights[2].toggle(False)
 
     def main_loop(self):
         pokes = []
@@ -87,19 +91,25 @@ class MiddleNosePokeTraining(Task):
         if self.state == self.States.RESPONSE:
             if pokes[0] == BinaryInput.ENTERED or pokes[2] == BinaryInput.ENTERED:
                 if pokes[0] == BinaryInput.ENTERED:
-                    if (self.nose_pokes[0].get_state() and self.training_stage == 'light') or self.training_stage == 'front':
+                    if (self.nose_poke_lights[0].get_state() and self.training_stage == 'light') or self.training_stage == 'front':
                         self.food.toggle(self.dispense_time)
                         self.pokes += 1
-                        self.nose_pokes[0].toggle(False)
-                        self.nose_pokes[2].toggle(False)
-                        self.change_state(self.States.INTER_TRIAL_INTERVAL)
+                    else:
+                        self.pokes = 0
                 elif pokes[2] == BinaryInput.ENTERED:
-                    if (self.nose_pokes[2].get_state() and self.training_stage == 'light') or self.training_stage == 'rear':
+                    if (self.nose_poke_lights[2].get_state() and self.training_stage == 'light') or self.training_stage == 'rear':
                         self.food.toggle(self.dispense_time)
                         self.pokes += 1
-                        self.nose_pokes[0].toggle(False)
-                        self.nose_pokes[2].toggle(False)
-                        self.change_state(self.States.INTER_TRIAL_INTERVAL)
+                    else:
+                        self.pokes = 0
+                self.nose_poke_lights[0].toggle(False)
+                self.nose_poke_lights[2].toggle(False)
+                self.change_state(self.States.INTER_TRIAL_INTERVAL)
+            elif self.time_in_state() > self.timeout:
+                self.pokes = 0
+                self.nose_poke_lights[0].toggle(False)
+                self.nose_poke_lights[2].toggle(False)
+                self.change_state(self.States.INTER_TRIAL_INTERVAL)
         elif self.state == self.States.INITIATION:
             if pokes[1] == BinaryInput.ENTERED:
                 self.nose_poke_lights[1].toggle(False)
@@ -108,7 +118,7 @@ class MiddleNosePokeTraining(Task):
                     self.pokes += 1
                     self.change_state(self.States.INTER_TRIAL_INTERVAL)
                 else:
-                    self.nose_pokes[2*random.randint(0,1)].toggle(True)
+                    self.nose_poke_lights[2*random.randint(0, 1)].toggle(True)
                     self.change_state(self.States.RESPONSE)
         elif self.state == self.States.INTER_TRIAL_INTERVAL:
             if self.time_in_state() > self.inter_trial_interval:
