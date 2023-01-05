@@ -110,11 +110,11 @@ class FiveChoice(Task):
             light.toggle(False)
 
     def handle_input(self) -> None:
-        pokes = []
+        self.pokes = []
         # Output events for pokes that were entered/exited
         for i in range(5):
-            pokes.append(self.nose_pokes[i].check())
-            if pokes[i] == BinaryInput.ENTERED:
+            self.pokes.append(self.nose_pokes[i].check())
+            if self.pokes[i] == BinaryInput.ENTERED:
                 if i == 0:
                     self.events.append(InputEvent(self, self.Inputs.NP1_ENTERED))
                 elif i == 1:
@@ -125,7 +125,7 @@ class FiveChoice(Task):
                     self.events.append(InputEvent(self, self.Inputs.NP4_ENTERED))
                 elif i == 4:
                     self.events.append(InputEvent(self, self.Inputs.NP5_ENTERED))
-            elif pokes[i] == BinaryInput.EXIT:
+            elif self.pokes[i] == BinaryInput.EXIT:
                 if i == 0:
                     self.events.append(InputEvent(self, self.Inputs.NP1_EXIT))
                 elif i == 1:
@@ -137,10 +137,10 @@ class FiveChoice(Task):
                 elif i == 4:
                     self.events.append(InputEvent(self, self.Inputs.NP5_EXIT))
         # Output if the food trough was entered/exited
-        trough_entered = self.food_trough.check()
-        if trough_entered == BinaryInput.ENTERED:
+        self.trough_entered = self.food_trough.check()
+        if self.trough_entered == BinaryInput.ENTERED:
             self.events.append(InputEvent(self, self.Inputs.TROUGH_ENTERED))
-        elif trough_entered == BinaryInput.EXIT:
+        elif self.trough_entered == BinaryInput.EXIT:
             self.events.append(InputEvent(self, self.Inputs.TROUGH_EXIT))
 
     def INITIATION(self):

@@ -29,9 +29,9 @@ class FiveChoiceGUI(GUI):
             return [str(task.cur_trial+1)]
 
         for i in range(5):
-            npl = CircleLightElement(self, 50 + i*(25+60), 60, 30, comp=task.nose_poke_lights[i])
+            npl = CircleLightElement(self, 50 + i*(25+60), 60, 30, comp=task.nose_poke_lights[-i - 1])
             self.np_lights.append(npl)
-            npi = NosePokeElement(self, 50 + i * (25 + 60), 150, 30, comp=task.nose_pokes[i])
+            npi = NosePokeElement(self, 50 + i * (25 + 60), 150, 30, comp=task.nose_pokes[-i - 1])
             self.np_inputs.append(npi)
         self.food_poke = NosePokeElement(self, 220, 360, 30, comp=task.food_trough)
         self.feed_button = ButtonElement(self, 225, 500, 50, 20, "FEED")

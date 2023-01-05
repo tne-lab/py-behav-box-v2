@@ -307,7 +307,7 @@ class Workstation:
                     if len(self.tasks[key].events) > 0 and not self.event_notifier.is_set():
                         self.event_notifier.set()
                     if self.thread_events[key][3].is_set() and not self.tasks[key].paused:  # If the Task has been started and is not paused
-                        self.tasks[key].main_loop__()  # Run the Task's logic loop
+                        self.tasks[key].main_loop()  # Run the Task's logic loop
                         self.guis[key].handle_events(events)  # Handle mouse/keyboard events with the Task GUI
                         if self.tasks[key].is_complete():  # Stop the Task if it is complete
                             self.wsg.chambers[key].stop()

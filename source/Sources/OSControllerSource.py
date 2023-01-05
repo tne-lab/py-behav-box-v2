@@ -102,7 +102,6 @@ class OSControllerSource(Source):
 
     def write_component(self, component_id, msg):
         # If the intended value for the component differs from the current value, change it
-        print(time.perf_counter())
         if not msg == self.values[component_id]:
             parts = self.components[component_id].address.split('_')
             if 'A' in self.components[component_id].address:
