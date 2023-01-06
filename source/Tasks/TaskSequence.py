@@ -79,11 +79,12 @@ class TaskSequence(Task):
 
     def main_loop(self) -> None:
         self.cur_time = time.time()
+        self.cur_task.cur_time = self.cur_time
         self.cur_task.handle_input()
+        self.handle_input()
         if hasattr(self.cur_task, self.cur_task.state.name):
             state_method = getattr(self.cur_task, self.cur_task.state.name)
             state_method()
-        self.handle_input()
         if hasattr(self, self.state.name):
             state_method = getattr(self, self.state.name)
             state_method()

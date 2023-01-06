@@ -70,7 +70,7 @@ class PMA(Task):
         self.cam.start()
         self.fan.toggle(True)
         if self.type == 'low':
-            self.lever_out.send(3)
+            self.lever_out.toggle(True)
             self.food_light.toggle(True)
 
     def stop(self):
@@ -79,7 +79,7 @@ class PMA(Task):
         self.food_light.toggle(False)
         self.cage_light.toggle(False)
         self.fan.toggle(False)
-        self.lever_out.send(0)
+        self.lever_out.toggle(False)
         self.shocker.toggle(False)
         self.tone.toggle(False)
         self.cam.stop()
@@ -102,7 +102,7 @@ class PMA(Task):
             if not self.type == 'light':
                 self.tone.toggle(True)
             if not self.type == 'low':
-                self.lever_out.send(3)
+                self.lever_out.toggle(True)
                 self.food_light.toggle(True)
 
     def TONE(self):
@@ -123,7 +123,7 @@ class PMA(Task):
                 self.change_state(self.States.POST_SESSION)
             self.tone.toggle(False)
             if not self.type == 'low':
-                self.lever_out.send(0)
+                self.lever_out.toggle(False)
                 self.food_light.toggle(False)
 
     def is_complete(self):

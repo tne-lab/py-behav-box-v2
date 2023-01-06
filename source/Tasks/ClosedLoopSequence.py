@@ -32,6 +32,14 @@ class ClosedLoopSequence(TaskSequence):
             'post_raw_protocol': None
         }
 
+    def start(self):
+        self.fan.toggle(True)
+        self.house_light.toggle(True)
+
+    def stop(self):
+        self.fan.toggle(False)
+        self.house_light.toggle(False)
+
     def init_state(self):
         return self.States.PRE_RAW
 
