@@ -191,6 +191,11 @@ All pybehave tasks have GUIs written using [pygame](https://www.pygame.org/) fun
 task features if necessary. Task GUIs are written as Python files in the *source/GUIs* folder and must be named TASK_NAMEGUI.py.
 Further details on GUI development are available on the GUI [page](guis.md).
 
+## Overriding tasks
+
+Tasks can also be subclassed if a new Task has a high degree of overlap with an existing one. Each of the methods mentioned
+above can be overriden and augmented as needed.
+
 ## Class reference
 
 The methods detailed below are contained in the `Task` class.
