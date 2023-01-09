@@ -6,11 +6,10 @@ from Elements.Element import Element
 from Elements.NosePokeElement import NosePokeElement
 from Elements.ButtonElement import ButtonElement
 from Elements.InfoBoxElement import InfoBoxElement
-from GUIs import Colors
 from GUIs.GUI import GUI
 
 
-class MiddleNosePokeTrainingGUI(GUI):
+class SetShiftTrainingGUI(GUI):
 
     def __init__(self, task_gui, task):
         super().__init__(task_gui, task)
