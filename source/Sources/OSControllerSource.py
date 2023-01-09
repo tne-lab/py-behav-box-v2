@@ -14,6 +14,7 @@ class OSControllerSource(Source):
 
     def __init__(self, address='localhost', port=9296):
         super(OSControllerSource, self).__init__()
+        self.msg = ""
         try:
             self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.client.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
@@ -75,17 +76,21 @@ class OSControllerSource(Source):
                 coms.append(parts[0])
 
     def read_component(self, component_id):
-        msg = ""
         try:
             while True:
                 rmsg = self.client.recv(4096)
-                msg += rmsg.decode()
+                self.msg += rmsg.decode()
                 if len(rmsg) < 4096:
                     break
         except BlockingIOError:
             pass
-        if len(msg) > 0:
-            msgs = msg[:-1].split('\n')
+        if len(self.msg) > 0:
+            msgs = self.msg.split('\n')
+            if msgs[-1] != '':
+                self.msg = msgs[-1]
+            else:
+                self.msg = ''
+            msgs = msgs[:-1]
         else:
             msgs = []
         for msg in msgs:
