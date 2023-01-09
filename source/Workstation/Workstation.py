@@ -308,16 +308,17 @@ class Workstation:
             events = pygame.event.get()  # Get mouse/keyboard events
             task_keys = list(self.tasks.keys())
             for key in task_keys:  # For each Task
-                if not self.thread_events[key][0].is_set():
-                    if self.thread_events[key][3].is_set() and not self.tasks[key].paused:  # If the Task has been started and is not paused
-                        if len(self.tasks[key].events) > 0 and not self.event_notifier.is_set():
-                            self.event_notifier.set()
-                        self.tasks[key].main_loop()  # Run the Task's logic loop
-                        self.guis[key].handle_events(events)  # Handle mouse/keyboard events with the Task GUI
-                        if self.tasks[key].is_complete():  # Stop the Task if it is complete
-                            self.wsg.chambers[key].stop()
-                elif not self.thread_events[key][2].is_set():
-                    self.thread_events[key][2].set()
+                if key in self.thread_events.keys():
+                    if not self.thread_events[key][0].is_set():
+                        if self.thread_events[key][3].is_set() and not self.tasks[key].paused:  # If the Task has been started and is not paused
+                            if len(self.tasks[key].events) > 0 and not self.event_notifier.is_set():
+                                self.event_notifier.set()
+                            self.tasks[key].main_loop()  # Run the Task's logic loop
+                            self.guis[key].handle_events(events)  # Handle mouse/keyboard events with the Task GUI
+                            if self.tasks[key].is_complete():  # Stop the Task if it is complete
+                                self.wsg.chambers[key].stop()
+                    elif not self.thread_events[key][2].is_set():
+                        self.thread_events[key][2].set()
             time.sleep(0)
 
     def gui_loop(self) -> None:

@@ -28,6 +28,9 @@ class FiveChoiceGUI(GUI):
         def trial_count_text(self):
             return [str(task.cur_trial+1)]
 
+        def time_elapsed_text(self):
+            return [str(round(task.time_elapsed() / 60, 2))]
+
         for i in range(5):
             npl = CircleLightElement(self, 50 + i*(25+60), 60, 30, comp=task.nose_poke_lights[-i - 1])
             self.np_lights.append(npl)
@@ -41,7 +44,10 @@ class FiveChoiceGUI(GUI):
         self.info_boxes.append(pellets)
         trial_count = InfoBoxElement(self, 400, 500, 50, 15, "TRIAL", 'BOTTOM', ['0'])
         trial_count.get_text = MethodType(trial_count_text, trial_count)
+        time_elapsed = InfoBoxElement(self, 400, 545, 50, 15, "TIME", 'BOTTOM', ['0'])
+        time_elapsed.get_text = MethodType(time_elapsed_text, time_elapsed)
         self.info_boxes.append(trial_count)
+        self.info_boxes.append(time_elapsed)
         self.food_light = FoodLightElement(self, 200, 250, 100, 90, comp=task.food_light)
 
     def get_elements(self) -> List[Element]:
