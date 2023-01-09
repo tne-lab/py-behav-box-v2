@@ -1,7 +1,7 @@
 from Components.Component import Component
 
 
-class TouchScreen(Component):
+class TouchScreen(Component): # Not implemented
     """
         Class defining a TouchScreen component in the operant chamber.
 

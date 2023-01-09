@@ -8,7 +8,6 @@ from Elements.NosePokeElement import NosePokeElement
 from Elements.ButtonElement import ButtonElement
 from Elements.InfoBoxElement import InfoBoxElement
 from Events.InputEvent import InputEvent
-from GUIs import Colors
 from GUIs.GUI import GUI
 
 

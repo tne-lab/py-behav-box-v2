@@ -1,5 +1,8 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
+
+from Components.Output import Output
+
 if TYPE_CHECKING:
     from Sources.Source import Source
 
@@ -22,9 +25,6 @@ class Video(Component):
         self.state = False
         self.write(self.state)
 
-    def get_state(self) -> bool:
-        return self.state
-
     @staticmethod
     def get_type() -> Component.Type:
-        return Component.Type.INPUT
+        return Component.Type.BOTH

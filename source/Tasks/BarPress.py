@@ -6,7 +6,6 @@ from Components.BinaryInput import BinaryInput
 from Components.Toggle import Toggle
 from Components.TimedToggle import TimedToggle
 from Components.Video import Video
-from Components.ByteOutput import ByteOutput
 from Events.InputEvent import InputEvent
 from Tasks.Task import Task
 
@@ -28,7 +27,7 @@ class BarPress(Task):
             'cage_light': [Toggle],
             'food': [TimedToggle],
             'fan': [Toggle],
-            'lever_out': [ByteOutput],
+            'lever_out': [Toggle],
             'food_light': [Toggle],
             'cam': [Video]
         }
@@ -47,7 +46,8 @@ class BarPress(Task):
     def get_variables(self):
         return {
             'lockout': 0,
-            'presses': 0
+            'presses': 0,
+            'pressed': False
         }
 
     def init_state(self):
@@ -67,24 +67,27 @@ class BarPress(Task):
         self.lever_out.send(0)
         self.cam.stop()
 
-    def main_loop(self):
+    def handle_input(self) -> None:
         food_lever = self.food_lever.check()
-        pressed = False
+        self.pressed = False
         if food_lever == BinaryInput.ENTERED:
             self.events.append(InputEvent(self, self.Inputs.LEVER_PRESSED))
-            pressed = True
+            self.pressed = True
             self.presses += 1
         elif food_lever == BinaryInput.EXIT:
             self.events.append(InputEvent(self, self.Inputs.LEVER_DEPRESSED))
-        if self.state == self.States.REWARD_AVAILABLE:
-            if pressed:
-                self.food.toggle(self.dispense_time)
-                if self.reward_lockout:
-                    self.lockout = self.reward_lockout_min+random.random()*(self.reward_lockout_max-self.reward_lockout_min)
-                    self.change_state(self.States.REWARD_UNAVAILABLE)
-        elif self.state == self.States.REWARD_UNAVAILABLE:
-            if self.time_in_state() > self.lockout:
-                self.change_state(self.States.REWARD_AVAILABLE)
+
+    def REWARD_AVAILABLE(self):
+        if self.pressed:
+            self.food.toggle(self.dispense_time)
+            if self.reward_lockout:
+                self.lockout = self.reward_lockout_min + random.random() * (
+                            self.reward_lockout_max - self.reward_lockout_min)
+                self.change_state(self.States.REWARD_UNAVAILABLE)
+
+    def REWARD_UNAVAILABLE(self):
+        if self.time_in_state() > self.lockout:
+            self.change_state(self.States.REWARD_AVAILABLE)
 
     def is_complete(self):
         return self.time_elapsed() > self.duration * 60.0

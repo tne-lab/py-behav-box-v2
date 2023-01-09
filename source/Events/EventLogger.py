@@ -35,8 +35,16 @@ class EventLogger:
     def start(self) -> None:
         pass
 
-    def close_(self) -> None:
+    def stop_(self) -> None:
         self.started = False
+        self.stop()
+
+    def stop(self) -> None:
+        pass
+
+    def close_(self):
+        if self.started:
+            self.stop_()
         self.close()
 
     def close(self) -> None:

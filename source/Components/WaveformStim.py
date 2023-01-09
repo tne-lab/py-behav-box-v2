@@ -37,9 +37,6 @@ class WaveformStim(Stimmer):
         self.state = True  # Ideally make this false when stim is done
         self.source.write_component(self.id, self.configs[pnum])
 
-    def get_state(self) -> bool:
-        return self.state
-
     @staticmethod
     def get_type() -> Component.Type:
         return Component.Type.ANALOG_OUTPUT
