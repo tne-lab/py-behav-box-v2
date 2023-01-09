@@ -26,7 +26,7 @@ class InfoBoxElement(Element):
         self.pt3 = self.x+w, self.y+h
         self.pt4 = self.x, self.y+h
 
-    def get_text(self) -> str:
+    def get_text(self) -> list[str]:
         return self.text
 
     def draw(self) -> None:
@@ -43,7 +43,7 @@ class InfoBoxElement(Element):
         lbl_wd = lbl_in_font.get_width()
         if self.label_pos == 'BOTTOM':
             lbl_x = (self.rect.width - lbl_wd)/2  # Center in box
-            lbl_y = + 20 * self.SF  # Below Box
+            lbl_y = self.rect.height  # Below Box
         elif self.label_pos == 'TOP':
             lbl_x = (self.rect.width - lbl_wd)/2  # Center in box
             lbl_y = - 20 * self.SF  # Above box
@@ -51,7 +51,7 @@ class InfoBoxElement(Element):
             lbl_x = - lbl_wd - 5 * self.SF
             lbl_y = (self.rect.height - lbl_ht)/2
         else:
-            lbl_x = self.w + 5 * self.SF
+            lbl_x = self.rect.width + 5 * self.SF
             lbl_y = (self.rect.height - lbl_ht)/2
 
         self.screen.blit(lbl_in_font, self.rect.move(lbl_x,  lbl_y+1))
