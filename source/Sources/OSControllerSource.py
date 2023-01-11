@@ -3,6 +3,8 @@ import threading
 import time
 import traceback
 
+import zmq
+
 from Sources.Source import Source
 
 from Components.Component import Component
@@ -15,15 +17,22 @@ class OSControllerSource(Source):
     def __init__(self, address='localhost', port=9296):
         super(OSControllerSource, self).__init__()
         try:
-            self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.client.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-            self.client.connect((address, int(port)))
-            self.client.setblocking(False)
-            self.available = True
-            self.last_read = 0
-            self.closing = False
-            clear_thread = threading.Thread(target=lambda: self.clear())
-            clear_thread.start()
+            context = zmq.Context.instance()
+            self.client = context.socket(zmq.DEALER)
+            self.client.connect("ipc://oscar.ipc")
+            poll = zmq.Poller()
+            poll.register(self.client, zmq.POLLIN)
+            self.client.send(b"READY")
+            sockets = dict(poll.poll(1000))
+            if sockets:
+                self.address, _, _ = socket.recv_multipart()
+                self.available = True
+                self.last_read = 0
+                self.closing = False
+            else:
+                self.available = False
+            #clear_thread = threading.Thread(target=lambda: self.clear())
+            #clear_thread.start()
         except:
             traceback.print_exc()
             self.available = False
@@ -56,7 +65,7 @@ class OSControllerSource(Source):
                 tp = 3
             else:
                 raise ComponentRegisterError
-            self.client.send('RegGPIO {} {} {}\n'.format(parts[0], parts[1], tp).encode('utf-8'))
+            self.client.send_multipart(self.address, b"", 'RegGPIO {} {} {}\n'.format(parts[0], parts[1], tp).encode('utf-8'))
         if component.get_type() == Component.Type.DIGITAL_INPUT or component.get_type() == Component.Type.DIGITAL_OUTPUT:
             self.values[component.id] = False
         else:
@@ -71,18 +80,16 @@ class OSControllerSource(Source):
         for component in self.components:
             parts = component.address.split('_')
             if parts[0] not in coms:
-                self.client.send('Reset {}\n'.format(parts[0]).encode('utf-8'))
+                self.client.send_multipart(self.address, b"", b"CLOSE")
                 coms.append(parts[0])
 
     def read_component(self, component_id):
         msg = ""
         try:
             while True:
-                rmsg = self.client.recv(4096)
-                msg += rmsg.decode()
-                if len(rmsg) < 4096:
-                    break
-        except BlockingIOError:
+                _, _, rmsg = self.client.recv_multipart(flags=zmq.NOBLOCK)
+                msg += rmsg.decode('utf-8')
+        except zmq.ZMQError:
             pass
         if len(msg) > 0:
             msgs = msg[:-1].split('\n')
@@ -105,7 +112,7 @@ class OSControllerSource(Source):
         if not msg == self.values[component_id]:
             parts = self.components[component_id].address.split('_')
             if 'A' in self.components[component_id].address:
-                self.client.send('GPIOOut {} {}\n'.format(parts[0], parts[1]).encode('utf-8'))
+                self.client.send_multipart(self.address, b"", 'GPIOOut {} {}\n'.format(parts[0], parts[1]).encode('utf-8'))
             elif 'O' in self.components[component_id].address:
                 scaled = msg
                 if scaled < 0:
@@ -113,15 +120,15 @@ class OSControllerSource(Source):
                 elif scaled > 2.5:
                     scaled = 2.5
                 scaled = round(scaled * 65535 / 2.5)
-                self.client.send('AOut {} {} {}\n'.format(parts[0], parts[1], scaled).encode('utf-8'))
+                self.client.send_multipart(self.address, b"", 'AOut {} {} {}\n'.format(parts[0], parts[1], scaled).encode('utf-8'))
             else:
-                self.client.send('DOut {} {}\n'.format(parts[0], parts[1]).encode('utf-8'))
+                self.client.send_multipart(self.address, b"", 'DOut {} {}\n'.format(parts[0], parts[1]).encode('utf-8'))
         self.values[component_id] = msg
 
     def close_component(self, component_id: str) -> None:
         if 'A' in self.components[component_id].address:
             parts = self.components[component_id].address.split('_')
-            self.client.send('RegGPIO {} {} {}\n'.format(parts[0], parts[1], 0).encode('utf-8'))
+            self.client.send_multipart(self.address, b"", 'RegGPIO {} {} {}\n'.format(parts[0], parts[1], 0).encode('utf-8'))
 
     def is_available(self):
         return self.available
