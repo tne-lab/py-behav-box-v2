@@ -92,7 +92,7 @@ class OSControllerSource(Source):
         except zmq.ZMQError:
             pass
         if len(msg) > 0:
-            msgs = msg[:-1].split('\n')
+            msgs = msg.split('\n')
         else:
             msgs = []
         for msg in msgs:
