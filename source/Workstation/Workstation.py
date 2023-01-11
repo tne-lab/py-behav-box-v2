@@ -181,9 +181,9 @@ class Workstation:
             elif isinstance(e, pyberror.SourceUnavailableError):
                 self.ed.setText("A requested Source is currently unavailable")
             elif isinstance(e, pyberror.MalformedProtocolError):
-                self.ed.setText("Error raised when parsing Protocol file")
+                self.ed.setText("Error raised when parsing Protocol file\n"+traceback.format_exc())
             elif isinstance(e, pyberror.MalformedAddressFileError):
-                self.ed.setText("Error raised when parsing AddressFile")
+                self.ed.setText("Error raised when parsing AddressFile\n"+traceback.format_exc())
             elif isinstance(e, pyberror.InvalidComponentTypeError):
                 self.ed.setText("A Component in the AddressFile is an invalid type")
             else:
