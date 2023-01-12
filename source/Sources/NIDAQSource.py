@@ -67,7 +67,7 @@ class NIDAQSource(Source):
                 self.ao_task = nidaqmx.Task()
             self.ao_task.ao_channels.add_ao_voltage_chan(self.dev + component.address)
             self.ao_stream = stream_writers.AnalogMultiChannelWriter(self.ao_task.out_stream)
-            self.ao_inds[component.id] = len(self.ao_inds)
+            self.ao_inds[component.id] = len(self.ao_inds) - 1
         # elif component.get_type() == Component.Type.ANALOG_INPUT:
         #     task.ai_channels.add_ai_voltage_chan(self.dev + component.address)
         #     self.streams[component.id] = stream_writers.AnalogSingleChannelReader(task.in_stream)
