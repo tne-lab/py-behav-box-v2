@@ -71,13 +71,14 @@ class FiveChoice(Task):
             "nose_poke_lights": [Toggle, Toggle, Toggle, Toggle, Toggle],
             "food_trough": [BinaryInput],
             "food": [TimedToggle],
-            "food_light": [Toggle]
+            "food_light": [Toggle],
+            "house_light": [Toggle]
         }
 
     # noinspection PyMethodMayBeStatic
     def get_constants(self):
         return {
-            'max_duration': 30,  # The max time the task can take in seconds
+            'max_duration': 30,  # The max time the task can take in minutes
             'max_trials': 100,  # The maximum number of trials the rat can do
             'inter_trial_interval': 5,  # Time between initiation and stimulus presentation
             'stimulus_duration': 0.5,  # Time the stimulus is presented for
@@ -90,26 +91,30 @@ class FiveChoice(Task):
     # noinspection PyMethodMayBeStatic
     def get_variables(self):
         return {
-            "cur_trial": 0
+            "cur_trial": 0,
+            "pokes": [],
+            "trough_entered": None
         }
 
     def init_state(self):
         return self.States.INITIATION
 
     def start(self):
+        self.house_light.toggle(True)
         self.food_light.toggle(True)
 
     def stop(self):
+        self.house_light.toggle(False)
         self.food_light.toggle(False)
         for light in self.nose_poke_lights:
             light.toggle(False)
 
-    def main_loop(self):
-        pokes = []
+    def handle_input(self) -> None:
+        self.pokes = []
         # Output events for pokes that were entered/exited
         for i in range(5):
-            pokes.append(self.nose_pokes[i].check())
-            if pokes[i] == BinaryInput.ENTERED:
+            self.pokes.append(self.nose_pokes[i].check())
+            if self.pokes[i] == BinaryInput.ENTERED:
                 if i == 0:
                     self.events.append(InputEvent(self, self.Inputs.NP1_ENTERED))
                 elif i == 1:
@@ -120,7 +125,7 @@ class FiveChoice(Task):
                     self.events.append(InputEvent(self, self.Inputs.NP4_ENTERED))
                 elif i == 4:
                     self.events.append(InputEvent(self, self.Inputs.NP5_ENTERED))
-            elif pokes[i] == BinaryInput.EXIT:
+            elif self.pokes[i] == BinaryInput.EXIT:
                 if i == 0:
                     self.events.append(InputEvent(self, self.Inputs.NP1_EXIT))
                 elif i == 1:
@@ -132,50 +137,60 @@ class FiveChoice(Task):
                 elif i == 4:
                     self.events.append(InputEvent(self, self.Inputs.NP5_EXIT))
         # Output if the food trough was entered/exited
-        trough_entered = self.food_trough.check()
-        if trough_entered == BinaryInput.ENTERED:
+        self.trough_entered = self.food_trough.check()
+        if self.trough_entered == BinaryInput.ENTERED:
             self.events.append(InputEvent(self, self.Inputs.TROUGH_ENTERED))
-        elif trough_entered == BinaryInput.EXIT:
+        elif self.trough_entered == BinaryInput.EXIT:
             self.events.append(InputEvent(self, self.Inputs.TROUGH_EXIT))
-        if self.state == self.States.INITIATION:  # The rat has not initiated the trial yet
-            if trough_entered == BinaryInput.ENTERED:  # Trial is initiated when the rat nosepokes the trough
-                self.food_light.toggle(False)  # Turn the food light off
-                self.change_state(self.States.INTER_TRIAL_INTERVAL)
-        elif self.state == self.States.INTER_TRIAL_INTERVAL:  # The rat has initiated a trial and must wait before nose poking
-            if any(map(lambda x: x == BinaryInput.ENTERED, pokes)):  # The rat failed to withold a response
-                self.change_state(self.States.POST_RESPONSE_INTERVAL, {"response": "premature"})
-            elif self.time_in_state() > self.inter_trial_interval:  # The rat waited the necessary time
-                self.nose_poke_lights[self.sequence[self.cur_trial]].toggle(True)  # Turn the stimulus light on
-                self.change_state(self.States.STIMULUS_ON)
-        elif self.state == self.States.STIMULUS_ON:  # The correct stimulus lights up
-            if any(map(lambda x: x == BinaryInput.ENTERED, pokes)):  # The rat made a selection
-                selection = next(i for i in range(5) if pokes[i] == BinaryInput.ENTERED)
-                if selection == self.sequence[self.cur_trial]:  # If the selection was correct, provide a reward
-                    self.food.toggle(self.dispense_time)
-                    metadata = {"response": "correct"}
-                else:
-                    metadata = {"response": "incorrect"}
-                self.nose_poke_lights[self.sequence[self.cur_trial]].toggle(False)  # Turn the stimulus light off
-                self.change_state(self.States.POST_RESPONSE_INTERVAL, metadata)
-            elif self.time_in_state() > self.stimulus_duration:  # The stimulus was shown for the allotted time
-                self.nose_poke_lights[self.sequence[self.cur_trial]].toggle(False)  # Turn the stimulus light off
-                self.change_state(self.States.LIMITED_HOLD)
-        elif self.state == self.States.LIMITED_HOLD:  # The correct stimulus is turned off and the rat has time to decide
-            if any(map(lambda x: x == BinaryInput.ENTERED, pokes)):  # The rat made a selection
-                selection = next(i for i in range(5) if pokes[i] == BinaryInput.ENTERED)
-                if selection == self.sequence[self.cur_trial]:  # If the selection was correct, provide a reward
-                    self.food.toggle(self.dispense_time)
-                    metadata = {"response": "correct"}
-                else:
-                    metadata = {"response": "incorrect"}
-                self.change_state(self.States.POST_RESPONSE_INTERVAL, metadata)
-            elif self.time_in_state() > self.limited_hold_duration:  # The rat failed to respond
-                self.change_state(self.States.POST_RESPONSE_INTERVAL, {"response": "none"})
-        elif self.state == self.States.POST_RESPONSE_INTERVAL:  # The rat has responded and an initiation lockout begins
-            if self.time_in_state() > self.post_response_interval:  # The post response period has ended
-                self.change_state(self.States.INITIATION)
-                self.food_light.toggle(True)  # Turn the food light on
-                self.cur_trial += 1
+
+    def INITIATION(self):
+        if self.trough_entered == BinaryInput.ENTERED:  # Trial is initiated when the rat nosepokes the trough
+            self.food_light.toggle(False)  # Turn the food light off
+            self.change_state(self.States.INTER_TRIAL_INTERVAL)
+
+    def INTER_TRIAL_INTERVAL(self):
+        if any(map(lambda x: x == BinaryInput.ENTERED, self.pokes)):  # The rat failed to withold a response
+            self.house_light.toggle(False)
+            self.change_state(self.States.POST_RESPONSE_INTERVAL, {"response": "premature"})
+        elif self.time_in_state() > self.inter_trial_interval:  # The rat waited the necessary time
+            self.nose_poke_lights[self.sequence[self.cur_trial]].toggle(True)  # Turn the stimulus light on
+            self.change_state(self.States.STIMULUS_ON)
+
+    def STIMULUS_ON(self):
+        if any(map(lambda x: x == BinaryInput.ENTERED, self.pokes)):  # The rat made a selection
+            selection = next(i for i in range(5) if self.pokes[i] == BinaryInput.ENTERED)
+            if selection == self.sequence[self.cur_trial]:  # If the selection was correct, provide a reward
+                self.food.toggle(self.dispense_time)
+                metadata = {"response": "correct"}
+            else:
+                self.house_light.toggle(False)
+                metadata = {"response": "incorrect"}
+            self.nose_poke_lights[self.sequence[self.cur_trial]].toggle(False)  # Turn the stimulus light off
+            self.change_state(self.States.POST_RESPONSE_INTERVAL, metadata)
+        elif self.time_in_state() > self.stimulus_duration:  # The stimulus was shown for the allotted time
+            self.nose_poke_lights[self.sequence[self.cur_trial]].toggle(False)  # Turn the stimulus light off
+            self.change_state(self.States.LIMITED_HOLD)
+
+    def LIMITED_HOLD(self):
+        if any(map(lambda x: x == BinaryInput.ENTERED, self.pokes)):  # The rat made a selection
+            selection = next(i for i in range(5) if self.pokes[i] == BinaryInput.ENTERED)
+            if selection == self.sequence[self.cur_trial]:  # If the selection was correct, provide a reward
+                self.food.toggle(self.dispense_time)
+                metadata = {"response": "correct"}
+            else:
+                metadata = {"response": "incorrect"}
+                self.house_light.toggle(False)
+            self.change_state(self.States.POST_RESPONSE_INTERVAL, metadata)
+        elif self.time_in_state() > self.limited_hold_duration:  # The rat failed to respond
+            self.house_light.toggle(False)
+            self.change_state(self.States.POST_RESPONSE_INTERVAL, {"response": "none"})
+
+    def POST_RESPONSE_INTERVAL(self):
+        if self.time_in_state() > self.post_response_interval:  # The post response period has ended
+            self.house_light.toggle(True)
+            self.change_state(self.States.INITIATION)
+            self.food_light.toggle(True)  # Turn the food light on
+            self.cur_trial += 1
 
     def is_complete(self):
         return self.cur_trial == self.max_trials or self.time_elapsed() > self.max_duration * 60

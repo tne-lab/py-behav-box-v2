@@ -58,7 +58,7 @@ class FearConditioning(Task):
     def start(self):
         self.cage_light.toggle(True)
 
-    def main_loop(self):
+    def handle_input(self) -> None:
         if self.cur_time - self.prev_reward_time > self.reward_lockout:
             self.reward_available = True
         food_lever = self.food_lever.check()
@@ -71,22 +71,26 @@ class FearConditioning(Task):
                 self.prev_reward_time = self.cur_time
         elif food_lever == BinaryInput.EXIT:
             self.events.append(InputEvent(self, self.Inputs.LEVER_DEPRESSED))
-        if self.state == self.States.INTER_TONE_INTERVAL:
-            if self.cur_trial < len(self.type_sequence) and self.time_elapsed() > self.time_sequence[2 * self.cur_trial]:
-                self.change_state(self.States.TONE)
-                self.tone.play_sound(self.tone_frequency, 1, self.time_sequence[2 * self.cur_trial + 1] - self.time_sequence[2 * self.cur_trial])
-        elif self.state == self.States.TONE:
-            if self.time_elapsed() > self.time_sequence[2 * self.cur_trial + 1]:
-                if self.type_sequence[self.cur_trial] == 0:
-                    self.change_state(self.States.INTER_TONE_INTERVAL)
-                elif self.type_sequence[self.cur_trial] == 1:
-                    self.change_state(self.States.SHOCK)
-                    self.shocker.toggle(True)
-                self.cur_trial += 1
-        elif self.state == self.States.SHOCK:
-            if self.time_in_state() > self.shock_duration:
-                self.shocker.toggle(False)
+
+    def INTER_TONE_INTERVAL(self):
+        if self.cur_trial < len(self.type_sequence) and self.time_elapsed() > self.time_sequence[2 * self.cur_trial]:
+            self.change_state(self.States.TONE)
+            self.tone.play_sound(self.tone_frequency, 1,
+                                 self.time_sequence[2 * self.cur_trial + 1] - self.time_sequence[2 * self.cur_trial])
+
+    def TONE(self):
+        if self.time_elapsed() > self.time_sequence[2 * self.cur_trial + 1]:
+            if self.type_sequence[self.cur_trial] == 0:
                 self.change_state(self.States.INTER_TONE_INTERVAL)
+            elif self.type_sequence[self.cur_trial] == 1:
+                self.change_state(self.States.SHOCK)
+                self.shocker.toggle(True)
+            self.cur_trial += 1
+
+    def SHOCK(self):
+        if self.time_in_state() > self.shock_duration:
+            self.shocker.toggle(False)
+            self.change_state(self.States.INTER_TONE_INTERVAL)
 
     def is_complete(self):
         return self.time_elapsed() > self.time_sequence[-1] + self.post_session_time

@@ -5,7 +5,6 @@ from Components.BinaryInput import BinaryInput
 from Components.Toggle import Toggle
 from Components.TimedToggle import TimedToggle
 from Components.Video import Video
-from Components.ByteOutput import ByteOutput
 from Events.InputEvent import InputEvent
 from Tasks.Task import Task
 
@@ -31,7 +30,7 @@ class PMA(Task):
             'cage_light': [Toggle],
             'food': [TimedToggle],
             'fan': [Toggle],
-            'lever_out': [ByteOutput],
+            'lever_out': [Toggle],
             'food_light': [Toggle],
             'shocker': [Toggle],
             'tone': [Toggle],
@@ -71,7 +70,7 @@ class PMA(Task):
         self.cam.start()
         self.fan.toggle(True)
         if self.type == 'low':
-            self.lever_out.send(3)
+            self.lever_out.toggle(True)
             self.food_light.toggle(True)
 
     def stop(self):
@@ -80,48 +79,52 @@ class PMA(Task):
         self.food_light.toggle(False)
         self.cage_light.toggle(False)
         self.fan.toggle(False)
-        self.lever_out.send(0)
+        self.lever_out.toggle(False)
         self.shocker.toggle(False)
         self.tone.toggle(False)
         self.cam.stop()
 
-    def main_loop(self):
-        food_lever = self.food_lever.check()
-        if food_lever == BinaryInput.ENTERED:
+    def handle_input(self) -> None:
+        lever = self.food_lever.check()
+        if lever == BinaryInput.ENTERED:
             self.events.append(InputEvent(self, self.Inputs.LEVER_PRESSED))
             self.food.toggle(self.dispense_time)
             self.presses += 1
-        elif food_lever == BinaryInput.EXIT:
+        elif lever == BinaryInput.EXIT:
             self.events.append(InputEvent(self, self.Inputs.LEVER_DEPRESSED))
-        if self.state == self.States.INTER_TONE_INTERVAL:
-            if (not self.random and self.cur_trial < len(self.time_sequence) and self.time_in_state() > self.time_sequence[
-                self.cur_trial]) or (
-                    self.random and self.cur_trial < self.ntone and self.time_in_state() > self.iti):
-                self.change_state(self.States.TONE)
-                self.reward_available = True
-                if not self.type == 'light':
-                    self.tone.toggle(True)
-                if not self.type == 'low':
-                    self.lever_out.send(3)
-                    self.food_light.toggle(True)
-        elif self.state == self.States.TONE:
-            if self.time_in_state() > self.tone_duration - self.shock_duration:
-                self.change_state(self.States.SHOCK)
-                if not self.type == 'light':
-                    self.shocker.toggle(True)
-                self.cur_trial += 1
-                self.iti = self.iti_min + (self.iti_max - self.iti_min) * random.random()
-        elif self.state == self.States.SHOCK:
-            if self.time_in_state() > self.shock_duration:
-                self.shocker.toggle(False)
-                if (not self.random and self.cur_trial < len(self.time_sequence)) or (self.random and self.cur_trial < self.ntone):
-                    self.change_state(self.States.INTER_TONE_INTERVAL)
-                else:
-                    self.change_state(self.States.POST_SESSION)
-                self.tone.toggle(False)
-                if not self.type == 'low':
-                    self.lever_out.send(0)
-                    self.food_light.toggle(False)
+
+    def INTER_TONE_INTERVAL(self):
+        if (not self.random and self.cur_trial < len(self.time_sequence) and self.time_in_state() > self.time_sequence[
+            self.cur_trial]) or (
+                self.random and self.cur_trial < self.ntone and self.time_in_state() > self.iti):
+            self.change_state(self.States.TONE)
+            self.reward_available = True
+            if not self.type == 'light':
+                self.tone.toggle(True)
+            if not self.type == 'low':
+                self.lever_out.toggle(True)
+                self.food_light.toggle(True)
+
+    def TONE(self):
+        if self.time_in_state() > self.tone_duration - self.shock_duration:
+            self.change_state(self.States.SHOCK)
+            if not self.type == 'light':
+                self.shocker.toggle(True)
+            self.cur_trial += 1
+            self.iti = self.iti_min + (self.iti_max - self.iti_min) * random.random()
+
+    def SHOCK(self):
+        if self.time_in_state() > self.shock_duration:
+            self.shocker.toggle(False)
+            if (not self.random and self.cur_trial < len(self.time_sequence)) or (
+                    self.random and self.cur_trial < self.ntone):
+                self.change_state(self.States.INTER_TONE_INTERVAL)
+            else:
+                self.change_state(self.States.POST_SESSION)
+            self.tone.toggle(False)
+            if not self.type == 'low':
+                self.lever_out.toggle(False)
+                self.food_light.toggle(False)
 
     def is_complete(self):
         return self.cur_trial == len(self.time_sequence) and self.time_in_state() > self.post_session_time

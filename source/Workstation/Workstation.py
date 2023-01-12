@@ -181,9 +181,9 @@ class Workstation:
             elif isinstance(e, pyberror.SourceUnavailableError):
                 self.ed.setText("A requested Source is currently unavailable")
             elif isinstance(e, pyberror.MalformedProtocolError):
-                self.ed.setText("Error raised when parsing Protocol file")
+                self.ed.setText("Error raised when parsing Protocol file\n"+traceback.format_exc())
             elif isinstance(e, pyberror.MalformedAddressFileError):
-                self.ed.setText("Error raised when parsing AddressFile")
+                self.ed.setText("Error raised when parsing AddressFile\n"+traceback.format_exc())
             elif isinstance(e, pyberror.InvalidComponentTypeError):
                 self.ed.setText("A Component in the AddressFile is an invalid type")
             else:
@@ -261,7 +261,7 @@ class Workstation:
             The chamber corresponding to the Task that should be started
         """
         self.tasks[chamber].start__()  # Start the Task
-        for el in self.event_loggers[chamber]:  # Start all EventLoggers and log initial events
+        for el in self.event_loggers[chamber]:  # Start all EventLoggers
             el.start_()
         self.thread_events[chamber][3].set()
 
@@ -276,6 +276,7 @@ class Workstation:
         """
         self.thread_events[chamber][3].clear()
         self.tasks[chamber].stop__()  # Stop the task
+        self.event_notifier.set()
 
     def event_loop(self) -> None:
         while not self.stopping:
@@ -289,6 +290,10 @@ class Workstation:
                     for el in self.event_loggers[key]:
                         if el.started:
                             el.log_events(ecopy)
+                    if not self.tasks[key].started:
+                        for el in self.event_loggers[key]:
+                            if el.started:
+                                el.stop_()
                 elif not self.thread_events[key][4].is_set():
                     self.thread_events[key][4].set()
             time.sleep(0)
@@ -303,16 +308,17 @@ class Workstation:
             events = pygame.event.get()  # Get mouse/keyboard events
             task_keys = list(self.tasks.keys())
             for key in task_keys:  # For each Task
-                if not self.thread_events[key][0].is_set():
-                    if len(self.tasks[key].events) > 0 and not self.event_notifier.is_set():
-                        self.event_notifier.set()
-                    if self.thread_events[key][3].is_set() and not self.tasks[key].paused:  # If the Task has been started and is not paused
-                        self.tasks[key].main_loop__()  # Run the Task's logic loop
-                        self.guis[key].handle_events(events)  # Handle mouse/keyboard events with the Task GUI
-                        if self.tasks[key].is_complete():  # Stop the Task if it is complete
-                            self.wsg.chambers[key].stop()
-                elif not self.thread_events[key][2].is_set():
-                    self.thread_events[key][2].set()
+                if key in self.thread_events.keys():
+                    if not self.thread_events[key][0].is_set():
+                        if self.thread_events[key][3].is_set() and not self.tasks[key].paused:  # If the Task has been started and is not paused
+                            if len(self.tasks[key].events) > 0 and not self.event_notifier.is_set():
+                                self.event_notifier.set()
+                            self.tasks[key].main_loop()  # Run the Task's logic loop
+                            self.guis[key].handle_events(events)  # Handle mouse/keyboard events with the Task GUI
+                            if self.tasks[key].is_complete():  # Stop the Task if it is complete
+                                self.wsg.chambers[key].stop()
+                    elif not self.thread_events[key][2].is_set():
+                        self.thread_events[key][2].set()
             time.sleep(0)
 
     def gui_loop(self) -> None:

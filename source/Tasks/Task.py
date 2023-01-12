@@ -258,11 +258,14 @@ class Task:
     def stop(self) -> None:
         pass
 
-    def main_loop__(self) -> None:
-        self.cur_time = time.time()
-        self.main_loop()
-
     def main_loop(self) -> None:
+        self.cur_time = time.time()
+        self.handle_input()
+        if hasattr(self, self.state.name):
+            state_method = getattr(self, self.state.name)
+            state_method()
+
+    def handle_input(self) -> None:
         pass
 
     def time_elapsed(self) -> float:

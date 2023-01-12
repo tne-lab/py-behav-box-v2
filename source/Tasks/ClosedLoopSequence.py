@@ -32,22 +32,38 @@ class ClosedLoopSequence(TaskSequence):
             'post_raw_protocol': None
         }
 
+    def start(self):
+        self.fan.toggle(True)
+        self.house_light.toggle(True)
+
+    def stop(self):
+        self.fan.toggle(False)
+        self.house_light.toggle(False)
+
     def init_state(self):
         return self.States.PRE_RAW
 
     def init_sequence(self):
         return Raw, self.pre_raw_protocol
 
-    def main_loop(self):
-        if self.state == self.States.PRE_RAW and self.cur_task.is_complete():
+    def PRE_RAW(self):
+        if self.cur_task.is_complete():
             self.switch_task(ERP, self.States.PRE_ERP, self.pre_erp_protocol)
-        elif self.state == self.States.PRE_ERP and self.cur_task.is_complete():
+
+    def PRE_ERP(self):
+        if self.cur_task.is_complete():
             self.switch_task(ClosedLoop, self.States.CLOSED_LOOP, self.closed_loop_protocol)
-        elif self.state == self.States.CLOSED_LOOP and self.cur_task.is_complete():
+
+    def CLOSED_LOOP(self):
+        if self.cur_task.is_complete():
             self.switch_task(PMA, self.States.PMA, self.pma_protocol)
-        elif self.state == self.States.PMA and self.cur_task.is_complete():
+
+    def PMA(self):
+        if self.cur_task.is_complete():
             self.switch_task(ERP, self.States.POST_ERP, self.post_erp_protocol)
-        elif self.state == self.States.POST_ERP and self.cur_task.is_complete():
+
+    def POST_ERP(self):
+        if self.cur_task.is_complete():
             self.switch_task(Raw, self.States.POST_RAW, self.post_raw_protocol)
 
     def is_complete(self):

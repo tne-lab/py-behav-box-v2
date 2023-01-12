@@ -48,9 +48,9 @@ An example `log_events` override for the core event types is shown below:
 All EventLoggers have an `event_count` attribute for tracking the number of events that have been handled by the logger.
 Additional EventLogger arguments for particular subclasses can be provided when added to the [Workstation](workstation.md).
 
-### start and close
+### start, stop, and close
 
-The EventLogger class also provides two additional methods that will be called when the task begins and ends: `start` and `close`.
+The EventLogger class also provides three additional methods that will be called when the task begins, ends, or is cleared: `start`, `stop`, and `close`.
 These methods do not have to be overridden but the `start` method will reset `event_count` each time it is called.
 
 ### FileEventLoggers

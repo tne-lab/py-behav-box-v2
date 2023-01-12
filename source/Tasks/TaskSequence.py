@@ -77,10 +77,17 @@ class TaskSequence(Task):
             event.entry_time += self.sub_start_time - self.start_time
         self.events.extend(sub_events)
 
-    def main_loop__(self) -> None:
+    def main_loop(self) -> None:
         self.cur_time = time.time()
-        self.cur_task.main_loop__()
-        self.main_loop()
+        self.cur_task.cur_time = self.cur_time
+        self.cur_task.handle_input()
+        self.handle_input()
+        if hasattr(self.cur_task, self.cur_task.state.name):
+            state_method = getattr(self.cur_task, self.cur_task.state.name)
+            state_method()
+        if hasattr(self, self.state.name):
+            state_method = getattr(self, self.state.name)
+            state_method()
         self.log_sequence_events()
 
     def start_sub(self) -> None:

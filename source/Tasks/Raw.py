@@ -25,13 +25,5 @@ class Raw(Task):
     def init_state(self):
         return self.States.ACTIVE
 
-    def start(self):
-        self.fan.toggle(True)
-        self.house_light.toggle(True)
-
-    def stop(self):
-        self.fan.toggle(False)
-        self.house_light.toggle(False)
-
     def is_complete(self):
         return self.time_elapsed() > self.duration * 60

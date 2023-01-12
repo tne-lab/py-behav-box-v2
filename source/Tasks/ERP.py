@@ -54,20 +54,20 @@ class ERP(Task):
         if self.ephys:
             self.events.append(OEEvent(self, "startRecording", {"pre": "ClosedLoop"}))
 
-    def main_loop(self):
-        if self.state == self.States.START_RECORD:
-            if self.time_in_state() > self.record_lockout:
-                self.change_state(self.States.ERP)
-        elif self.state == self.States.ERP:
-            if self.cur_time - self.last_pulse_time > self.pulse_sep and self.pulse_count == self.npulse:
-                self.change_state(self.States.STOP_RECORD)
-                if self.ephys:
-                    self.events.append(OEEvent(self, "stopRecording"))
-            elif self.cur_time - self.last_pulse_time > self.pulse_sep:
-                self.last_pulse_time = self.cur_time
-                self.stim.start(0)
-                self.pulse_count += 1
-                self.events.append(InputEvent(self, self.Inputs.ERP_STIM))
+    def START_RECORD(self):
+        if self.time_in_state() > self.record_lockout:
+            self.change_state(self.States.ERP)
+
+    def ERP(self):
+        if self.cur_time - self.last_pulse_time > self.pulse_sep and self.pulse_count == self.npulse:
+            self.change_state(self.States.STOP_RECORD)
+            if self.ephys:
+                self.events.append(OEEvent(self, "stopRecording"))
+        elif self.cur_time - self.last_pulse_time > self.pulse_sep:
+            self.last_pulse_time = self.cur_time
+            self.stim.start(0)
+            self.pulse_count += 1
+            self.events.append(InputEvent(self, self.Inputs.ERP_STIM))
 
     def is_complete(self):
         return self.state == self.States.STOP_RECORD and self.time_in_state() > self.record_lockout
