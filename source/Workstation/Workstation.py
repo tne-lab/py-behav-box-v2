@@ -282,9 +282,9 @@ class Workstation:
         while not self.stopping:
             self.event_notifier.wait()
             self.event_notifier.clear()
-            event_keys = list(self.event_loggers.keys())
-            for key in event_keys:
-                if not self.thread_events[key][0].is_set():
+            keys = list(self.thread_events.keys())
+            for key in keys:
+                if key in self.thread_events and not self.thread_events[key][0].is_set():
                     ecopy = self.tasks[key].events.copy()
                     self.tasks[key].events = []
                     for el in self.event_loggers[key]:
@@ -294,7 +294,7 @@ class Workstation:
                         for el in self.event_loggers[key]:
                             if el.started:
                                 el.stop_()
-                elif not self.thread_events[key][4].is_set():
+                elif key in self.thread_events and not self.thread_events[key][4].is_set():
                     self.thread_events[key][4].set()
             time.sleep(0)
 
@@ -308,16 +308,17 @@ class Workstation:
             events = pygame.event.get()  # Get mouse/keyboard events
             task_keys = list(self.tasks.keys())
             for key in task_keys:  # For each Task
-                if key in self.thread_events.keys():
+                keys = list(self.thread_events.keys())
+                if key in keys:
                     if not self.thread_events[key][0].is_set():
-                        if self.thread_events[key][3].is_set() and not self.tasks[key].paused:  # If the Task has been started and is not paused
+                        if key in self.thread_events and self.thread_events[key][3].is_set() and not self.tasks[key].paused:  # If the Task has been started and is not paused
                             if len(self.tasks[key].events) > 0 and not self.event_notifier.is_set():
                                 self.event_notifier.set()
                             self.tasks[key].main_loop()  # Run the Task's logic loop
                             self.guis[key].handle_events(events)  # Handle mouse/keyboard events with the Task GUI
                             if self.tasks[key].is_complete():  # Stop the Task if it is complete
                                 self.wsg.chambers[key].stop()
-                    elif not self.thread_events[key][2].is_set():
+                    elif key in self.thread_events and not self.thread_events[key][2].is_set():
                         self.thread_events[key][2].set()
             time.sleep(0)
 
@@ -326,9 +327,9 @@ class Workstation:
         while not self.stopping:
             if time.perf_counter() - last_frame > 1/30:
                 self.task_gui.fill(Colors.black)
-                gui_keys = list(self.guis.keys())
-                for key in gui_keys:  # For each Task
-                    if not self.thread_events[key][0].is_set():
+                keys = list(self.guis.keys())
+                for key in keys:  # For each Task
+                    if key in self.thread_events and not self.thread_events[key][0].is_set():
                         self.guis[key].draw()  # Update the GUI
                         # Draw GUI border and subject name
                         col = key % self.n_col
@@ -336,7 +337,7 @@ class Workstation:
                         pygame.draw.rect(self.task_gui, Colors.white, pygame.Rect(col * self.w, row * self.h, self.w, self.h), 1)
                         LabelElement(self.guis[key], 10, self.h - 30, self.w, 20,
                                      self.tasks[key].metadata["subject"], SF=1).draw()
-                    elif not self.thread_events[key][1].is_set():
+                    elif key in self.thread_events and not self.thread_events[key][1].is_set():
                         self.thread_events[key][1].set()
                 pygame.display.flip()  # Signal to pygame that the whole GUI has updated
                 last_frame = time.perf_counter()
