@@ -24,6 +24,7 @@ class WhiskerLineSource(Source):
 
     def __init__(self, address='localhost', port=3233, whisker_path=r"C:\Program Files (x86)\WhiskerControl\WhiskerServer.exe"):
         super(WhiskerLineSource, self).__init__()
+        self.msg = ""
         try:
             win32gui.EnumWindows(look_for_program, 'WhiskerServer')
             if not IsWhiskerRunning:
@@ -49,10 +50,15 @@ class WhiskerLineSource(Source):
 
     def read(self):
         while not self.running.is_set():
-            msg = self.client.recv(4096).decode()
-            print(msg)
-            if msg.startswith('Event:'):
-                self.vals[msg[:-1].split(' ')[1]] = not self.vals[msg[:-1].split(' ')[1]]
+            self.msg += self.client.recv(4096).decode()
+            print(self.msg)
+            if self.msg.startswith('Event:'):
+                if '\n' in self.msg:
+                    msgs = self.msg.split('\n')
+                    for msg in msgs[:-1]:
+                        self.vals[msg.split(' ')[1]] = not self.vals[msg.split(' ')[1]]
+                    self.msg = msgs[-1]
+
         self.client.send(b'LineRelinquishAll\n')
         self.client.close()
 
