@@ -57,14 +57,14 @@ class BarPress(Task):
         self.cage_light.toggle(True)
         self.cam.start()
         self.fan.toggle(True)
-        self.lever_out.send(3)
+        self.lever_out.toggle(True)
         self.food_light.toggle(True)
 
     def stop(self):
         self.food_light.toggle(False)
         self.cage_light.toggle(False)
         self.fan.toggle(False)
-        self.lever_out.send(0)
+        self.lever_out.toggle(False)
         self.cam.stop()
 
     def handle_input(self) -> None:

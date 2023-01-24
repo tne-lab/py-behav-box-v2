@@ -15,11 +15,13 @@ class Stimmer(Output):
 
     @abstractmethod
     def parametrize(self, pnum: int, outs: list[int], per: int, dur: int, amps: np.ndarray, durs: list[int]) -> None:
-        raise NotImplementedError
+        #raise NotImplementedError
+        pass
 
     @abstractmethod
     def start(self, pnum: int, stype: str) -> None:
-        raise NotImplementedError
+        #raise NotImplementedError
+        pass
 
     @staticmethod
     def get_type() -> Component.Type:
