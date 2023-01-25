@@ -137,7 +137,7 @@ class ChamberWidget(QGroupBox):
 
         self.setLayout(self.chamber)
         self.logger_params = event_loggers[1]
-        self.workstation.add_task(int(chamber_index) - 1, self.task_name.currentText(), self.address_file_path.text(),
+        self.workstation.add_task(int(chamber_index) - 1, self.task_name.currentText(), self.subject.text(), self.address_file_path.text(),
                                   self.protocol_path.text(), self.event_loggers)
         self.task = self.workstation.tasks[int(chamber_index) - 1]
         self.output_file_changed()
@@ -149,7 +149,7 @@ class ChamberWidget(QGroupBox):
         self.workstation.remove_task(int(self.chamber_id.text()) - 1, False)
         try:
             self.workstation.add_task(int(self.chamber_id.text()) - 1, self.task_name.currentText(),
-                                      self.address_file_path.text(),
+                                      self.subject.text(), self.address_file_path.text(),
                                       self.protocol_path.text(), self.event_loggers)
             self.task = self.workstation.tasks[int(self.chamber_id.text()) - 1]
             self.output_file_changed()
@@ -293,14 +293,19 @@ class ChamberWidget(QGroupBox):
         if not os.path.exists("{}/py-behav/Configurations/".format(desktop)):
             os.makedirs("{}/py-behav/Configurations/".format(desktop))
         # Create a file dialog so the user can choose the save location
-        file_name = QFileDialog.getSaveFileName(self, 'Save Configuration',
-                                                "{}/py-behav/Configurations/{}-{}-{}.csv".format(desktop,
-                                                                                                 self.chamber_id.text(),
-                                                                                                 self.subject.text(),
-                                                                                                 self.task_name.currentText()),
-                                                '*.csv')
-        if len(file_name[0]) > 1:
-            with open(file_name[0], "w", newline='') as out:  # Save all configuration variables
+        self.fd = QFileDialog(self)
+        self.fd.setFileMode(QFileDialog.AnyFile)
+        self.fd.setViewMode(QFileDialog.List)
+        self.fd.setAcceptMode(QFileDialog.AcceptSave)
+        self.fd.setDirectory("{}/py-behav/Configurations/".format(desktop))
+        self.fd.selectFile('{}-{}-{}.csv'.format(self.chamber_id.text(), self.subject.text(), self.task_name.currentText()))
+        self.fd.setWindowTitle('Save Configuration')
+        self.fd.accept = self.save_configuration_
+        self.fd.show()
+
+    def save_configuration_(self) -> None:
+        if len(self.fd.selectedFiles()[0]) > 0:  # If a file was selected
+            with open(self.fd.selectedFiles()[0], "w", newline='') as out:  # Save all configuration variables
                 w = csv.writer(out)
                 w.writerow(["Chamber", self.chamber_id.text()])  # Index of the chamber
                 w.writerow(["Subject", self.subject.text()])  # The name of the subject
@@ -314,6 +319,7 @@ class ChamberWidget(QGroupBox):
                     el_text += type(self.event_loggers[i]).__name__ + "((" + ''.join(
                         f"||{w}||" for w in self.logger_params[i - 1]) + "))"
                 w.writerow(["EventLoggers", el_text])
+        super(QFileDialog, self.fd).accept()
 
     def edit_configuration(self) -> None:
         self.ld = ConfigurationDialog(self)

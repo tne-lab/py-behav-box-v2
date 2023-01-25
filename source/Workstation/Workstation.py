@@ -135,7 +135,7 @@ class Workstation:
         settings.setValue("pyqt/h", int(szo[1] - 70))
         self.task_gui = pygame.display.set_mode((self.w * self.n_col, self.h * self.n_row), pygame.RESIZABLE, 32)
 
-    def add_task(self, chamber: int, task_name: str, address_file: str, protocol: str, task_event_loggers: List[EventLogger]) -> None:
+    def add_task(self, chamber: int, task_name: str, subject_name: str, address_file: str, protocol: str, task_event_loggers: List[EventLogger]) -> None:
         """
         Creates a Task and adds it to the chamber.
 
@@ -155,7 +155,7 @@ class Workstation:
         # Import the selected Task
         task_module = importlib.import_module("Local.Tasks." + task_name)
         task = getattr(task_module, task_name)
-        metadata = {"chamber": chamber, "subject": "default", "protocol": protocol, "address_file": address_file}
+        metadata = {"chamber": chamber, "subject": subject_name, "protocol": protocol, "address_file": address_file}
         try:
             self.tasks[chamber] = task(self, metadata, self.sources, address_file, protocol)  # Create the task
             self.event_loggers[chamber] = task_event_loggers

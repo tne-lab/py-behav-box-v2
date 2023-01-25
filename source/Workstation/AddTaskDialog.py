@@ -16,6 +16,7 @@ class AddTaskDialog(QDialog):
     def __init__(self, wsg: WorkstationGUI):
         super().__init__()
 
+        self.fd = None
         self.wsg = wsg
         self.setWindowTitle("Add Task")
 
@@ -94,9 +95,17 @@ class AddTaskDialog(QDialog):
 
     def load_config(self) -> None:
         desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
-        file_name = QFileDialog.getOpenFileName(self, 'Select File',
-                                                "{}/py-behav/Configurations/".format(desktop),
-                                                '*.csv')
-        if len(file_name[0]) > 1:
-            self.configuration_path = file_name[0]
+        self.fd = QFileDialog(self)
+        self.fd.setFileMode(QFileDialog.ExistingFile)
+        self.fd.setViewMode(QFileDialog.List)
+        self.fd.setNameFilter("CSV files (*.csv)")
+        self.fd.setDirectory("{}/py-behav/Configurations/".format(desktop))
+        self.fd.setWindowTitle('Select File')
+        self.fd.accept = self.open_file
+        self.fd.show()
+
+    def open_file(self):
+        if len(self.fd.selectedFiles()[0]) > 1:
+            self.configuration_path = self.fd.selectedFiles()[0]
+            super(QFileDialog, self.fd).accept()
             self.accept()
