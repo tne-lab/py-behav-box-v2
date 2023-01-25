@@ -38,7 +38,7 @@ The full list of default Elements and their constructors is provided in the [pac
 
 ## GUI classes
 
-All Tasks must have a GUI class saved in the `source/GUIs` folder named *TASK_NAMEGUI*. GUIs are subclasses of the base `GUI`
+All Tasks must have a GUI class saved in the *GUIs* folder of the *Local* Git submodule `source/Local/GUIs` named *TASK_NAMEGUI*. GUIs are subclasses of the base `GUI`
 class and are constructed with reference to a pygame `Screen` object named `task_gui` and the corresponding Task object `task`:
 
     def __init__(self, task_gui, task):

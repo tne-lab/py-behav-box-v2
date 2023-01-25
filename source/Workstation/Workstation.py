@@ -153,7 +153,7 @@ class Workstation:
             The list of EventLoggers for the task
         """
         # Import the selected Task
-        task_module = importlib.import_module("Tasks." + task_name)
+        task_module = importlib.import_module("Local.Tasks." + task_name)
         task = getattr(task_module, task_name)
         metadata = {"chamber": chamber, "subject": "default", "protocol": protocol, "address_file": address_file}
         try:
@@ -164,7 +164,7 @@ class Workstation:
             for logger in task_event_loggers:
                 logger.set_task(self.tasks[chamber])
             # Import the Task GUI
-            gui = getattr(importlib.import_module("GUIs." + task_name + "GUI"), task_name + "GUI")
+            gui = getattr(importlib.import_module("Local.GUIs." + task_name + "GUI"), task_name + "GUI")
             # Position the GUI in pygame
             col = chamber % self.n_col
             row = math.floor(chamber / self.n_col)
@@ -207,7 +207,7 @@ class Workstation:
         """
         # Create the new Task as part of a sequence
         new_task = task_name(task_base, task_base.components, protocol)
-        gui = getattr(importlib.import_module("GUIs." + task_name.__name__ + "GUI"), task_name.__name__ + "GUI")
+        gui = getattr(importlib.import_module("Local.GUIs." + task_name.__name__ + "GUI"), task_name.__name__ + "GUI")
         # Position the GUI in pygame
         col = task_base.metadata['chamber'] % self.n_col
         row = math.floor(task_base.metadata['chamber'] / self.n_col)

@@ -3,8 +3,8 @@
 ## Overview
 
 Behavioral tasks in pybehave are implemented as state machines, the basic elements of which are states and components. To create
-a task, the user develops a *task definition file* written in Python in the *py-behav-box-v2/source/Tasks* folder. Task 
-definitions are hardware-agnostic and solely program for task logic and timing, interacting with hardware or implementation specific
+a task, the user develops a *task definition file* written in Python. Tasks are associated with a Git submodule contained in the *py-behav-box-v2/source/Local* directory
+which must have a nested *Tasks* folder. Task definitions are hardware-agnostic and solely program for task logic and timing, interacting with hardware or implementation specific
 [Sources](sources.md) and [Events](events.md). Pybehave tasks are objects that are all subclasses of the base `Task` class with the ability to 
 override functionality as necessary.
 
