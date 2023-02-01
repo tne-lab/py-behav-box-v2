@@ -1,6 +1,3 @@
-import socket
-import threading
-import time
 import traceback
 
 import zmq
@@ -53,7 +50,8 @@ class OSControllerSource(Source):
                 raise ComponentRegisterError
             self.client.send('RegGPIO {} {} {}\n'.format(parts[0], parts[1], tp).encode('utf-8'))
         if component.get_type() == Component.Type.DIGITAL_INPUT or component.get_type() == Component.Type.DIGITAL_OUTPUT:
-            self.values[component.id] = False
+            if component.id not in self.values:
+                self.values[component.id] = False
         else:
             self.values[component.id] = 0
 
@@ -117,6 +115,7 @@ class OSControllerSource(Source):
         if 'A' in self.components[component_id].address:
             parts = self.components[component_id].address.split('_')
             self.client.send('RegGPIO {} {} {}\n'.format(parts[0], parts[1], 0).encode('utf-8'))
+        del self.components[component_id]
 
     def is_available(self):
         return self.available
