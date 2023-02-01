@@ -48,6 +48,7 @@ class BayesBuilder:
 
 class BayesContainer:
     def __init__(self, bb):
+        self.figure = None
         self.path = bb.path
         self.constant = bb.constant  # This probably needs to be updated
         self.length_scale = bb.length_scale
@@ -63,6 +64,7 @@ class BayesContainer:
         # self.gaussian_process.fit(self.params, self.outcome)
 
     def plot(self):
+        plt.figure(self.figure)
         plt.clf()
         plt.scatter(self.params, self.outcome, label="Observations")
         mean_prediction, std_prediction = self.gaussian_process.predict(self.test_params, return_std=True)
@@ -100,8 +102,8 @@ class BayesContainer:
 
     def suggest(self):
         mean_prediction, std_prediction = self.gaussian_process.predict(self.test_params, return_std=True)
-        soft_max = np.cumsum(np.power(math.e, mean_prediction - std_prediction) / np.sum(
-            np.power(math.e, mean_prediction - std_prediction)))
+        soft_max = np.cumsum(np.power(math.e, -(mean_prediction - std_prediction)) / np.sum(
+            np.power(math.e, -(mean_prediction - std_prediction))))
         keys = list(self.param_ranges.keys())
         new_params = self.test_params[np.argmin(np.abs(soft_max - np.random.rand()))]
         return collections.OrderedDict([(keys[i], new_params[i]) for i in range(len(new_params))])
@@ -121,8 +123,6 @@ class BayesContainer:
             if os.path.isfile(file_globals['bb'].path):
                 with open(file_globals['bb'].path, 'rb') as f:
                     bb = pickle.load(f)
-                    bb.figure = plt.Figure()
-                    bb.plot()
                     return bb
             else:
                 return BayesContainer(file_globals['bb'])
@@ -146,7 +146,7 @@ class BayesProcess(Process):
             print(command)
             if command['command'] == 'Register':
                 self.bayes = BayesContainer.load(command['file'])
-                self.bayes.figure = plt.Figure()
+                self.bayes.figure = plt.figure()
                 plt.ion()
                 plt.show(block=False)
                 self.bayes.plot()
@@ -165,6 +165,8 @@ class BayesProcess(Process):
                 self.bayes.plot()
             elif command['command'] == 'Save':
                 self.bayes.save()
+            elif command['command'] == 'CloseComponent':
+                plt.close(self.bayes.figure)
             elif command['command'] == 'Close':
                 closing = True
 
@@ -193,6 +195,9 @@ class BayesOptSource(Source):
         if self.inq.poll():
             self.next_params[component_id] = self.inq.get()
         return self.next_params[component_id]
+
+    def close_component(self, component_id: str) -> None:
+        self.outq.put({'command': 'CloseComponent', 'id': component_id})
 
     def close_source(self) -> None:
         self.outq.put({'command': 'Close'})

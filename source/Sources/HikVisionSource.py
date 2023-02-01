@@ -37,6 +37,15 @@ class HikVisionSource(Source):
             self.close_component(component)
 
     def write_component(self, component_id, msg):
+        if isinstance(self.components[component_id].address, list):
+            cams = self.components[component_id].address
+            msgs = msg
+        else:
+            cams = [self.components[component_id].address]
+            msgs = [msg]
+        for i, m in enumerate(msgs):
+            if m:
+                hikutils.putXML(self.server, 'ContentMgmt/record/control/manual/start/tracks/' + str(cams[i]))
         if msg:
             hikutils.putXML(self.server, 'ContentMgmt/record/control/manual/start/tracks/' + str(self.components[
                                                                                                      component_id].address))
@@ -46,19 +55,24 @@ class HikVisionSource(Source):
 
     def download(self, component_id):
         op = self.out_paths[component_id]
-        addr = str(self.components[component_id].address)
         name = self.components[component_id].name
         subj = self.tasks[component_id].metadata["subject"]
-        hikutils.putXML(self.server, 'ContentMgmt/record/control/manual/stop/tracks/' + addr)
-        hikutils.putXML(self.server, 'ContentMgmt/record/control/manual/stop/tracks/' + addr)
-        resp = self.server.ContentMgmt.search.getAllRecordingsForID(addr)
-        vid = resp['CMSearchResult']['matchList']['searchMatchItem'][-1]
-        dwnld = self.server.ContentMgmt.search.downloadURI(vid['mediaSegmentDescriptor']['playbackURI'])
-        output_folder = op.format(subj, datetime.now().strftime("%m-%d-%Y"))
-        if not os.path.exists(output_folder):
-            os.makedirs(output_folder)
-        with open(output_folder + name + ".mp4", 'wb') as file:
-            file.write(dwnld.content)
+        if isinstance(self.components[component_id].address, list):
+            addresses = self.components[component_id].address
+        else:
+            addresses = [self.components[component_id].address]
+        for addr in addresses:
+            addr = str(addr)
+            hikutils.putXML(self.server, 'ContentMgmt/record/control/manual/stop/tracks/' + addr)
+            hikutils.putXML(self.server, 'ContentMgmt/record/control/manual/stop/tracks/' + addr)
+            resp = self.server.ContentMgmt.search.getAllRecordingsForID(addr)
+            vid = resp['CMSearchResult']['matchList']['searchMatchItem'][-1]
+            dwnld = self.server.ContentMgmt.search.downloadURI(vid['mediaSegmentDescriptor']['playbackURI'])
+            output_folder = op.format(subj, datetime.now().strftime("%m-%d-%Y"))
+            if not os.path.exists(output_folder):
+                os.makedirs(output_folder)
+            with open(output_folder + name + "_" + addr + ".mp4", 'wb') as file:
+                file.write(dwnld.content)
 
     def is_available(self):
         return self.available
