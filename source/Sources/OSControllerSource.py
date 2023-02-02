@@ -69,7 +69,7 @@ class OSControllerSource(Source):
         try:
             while True:
                 rmsg = self.client.recv(flags=zmq.NOBLOCK)
-                msg += rmsg.decode('utf-8')
+                msg += rmsg.decode()
         except zmq.ZMQError:
             pass
         if len(msg) > 0:
