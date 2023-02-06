@@ -39,16 +39,15 @@ class HikVisionSource(Source):
     def write_component(self, component_id, msg):
         if isinstance(self.components[component_id].address, list):
             cams = self.components[component_id].address
-            msgs = msg
+            msgs = [msg] * len(self.components[component_id].address)
         else:
             cams = [self.components[component_id].address]
             msgs = [msg]
         for i, m in enumerate(msgs):
             if m:
                 hikutils.putXML(self.server, 'ContentMgmt/record/control/manual/start/tracks/' + str(cams[i]))
-        if msg:
-            hikutils.putXML(self.server, 'ContentMgmt/record/control/manual/start/tracks/' + str(self.components[
-                                                                                                     component_id].address))
+                params = {'id': str(cams[i]), 'enabled': True, 'positionX': 0, 'positionY': 0, 'displayText': '■'}
+                hikutils.postXML(self.server, 'System/Video/inputs/channels/' + str(cams[i]) + '/overlays/text', params)
         else:
             vt = threading.Thread(target=self.download, args=[component_id])
             vt.start()
@@ -63,6 +62,7 @@ class HikVisionSource(Source):
             addresses = [self.components[component_id].address]
         for addr in addresses:
             addr = str(addr)
+            hikutils.deleteXML(self.server, 'System/Video/inputs/channels/' + addr + '/overlays/text')
             hikutils.putXML(self.server, 'ContentMgmt/record/control/manual/stop/tracks/' + addr)
             hikutils.putXML(self.server, 'ContentMgmt/record/control/manual/stop/tracks/' + addr)
             resp = self.server.ContentMgmt.search.getAllRecordingsForID(addr)
