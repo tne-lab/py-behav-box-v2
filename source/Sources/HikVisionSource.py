@@ -26,6 +26,7 @@ class HikVisionSource(Source):
         self.out_paths[component.id] = "{}\\py-behav\\{}\\Data\\{{}}\\{{}}\\".format(desktop, type(task).__name__)
         self.components[component.id] = component
         self.tasks[component.id] = task
+        # hikutils.deleteXML(self.server, 'System/Video/inputs/channels/' + str(component.address) + '/overlays/text')
 
     def close_component(self, component_id):
         del self.components[component_id]
@@ -43,7 +44,47 @@ class HikVisionSource(Source):
             else:
                 cams = [self.components[component_id].address]
             for cam in cams:
-                hikutils.putXML(self.server, 'ContentMgmt/record/control/manual/start/tracks/' + str(cam))
+                cam = str(cam)
+                hikutils.putXML(self.server, 'ContentMgmt/record/control/manual/start/tracks/' + cam)
+                mask = hikutils.xml2dict(b'\
+                                                         <PrivacyMask version="2.0" xmlns="http://www.isapi.org/ver20/XMLSchema">\
+                                                         <enabled></enabled>\
+                                                         </PrivacyMask>')
+                mask['PrivacyMask']['enabled'] = 'true'
+                hikutils.putXML(self.server, 'System/Video/inputs/channels/' + cam[0] + '/privacyMask', mask)
+                params = hikutils.xml2dict(b'\
+                            <PrivacyMaskRegionList version="2.0" xmlns="http://www.isapi.org/ver20/XMLSchema">\
+                            <PrivacyMaskRegion>\
+                            <id></id>\
+                            <enabled></enabled>\
+                            <RegionCoordinatesList>\
+                            </RegionCoordinatesList>\
+                            <maskType></maskType>\
+                            </PrivacyMaskRegion>\
+                            </PrivacyMaskRegionList>')
+                params['PrivacyMaskRegionList']['PrivacyMaskRegion']['id'] = '1'
+                params['PrivacyMaskRegionList']['PrivacyMaskRegion']['enabled'] = 'true'
+                params['PrivacyMaskRegionList']['PrivacyMaskRegion']['maskType'] = 'red'
+                command = hikutils.dict2xml(params)
+                coords = '<RegionCoordinates>\
+                                    <positionX>0</positionX>\
+                                    <positionY>0</positionY>\
+                                </RegionCoordinates>\
+                                <RegionCoordinates>\
+                                    <positionX>0</positionX>\
+                                    <positionY>10</positionY>\
+                                </RegionCoordinates>\
+                            <RegionCoordinates>\
+                                    <positionX>10</positionX>\
+                                    <positionY>10</positionY>\
+                            </RegionCoordinates>\
+                            <RegionCoordinates>\
+                                    <positionX>10</positionX>\
+                                    <positionY>0</positionY>\
+                            </RegionCoordinates>'
+                index = command.find('</RegionCoordinatesList>')
+                command = command[:index] + coords + command[index:]
+                hikutils.putXML(self.server, 'System/Video/inputs/channels/' + cam[0] + '/privacyMask/regions', xmldata=command)
         else:
             vt = threading.Thread(target=self.download, args=[component_id])
             vt.start()
@@ -58,6 +99,12 @@ class HikVisionSource(Source):
             addresses = [self.components[component_id].address]
         for addr in addresses:
             addr = str(addr)
+            mask = hikutils.xml2dict(b'\
+                                     <PrivacyMask version="2.0" xmlns="http://www.isapi.org/ver20/XMLSchema">\
+                                     <enabled></enabled>\
+                                     </PrivacyMask>')
+            mask['PrivacyMask']['enabled'] = 'false'
+            hikutils.putXML(self.server, 'System/Video/inputs/channels/' + addr[0] + '/privacyMask', mask)
             hikutils.putXML(self.server, 'ContentMgmt/record/control/manual/stop/tracks/' + addr)
             hikutils.putXML(self.server, 'ContentMgmt/record/control/manual/stop/tracks/' + addr)
             resp = self.server.ContentMgmt.search.getAllRecordingsForID(addr)
