@@ -195,7 +195,8 @@ class ChamberWidget(QGroupBox):
                 self.pd.setWindowTitle("Wait")
                 self.pd.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
                 self.pd.setDefaultButton(QMessageBox.Cancel)
-                self.pd.accept = self.play_helper
+                self.pd.buttons()[0].clicked.connect(self.play_helper)
+                self.pd.show()
             else:
                 self.play_helper()
         elif self.task.paused:  # If the task is currently paused

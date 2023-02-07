@@ -37,18 +37,13 @@ class HikVisionSource(Source):
             self.close_component(component)
 
     def write_component(self, component_id, msg):
-        if isinstance(self.components[component_id].address, list):
-            cams = self.components[component_id].address
-            msgs = msg
-        else:
-            cams = [self.components[component_id].address]
-            msgs = [msg]
-        for i, m in enumerate(msgs):
-            if m:
-                hikutils.putXML(self.server, 'ContentMgmt/record/control/manual/start/tracks/' + str(cams[i]))
         if msg:
-            hikutils.putXML(self.server, 'ContentMgmt/record/control/manual/start/tracks/' + str(self.components[
-                                                                                                     component_id].address))
+            if isinstance(self.components[component_id].address, list):
+                cams = self.components[component_id].address
+            else:
+                cams = [self.components[component_id].address]
+            for cam in cams:
+                hikutils.putXML(self.server, 'ContentMgmt/record/control/manual/start/tracks/' + str(cam))
         else:
             vt = threading.Thread(target=self.download, args=[component_id])
             vt.start()
@@ -66,7 +61,10 @@ class HikVisionSource(Source):
             hikutils.putXML(self.server, 'ContentMgmt/record/control/manual/stop/tracks/' + addr)
             hikutils.putXML(self.server, 'ContentMgmt/record/control/manual/stop/tracks/' + addr)
             resp = self.server.ContentMgmt.search.getAllRecordingsForID(addr)
-            vid = resp['CMSearchResult']['matchList']['searchMatchItem'][-1]
+            vids = resp['CMSearchResult']['matchList']['searchMatchItem']
+            if not isinstance(vids, list):
+                vids = [vids]
+            vid = vids[-1]
             dwnld = self.server.ContentMgmt.search.downloadURI(vid['mediaSegmentDescriptor']['playbackURI'])
             output_folder = op.format(subj, datetime.now().strftime("%m-%d-%Y"))
             if not os.path.exists(output_folder):
