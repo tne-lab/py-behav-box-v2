@@ -217,7 +217,7 @@ class Workstation:
             new_task)
         return new_task
 
-    def remove_task(self, chamber: int, del_loggers: bool = True) -> None:
+    def remove_task(self, chamber: int, del_loggers: bool = True) -> threading.Thread:
         """
         Remove the Task from the specified chamber.
 
@@ -229,6 +229,7 @@ class Workstation:
         """
         remove_thread = threading.Thread(target=lambda: self.remove_task_(chamber, del_loggers))
         remove_thread.start()
+        return remove_thread
 
     def remove_task_(self, chamber: int, del_loggers: bool = True) -> None:
         if chamber in self.thread_events:

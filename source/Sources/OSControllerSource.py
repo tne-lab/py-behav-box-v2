@@ -112,10 +112,11 @@ class OSControllerSource(Source):
         self.values[component_id] = msg
 
     def close_component(self, component_id: str) -> None:
-        if 'A' in self.components[component_id].address:
-            parts = self.components[component_id].address.split('_')
-            self.client.send('RegGPIO {} {} {}\n'.format(parts[0], parts[1], 0).encode('utf-8'))
-        del self.components[component_id]
+        if component_id in self.components:
+            if 'A' in self.components[component_id].address:
+                parts = self.components[component_id].address.split('_')
+                self.client.send('RegGPIO {} {} {}\n'.format(parts[0], parts[1], 0).encode('utf-8'))
+            del self.components[component_id]
 
     def is_available(self):
         return self.available

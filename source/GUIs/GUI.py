@@ -20,7 +20,10 @@ class GUI:
         self.task = task
 
     def draw(self) -> None:
-        self.task_gui.fill(Colors.darkgray)
+        if self.task.is_complete():
+            self.task_gui.fill(Colors.green)
+        else:
+            self.task_gui.fill(Colors.darkgray)
         for el in self.get_elements():
             el.draw()
 
