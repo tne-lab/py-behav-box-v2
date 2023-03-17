@@ -32,24 +32,60 @@ is called when pybehave is exited.
 
 ### Source base class
 
+    register_component(task, component)
+
+Configure connection from the task to the selected component.
+
+    close_source()
+
+Close all connections with the interface represented by the Source.
+
+    close_component(component_id)
+
+Close the connection between a specific component and the interface represented by the Source.
+
+    read_component(component_id)
+
+Queries the current value of the indicated component from the interface represented by the Source.
+
+    write_component(component_id)
+
+Modify the value of the indicated component through the interface represented by the Source.
+
+    is_available()
+
+Returns true if the Source is active.
+
 ### Included sources
 
 #### EmptySource
 
-#### EmptyTouchScreenSource
+Default Source enabling simulated components from GUI.
 
 #### HikVisionSource
 
+Source for coordinating video recording with HikVision CCTV systems. Generally intended for sole use with Video components.
+
 #### NIDAQSource
 
-#### NIWhiskerSource
+Source for coordinating connections to National Instruments hardware. Has functionality for digital and analog inputs and outputs.
+
+#### WhiskerLineSource
+
+Communicates with digital input and output lines represented via a connection to Whisker.
 
 #### OESource
 
+Source for coordinating connections to the networking system in OpenEphys.
+
 #### OSControllerSource
+
+Source for coordinating connections to the Open Source Controller for Animal Research (OSCAR). Has functionality for digital and analog inputs and outputs.
 
 #### SerialSource
 
+Source for coordinating connections to serial devices.
+
 #### VideoSource
 
-#### WhiskerTouchScreenSource
+Source for coordinating video recording with Webcams. Generally intended for sole use with Video components.

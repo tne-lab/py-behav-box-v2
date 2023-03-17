@@ -257,21 +257,31 @@ Returns a dictionary describing all the variables used by the task. Variables ca
 
     init()
 
+Called when the task is first loaded into the chamber.
+
 #### start
 
     start()
+
+Called when the task begins.
 
 #### stop
 
     stop()
 
-#### resume
-
-    resume()
+Called when the task ends.
 
 #### pause
 
     pause()
+
+Called when the task is paused.
+
+#### resume
+
+    resume()
+
+Called when the task is resumed.
 
 #### is_complete
 
@@ -281,16 +291,25 @@ Returns a dictionary describing all the variables used by the task. Variables ca
 
 #### init_state
 
-    init_state(state)
+    init_state()
+
+Override to return the state the task should begin in (from the `States` enum).
 
 #### change_state
 
     change_state(state, metadata=None)
 
+Call to change the state the task is currently in. Metadata can be provided which will be passed to the EventLogger
+with the event information.
+
 #### time_elapsed
 
     time_elapsed()
 
+Returns the time that has passed in seconds (and fractions of a second) since the task began.
+
 #### time_in_state
 
     time_in_state()
+
+Returns the time that has passed in seconds (and fractions of a second) since the current state began.
