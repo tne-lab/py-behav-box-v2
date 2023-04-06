@@ -16,6 +16,8 @@ import matplotlib.pyplot as plt
 import matplotlib
 from sklearn.exceptions import NotFittedError
 
+from Tasks.Task import Task
+
 
 class PipeQueue:
     def __init__(self, *args):
@@ -112,16 +114,16 @@ class BayesContainer:
         self.outcome = np.append(self.outcome, outcome).reshape(-1, 1)
         self.params = np.append(self.params, [v for (k, v) in params.items() if k in self.param_ranges]).reshape(-1, len(self.param_ranges))
 
-    def save(self):
-        with open(self.path, 'wb') as f:
+    def save(self, subject):
+        with open(self.path + '/' + subject + '.dat', 'w+b') as f:
             pickle.dump(self, f)
 
     @staticmethod
-    def load(path):
+    def load(path, subject):
         if os.path.isfile(path):
             file_globals = runpy.run_path(path, {"BayesBuilder": BayesBuilder, "np": np})
-            if os.path.isfile(file_globals['bb'].path):
-                with open(file_globals['bb'].path, 'rb') as f:
+            if os.path.isfile(file_globals['bb'].path + '/' + subject + '.dat'):
+                with open(file_globals['bb'].path + '/' + subject + '.dat', 'rb') as f:
                     bb = pickle.load(f)
                     return bb
             else:
@@ -138,14 +140,15 @@ class BayesProcess(Process):
         self.inq = inq
         self.outq = outq
         self.bayes = None
+        self.subject = None
 
     def run(self):
         closing = False
         while not closing:
             command = self.inq.get()
-            print(command)
             if command['command'] == 'Register':
-                self.bayes = BayesContainer.load(command['file'])
+                self.subject = command['metadata']['subject']
+                self.bayes = BayesContainer.load(command['file'], self.subject)
                 self.bayes.figure = plt.figure()
                 plt.ion()
                 plt.show(block=False)
@@ -164,7 +167,7 @@ class BayesProcess(Process):
                 self.bayes.fit(refit_hyper=True)
                 self.bayes.plot()
             elif command['command'] == 'Save':
-                self.bayes.save()
+                self.bayes.save(self.subject)
             elif command['command'] == 'CloseComponent':
                 plt.close(self.bayes.figure)
             elif command['command'] == 'Close':
@@ -183,10 +186,10 @@ class BayesOptSource(Source):
         self.next_params = {}
         self.available = True
 
-    def register_component(self, _, component: Component) -> None:
+    def register_component(self, task: Task, component: Component) -> None:
         self.components[component.id] = component
         self.next_params[component.id] = None
-        self.outq.put({'command': 'Register', 'id': component.id, 'file': component.address})
+        self.outq.put({'command': 'Register', 'id': component.id, 'file': component.address, 'metadata': task.metadata})
 
     def write_component(self, component_id: str, msg: OrderedDict) -> None:
         self.outq.put(msg)
@@ -200,6 +203,8 @@ class BayesOptSource(Source):
         self.outq.put({'command': 'CloseComponent', 'id': component_id})
 
     def close_source(self) -> None:
+        for c in self.components.keys():
+            self.outq.put({'command': 'CloseComponent', 'id': c})
         self.outq.put({'command': 'Close'})
 
     def is_available(self):

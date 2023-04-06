@@ -207,6 +207,9 @@ class Task:
     def init(self) -> None:
         pass
 
+    def clear(self) -> None:
+        pass
+
     @abstractmethod
     def init_state(self) -> Enum:
         raise NotImplementedError
