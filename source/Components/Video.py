@@ -17,13 +17,15 @@ class Video(Component):
         super().__init__(source, component_id, component_address)
 
     def start(self) -> None:
-        self.name = str(time.time())
-        self.state = True
-        self.write(self.state)
+        if not self.state:
+            self.name = str(time.time())
+            self.state = True
+            self.write(self.state)
 
     def stop(self) -> None:
-        self.state = False
-        self.write(self.state)
+        if self.state:
+            self.state = False
+            self.write(self.state)
 
     @staticmethod
     def get_type() -> Component.Type:
