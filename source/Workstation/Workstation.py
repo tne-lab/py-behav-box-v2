@@ -177,7 +177,7 @@ class Workstation:
             self.ed.setIcon(QMessageBox.Critical)
             self.ed.setWindowTitle("Error adding task")
             if isinstance(e, pyberror.ComponentRegisterError):
-                self.ed.setText("A Component failed to register")
+                self.ed.setText("A Component failed to register\n"+traceback.format_exc())
             elif isinstance(e, pyberror.SourceUnavailableError):
                 self.ed.setText("A requested Source is currently unavailable")
             elif isinstance(e, pyberror.MalformedProtocolError):
@@ -244,6 +244,7 @@ class Workstation:
                     el.close_()
             del self.event_loggers[chamber]
         if chamber in self.tasks.keys():
+            self.tasks[chamber].clear()
             for c in self.tasks[chamber].components:
                 c.close()
             del self.tasks[chamber]

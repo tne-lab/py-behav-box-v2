@@ -18,6 +18,7 @@ class OSControllerSource(Source):
             self.client = context.socket(zmq.DEALER)
             self.client.setsockopt(zmq.RCVHWM, 0)
             self.client.setsockopt(zmq.SNDHWM, 0)
+            self.client.identity = ascii(id(self)).encode('ascii')
             self.client.connect("tcp://{}:{}".format(address, port))
             poll = zmq.Poller()
             poll.register(self.client, zmq.POLLIN)
