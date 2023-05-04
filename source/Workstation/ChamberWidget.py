@@ -1,6 +1,8 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, Tuple, List
 
+from PyQt5.QtCore import QRegExp
+
 from Utilities.Exceptions import AddTaskError
 
 if TYPE_CHECKING:
@@ -42,7 +44,10 @@ class ChamberWidget(QGroupBox):
         subject_box = QGroupBox('Subject')
         subject_box_layout = QHBoxLayout(self)
         subject_box.setLayout(subject_box_layout)
+        rx = QRegExp("^[_a-zA-Z]\\w*$")
+        validator = QRegExpValidator(rx, self)
         self.subject = QLineEdit(sn)
+        self.subject.setValidator(validator)
         self.subject.textChanged.connect(self.subject_changed)
         subject_box_layout.addWidget(self.subject)
         row1.addWidget(subject_box)
@@ -189,7 +194,14 @@ class ChamberWidget(QGroupBox):
         On click function for the play/pause button. Behavior is different if task has yet to be started, is currently running, or is paused.
         """
         if not self.task.started:  # If the task has yet to be started
-            if len(self.prompt) > 0:  # If there is a prompt that should be shown before the task starts
+            if len(self.subject.text()) == 0:
+                self.pd = QMessageBox()
+                self.pd.setIcon(QMessageBox.Critical)
+                self.pd.setText("Subject cannot be blank")
+                self.pd.setWindowTitle("Wait")
+                self.pd.setStandardButtons(QMessageBox.Abort)
+                self.pd.show()
+            elif len(self.prompt) > 0:  # If there is a prompt that should be shown before the task starts
                 self.pd = QMessageBox()
                 self.pd.setIcon(QMessageBox.Warning)
                 self.pd.setText(self.prompt)
