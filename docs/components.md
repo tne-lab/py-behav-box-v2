@@ -65,7 +65,7 @@ The `Component` class in the `Component` module is the super class for all compo
 
 #### \_\_init__
 
-    __init__(source, component_id, component_address)
+    __init__(source : Source, component_id : str, component_address : str)
 
 Constructor for a new component connecting to *Source* `source` registered with `component_id` at `component_address`.
 Values for `source`, `component_id`, `component_address` should be provided by local [AddressFiles](protocols_addressfiles.md#addressfiles).
@@ -88,7 +88,7 @@ types are shown below:
 
 #### get_type
 
-    get_type()
+    get_type() -> None
 
 Returns the component type as one of the symbolic names described in the `Type` class. This method must be overridden by 
 all subclasses of `Component`.
@@ -100,18 +100,13 @@ all subclasses of `Component`.
 
 #### get_state
 
-    get_type()
+    get_state() -> None
 
-Returns the state the component currently is in. This method must be overridden by all subclasses of `Component`.
-
-*Example override:*
-
-    def get_type(self):
-        return self.state   # Assuming the state variable was pre-initialized and modified by other methods
+Returns the state the component currently is in.
 
 #### read
     
-    read()
+    read() -> Any
 
 Queries the current value of the component from the source. The data type returned by `read` will depend
 on the source.
@@ -122,7 +117,7 @@ on the source.
 
 #### write
     
-    write(msg)
+    write(msg : Any) -> None
 
 Outputs a value via the source. The data type of `msg` will depend on the source.
 
@@ -132,7 +127,7 @@ Outputs a value via the source. The data type of `msg` will depend on the source
 
 #### close
 
-    close()
+    close() -> None
 
 Notifies the source that the component should be closed.
 
@@ -142,61 +137,222 @@ Notifies the source that the component should be closed.
 
 ### Component subclasses
 
+#### Output
+
+    class Output(Component)
+    Type: OUTPUT
+
+General purpose/non-specific output class. 
+
+*Methods:*
+
+`set(value : Any) -> None` Updates the state of the component based on `value`.
+
+*Attributes:*
+
+`state : Any` Current state value
+
+#### Input
+
+    class Input(Component)
+    Type: INPUT
+
+General purpose/non-specific input class.
+
+*Methods:*
+
+`check() -> Any` Queries and returns the current state of the component.
+
+*Attributes:*
+
+`state : Any` Current state value
+
+#### Both
+
+    class Both(Component)
+    Type: BOTH
+
+General purpose/non-specific class that supports inputs and outputs.
+
+*Methods:*
+
+`check() -> Any` Queries and returns the current state of the component.
+
+`set(value : Any) -> None` Updates the state of the component based on `value`.
+
+*Attributes:*
+
+`state : Any` Current state value
+
 #### Toggle
 
-    class Toggle(Component)
-    DIGITAL_OUTPUT
+    class Toggle(Output)
+    Type: DIGITAL_OUTPUT
 
 Toggles typically represent digital outputs like lights and motors and can be set to on or off states.
 
-*Example usage:*
+*Methods:*
 
-    self.house_light.toggle(True)   # where house_light is a Toggle object
+`toggle(on : bool) -> None` Set the on/off state of the toggle.
 
-#### TimedToggle
+*Attributes:*
 
-    class TimedToggle(Toggle)
-    DIGITAL_OUTPUT
-
-TimedToggles will only remain active for a set amount of time.
-
-*Example usage:*
-
-    self.food.toggle(0.7)   # where food is a TimedToggle object that should be active for 0.7s
+`state : bool` Current state value (active/inactive)
 
 #### BinaryInput
 
-    class BinaryInput(Component)
-    DIGITAL_INPUT
+    class BinaryInput(Input)
+    Type: DIGITAL_INPUT
 
 BinaryInputs represent inputs that can only be on or off like switches, IR sensors, or levers. The `check` method will
 indicate if the state has changed compared to the last time it was queried.
 
-*Example usage:*
+*Methods:*
 
-    value = self.poke.check()
-        if value == BinaryInput.ENTERED:
-            pass # Do something
-        elif value == BinaryInput.EXIT:
-            pass # Do something else
+`check() -> int` Checks for any changes in the state of the BinaryInput. Possible values are `NO_CHANGE` (0), `ENTERED` (1), or `EXIT` (2).
+
+`toggle(on : bool) -> None` It is possible to directly control the state of the input. This is intended to only be used with simulation.
+
+*Attributes:*
+
+`state : bool` Current state value (active/inactive)
+
+#### AnalogInput
+
+    class AnalogInput(Input)
+    Type: ANALOG_INPUT
+
+AnalogInputs represent inputs that can take on a continuous range of values like light, pressure, or temperature sensors.
+
+*Methods:*
+
+`check() -> float` Queries and returns the current value of the component.
+
+*Attributes:*
+
+`state : float` Current state value
+
+#### AnalogOutput
+
+    class AnalogOutput(Output)
+    Type: ANALOG_OUTPUT
+
+AnalogOutputs represent outputs that can take on a continuous range of values like intensity, frequency, and duration.
+
+*Methods:*
+
+`set(value : float) -> None` Updates the state of the component based on `value`.
+
+*Attributes:*
+
+`state : float` Current state value
+
+#### TimedToggle
+
+    class TimedToggle(Toggle)
+    Type: DIGITAL_OUTPUT
+
+TimedToggles will only remain active for a set amount of time.
+
+*Methods:*
+
+`toggle(on : Union[float, bool]) -> None` Set the on/off state of the toggle either as an active duration or a steady on/off value.
+
+*Attributes:*
+
+`count: int` Counter for number of instances a timed event has occurred
 
 #### OEBinaryInput
 
     class OEBinaryInput(BinaryInput)
-    DIGITAL_INPUT
+    Type: DIGITAL_INPUT
 
 OEBinaryInputs represent TTL broadcast events originating from [OpenEphys](https://open-ephys.github.io/gui-docs/User-Manual/Plugins/Event-Broadcaster.html).
 The class overrides the `check` method to handle the JSON data but has identical outputs to the standard BinaryInput.
 
-#### TouchScreen
+*Attributes:*
 
-    class TouchScreen(Component)
-    BOTH
+`rising: bool` Indicator for whether to respond to rising events
 
-TouchScreens are abstracted representations of touch screens that provide a framework for adding images to the screen (the output)
-and receiving touches (the input). The `add_image` and `remove_image` methods can be used to add or remove images from the screen
-which is updated via the `refresh` method. Touches can be received and handled via the `get_touches` and `handle` methods respectively.
+`falling: bool` Indicator for whether to respond to falling events
 
-*Example usage:*
+#### TouchBinaryInput
 
-    
+    class TouchBinaryInput(BinaryInput)
+    Type: DIGITAL_INPUT
+
+TouchBinaryInputs contain additional information about the location of an input for use with hardware like touchscreens. 
+
+*Attributes:*
+
+`definition: Any` Application specific description of the touch object
+
+`pos: (int, int)` Tuple indicating the last location touched
+
+#### Video
+
+    class Video(Both)
+    Type: BOTH
+
+Video components represent the "barebones" information necessary for recording a video file.
+
+*Methods:*
+
+`start() -> None` Starts a video recording
+
+`stop() -> None` Stops a video recording
+
+*Attributes:*
+
+`state: bool` Indicates if the video is currently being recorded
+
+`name: str` Represents the name for the saved video file. Default implementation uses the current timestamp as the name
+
+#### Stimmer
+
+    class Stimmer(Output)
+    Type: Output
+
+Stimmer is an abstract class to consolidate the basic functionality required for stimulation.
+
+*Methods:*
+
+`parametrize(pnum : int, outs : list[int], per : int, dur : int, amps : ndarray, durs : list[int]) -> None` 
+Defines a pulse train with ID `pnum`. The type of stimulation for each potential channel is indicated by a list of ints `outs`.
+The stimulation has a period of `per`. The pulse train itself is described by a set of stages with amplitudes `amps` and durations `durs`.
+The number of stages corresponds to the number of columns in `amps` which is equivalent to the length of `durs`. The number of rows in `amps` 
+corresponds to the number of channels. This format was inspired by programming for the [StimJim](https://bitbucket.org/natecermak/stimjim/src/master/).
+
+`start(pnum : int, stype: str) -> None` Starts the pulse train with ID `pnum`
+
+#### ParametricStim
+
+    class ParametricStim(Output)
+    Type: Output
+
+ParametricStim encapsulates behavior for a component that would accept a list of instructions to generate a stimulation waveform.
+The default configuration is readily compatible with the [StimJim](https://bitbucket.org/natecermak/stimjim/src/master/).
+
+*Methods:*
+
+`trigger(ichan : int, pnum : int, falling : int = 0) -> None` Configures input `ichan` on the component to trigger the stimulation
+pulse train with ID `pnum`. Defaults to trigger off a rising input but can be configured to falling inputs if `falling` is changed to 1.
+
+`start(pnum : int, stype: str = 'T') -> None` Starts the pulse train with ID `pnum`
+
+#### WaveformStim
+
+    class WaveformStim(Output)
+    Type: AnalogOutput
+
+WaveformStim defines a stimulation waveform as a matrix given configuration parameters that could be output using a device like a DAQ.
+
+*Methods:*
+
+`parametrize(pnum : int, _, per : int, dur : int, amps : ndarray, durs : list[int]) -> None` 
+Defines a pulse train with ID `pnum`.
+The stimulation has a period of `per`. The pulse train itself is described by a set of stages with amplitudes `amps` and durations `durs`.
+The number of stages corresponds to the number of columns in `amps` which is equivalent to the length of `durs`. The number of rows in `amps` 
+corresponds to the number of channels. This format was inspired by programming for the [StimJim](https://bitbucket.org/natecermak/stimjim/src/master/).
+
+`start(pnum : int, stype: str = None) -> None` Starts the pulse train with ID `pnum`

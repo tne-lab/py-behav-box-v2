@@ -259,6 +259,12 @@ Returns a dictionary describing all the variables used by the task. Variables ca
 
 Called when the task is first loaded into the chamber.
 
+#### clear
+
+    clear()
+
+Called when the task is cleared from the chamber.
+
 #### start
 
     start()
