@@ -28,12 +28,3 @@ class ParametricStim(Stimmer):
     def start(self, pnum: int, stype: str = "T") -> None:
         self.state = True
         self.source.write_component(self.id, "{}{}".format(stype, pnum))
-
-    def update_parameters(self, per: int, amps: np.ndarray, durs: list[int]) -> None:
-        stimulus = "F{}".format(per)
-        for i in range(amps.shape[1]):
-            stimulus += "; "
-            for j in range(amps.shape[0]):
-                stimulus += "{},".format(amps[j, i])
-            stimulus += "{}".format(durs[i])
-        self.source.write_component(self.id, stimulus)

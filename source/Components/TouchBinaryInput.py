@@ -14,7 +14,7 @@ class TouchBinaryInput(BinaryInput):
 
     def check(self) -> int:
         read = self.source.read_component(self.id)
-        if isinstance(read,tuple):
+        if isinstance(read, tuple):
             value = read[0]
             pos = read[1]
         else:

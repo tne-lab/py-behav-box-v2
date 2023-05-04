@@ -57,7 +57,7 @@ class Component:
         self.source = source  # The source that is used to identify the component
         self.state = None
 
-    def write(self, msg: Any):
+    def write(self, msg: Any) -> None:
         self.source.write_component(self.id, msg)
 
     def read(self) -> Any:

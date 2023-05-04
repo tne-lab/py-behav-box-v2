@@ -17,9 +17,6 @@ class Stimmer(Output):
     def start(self, pnum: int, stype: str = None) -> None:
         pass
 
-    def update_parameters(self, pnum: int, amps: np.ndarray, durs: list[int]):
-        pass
-
     @staticmethod
     def get_type() -> Component.Type:
         return Component.Type.OUTPUT
