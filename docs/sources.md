@@ -60,32 +60,63 @@ Returns true if the Source is active.
 
 #### EmptySource
 
+    class EmptySource()
+
 Default Source enabling simulated components from GUI.
 
 #### HikVisionSource
 
+    class HikVisionSource(ip : str, user : str, password : str)
+
 Source for coordinating video recording with HikVision CCTV systems. Generally intended for sole use with Video components.
+Recordings will start when the Video component is started and downloaded in a separate thread when the video is stopped.
+By default, the source will draw a small black rectangle in the bottom left of the video to assist with synchronization.
 
 #### NIDAQSource
+
+    class NIDAQSource(dev : str)
 
 Source for coordinating connections to National Instruments hardware. Has functionality for digital and analog inputs and outputs.
 
 #### WhiskerLineSource
 
+    class WhiskerLineSource(address : str ='localhost', port : int = 3233, whisker_path : str = r"C:\Program Files (x86)\WhiskerControl\WhiskerServer.exe")
+
 Communicates with digital input and output lines represented via a connection to Whisker.
 
+#### WhiskerTouchScreenSource
+
+    class WhiskerTouchScreenSource(address='localhost', port=3233, display_num=0, whisker_path=r"C:\Program Files (x86)\WhiskerControl\WhiskerServer.exe")
+
+Communicates with touchscreen objects represented via a connection to Whisker.
+
 #### OESource
+
+    class OESource(address : str, port : int, delay : int = 0)
 
 Source for coordinating connections to the networking system in OpenEphys.
 
 #### OSControllerSource
 
+    class OSControllerSource(address : str = '127.0.0.1', port : int = 9296)
+
 Source for coordinating connections to the Open Source Controller for Animal Research (OSCAR). Has functionality for digital and analog inputs and outputs.
 
 #### SerialSource
+
+    class SerialSource()
 
 Source for coordinating connections to serial devices.
 
 #### VideoSource
 
+    class VideoSource()
+
 Source for coordinating video recording with Webcams. Generally intended for sole use with Video components.
+
+#### BayesOptSource
+
+    class BayesOptSource()
+
+Source for coordinating selection of arbitrary parameters (like stimulation or task variables) according to an outcome of interest 
+using Bayesian optimization with gaussian process regression. Typically used with the general purpose `Both` component class.
