@@ -204,7 +204,7 @@ The methods detailed below are contained in the `Task` class.
 
 #### get_components
 
-    get_components()
+    get_components() -> Dict[str, List[Type[Component]]]
 
 Returns a dictionary describing all the components used by the task. Each component name is linked to a list of Component types.
 
@@ -224,7 +224,7 @@ Returns a dictionary describing all the components used by the task. Each compon
 
 #### get_constants
 
-    get_constants()
+    get_constants() -> Dict[str, Any]
 
 Returns a dictionary describing all the constants used by the task. Constants can be of any type and modified using [Protocols]().
 
@@ -239,7 +239,7 @@ Returns a dictionary describing all the constants used by the task. Constants ca
 
 #### get_variables
 
-    get_variables()
+    get_variables() -> Dict[str, Any]
 
 Returns a dictionary describing all the variables used by the task. Variables can be of any type.
 
@@ -255,67 +255,67 @@ Returns a dictionary describing all the variables used by the task. Variables ca
 
 #### init
 
-    init()
+    init() -> None
 
 Called when the task is first loaded into the chamber.
 
 #### clear
 
-    clear()
+    clear() -> None
 
 Called when the task is cleared from the chamber.
 
 #### start
 
-    start()
+    start() -> None
 
 Called when the task begins.
 
 #### stop
 
-    stop()
+    stop() -> None
 
 Called when the task ends.
 
 #### pause
 
-    pause()
+    pause() -> None
 
 Called when the task is paused.
 
 #### resume
 
-    resume()
+    resume() -> None
 
 Called when the task is resumed.
 
 #### is_complete
 
-    is_complete()
+    is_complete() -> bool
 
 ### Control and timing methods
 
 #### init_state
 
-    init_state()
+    init_state() -> Enum
 
 Override to return the state the task should begin in (from the `States` enum).
 
 #### change_state
 
-    change_state(state, metadata=None)
+    change_state(state : Enum, metadata : Any = None)
 
 Call to change the state the task is currently in. Metadata can be provided which will be passed to the EventLogger
 with the event information.
 
 #### time_elapsed
 
-    time_elapsed()
+    time_elapsed() -> float
 
 Returns the time that has passed in seconds (and fractions of a second) since the task began.
 
 #### time_in_state
 
-    time_in_state()
+    time_in_state() -> float
 
 Returns the time that has passed in seconds (and fractions of a second) since the current state began.
