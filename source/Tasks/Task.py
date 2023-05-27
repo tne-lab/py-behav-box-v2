@@ -1,10 +1,11 @@
 from __future__ import annotations
 import time
+import traceback
 from abc import ABCMeta, abstractmethod
 import importlib
 from enum import Enum
 import runpy
-from typing import Any, Type, overload
+from typing import Any, Type, overload, Dict, List
 
 from Components.Component import Component
 from Events.StateChangeEvent import StateChangeEvent
@@ -13,6 +14,7 @@ from Events.FinalStateEvent import FinalStateEvent
 from Sources.Source import Source
 from Utilities.AddressFile import AddressFile
 from Workstation.Workstation import Workstation
+import Utilities.Exceptions as pyberror
 
 
 class Task:
@@ -56,11 +58,11 @@ class Task:
         PAUSED = 0
 
     @overload
-    def __init__(self, ws: Workstation, metadata: dict[str, Any], sources: dict[str, Source], address_file: str = "", protocol: str = ""):
+    def __init__(self, ws: Workstation, metadata: Dict[str, Any], sources: Dict[str, Source], address_file: str = "", protocol: str = ""):
         ...
 
     @overload
-    def __init__(self, task: Task, components: list[Component], protocol: str):
+    def __init__(self, task: Task, components: List[Component], protocol: str):
         ...
 
     def __init__(self, *args):
@@ -78,10 +80,6 @@ class Task:
 
         # Get all default values for task constants
         for key, value in self.get_constants().items():
-            setattr(self, key, value)
-
-        # Get all default values for task variables
-        for key, value in self.get_variables().items():
             setattr(self, key, value)
 
         # If this task is being created as part of a Task sequence
@@ -104,8 +102,13 @@ class Task:
                     self.components.append(component)
             # Load protocol is provided
             if len(args) > 2 and args[2] is not None:
-                for key in args[2]:
-                    setattr(self, key, args[2][key])
+                try:
+                    file_globals = runpy.run_path(args[2])
+                except:
+                    raise pyberror.MalformedProtocolError
+                for cons in file_globals['protocol']:
+                    if hasattr(self, cons):
+                        setattr(self, cons, file_globals['protocol'][cons])
         else:  # If this is a standard Task
             self.ws = args[0]
             self.metadata = args[1]
@@ -120,7 +123,10 @@ class Task:
 
             # Open the provided AddressFile
             if isinstance(address_file, str) and len(address_file) > 0:
-                file_globals = runpy.run_path(address_file, {"AddressFile": AddressFile})
+                try:
+                    file_globals = runpy.run_path(address_file, {"AddressFile": AddressFile})
+                except:
+                    raise pyberror.MalformedAddressFileError
                 for cid in file_globals['addresses'].addresses:
                     if cid in component_definition:
                         comps = file_globals['addresses'].addresses[cid]
@@ -128,28 +134,35 @@ class Task:
                             # Import and instantiate the indicated Component with the provided ID and address
                             component_type = getattr(importlib.import_module("Components." + comp.component_type), comp.component_type)
                             if issubclass(component_type, component_definition[cid][i]):
-                                component = component_type(sources[comp.source_name], "{}-{}-{}".format(cid, str(self.metadata["chamber"]), str(i)), comp.component_address)
-                                if comp.metadata is not None:
-                                    component.initialize(comp.metadata)
-                                sources[comp.source_name].register_component(self, component)
-                                # If the ID has yet to be registered
-                                if not hasattr(self, cid):
-                                    # If the Component is part of a list
-                                    if len(comps) > 1:
-                                        # Create the list and add the Component at the specified index
-                                        component_list = [None] * int(len(comps))
+                                if sources[comp.source_name].is_available():
+                                    component = component_type(sources[comp.source_name], "{}-{}-{}".format(cid, str(self.metadata["chamber"]), str(i)), comp.component_address)
+                                    if comp.metadata is not None:
+                                        component.initialize(comp.metadata)
+                                    try:
+                                        sources[comp.source_name].register_component(self, component)
+                                    except:
+                                        print(traceback.format_exc())
+                                        raise pyberror.ComponentRegisterError
+                                    # If the ID has yet to be registered
+                                    if not hasattr(self, cid):
+                                        # If the Component is part of a list
+                                        if len(comps) > 1:
+                                            # Create the list and add the Component at the specified index
+                                            component_list = [None] * int(len(comps))
+                                            component_list[i] = component
+                                            setattr(self, cid, component_list)
+                                        else:  # If the Component is unique
+                                            setattr(self, cid, component)
+                                    else:  # If the Component is part of an already registered list
+                                        # Update the list with the Component at the specified index
+                                        component_list = getattr(self, cid)
                                         component_list[i] = component
                                         setattr(self, cid, component_list)
-                                    else:  # If the Component is unique
-                                        setattr(self, cid, component)
-                                else:  # If the Component is part of an already registered list
-                                    # Update the list with the Component at the specified index
-                                    component_list = getattr(self, cid)
-                                    component_list[i] = component
-                                    setattr(self, cid, component_list)
-                                self.components.append(component)
+                                    self.components.append(component)
+                                else:
+                                    raise pyberror.SourceUnavailableError
                             else:
-                                raise InvalidComponentTypeError
+                                raise pyberror.InvalidComponentTypeError
 
             for name in component_definition:
                 for i in range(len(component_definition[name])):
@@ -177,13 +190,24 @@ class Task:
 
             # If a Protocol is provided, replace all indicated variables with the values from the Protocol
             if isinstance(protocol, str) and len(protocol) > 0:
-                file_globals = runpy.run_path(protocol)
+                try:
+                    file_globals = runpy.run_path(protocol)
+                except:
+                    raise pyberror.MalformedProtocolError
                 for cons in file_globals['protocol']:
                     if hasattr(self, cons):
                         setattr(self, cons, file_globals['protocol'][cons])
+
+        # Get all default values for task variables
+        for key, value in self.get_variables().items():
+            setattr(self, key, value)
+
         self.init()
 
     def init(self) -> None:
+        pass
+
+    def clear(self) -> None:
         pass
 
     @abstractmethod
@@ -212,7 +236,6 @@ class Task:
         self.paused = True
         self.time_into_trial = self.time_in_state()
         self.events.append(StateChangeEvent(self, self.state, self.SessionStates.PAUSED, None))
-        self.ws.log_events(self.metadata["chamber"])
         self.pause()
 
     def pause(self) -> None:
@@ -238,11 +261,14 @@ class Task:
     def stop(self) -> None:
         pass
 
-    def main_loop__(self) -> None:
-        self.cur_time = time.time()
-        self.main_loop()
-
     def main_loop(self) -> None:
+        self.cur_time = time.time()
+        self.handle_input()
+        if hasattr(self, self.state.name):
+            state_method = getattr(self, self.state.name)
+            state_method()
+
+    def handle_input(self) -> None:
         pass
 
     def time_elapsed(self) -> float:
@@ -252,21 +278,17 @@ class Task:
         return self.cur_time - self.entry_time
 
     # noinspection PyMethodMayBeStatic
-    def get_constants(self) -> dict[str, Any]:
+    def get_constants(self) -> Dict[str, Any]:
         return {}
 
     # noinspection PyMethodMayBeStatic
-    def get_variables(self) -> dict[str, Any]:
+    def get_variables(self) -> Dict[str, Any]:
         return {}
 
     @staticmethod
-    def get_components() -> dict[str, list[Type[Component]]]:
+    def get_components() -> Dict[str, List[Type[Component]]]:
         return {}
 
     @abstractmethod
     def is_complete(self) -> bool:
         raise NotImplementedError
-
-
-class InvalidComponentTypeError:
-    pass

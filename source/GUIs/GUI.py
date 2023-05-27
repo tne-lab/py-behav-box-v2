@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 if TYPE_CHECKING:
     from Events.Event import Event
     from Tasks.Task import Task
@@ -20,15 +20,18 @@ class GUI:
         self.task = task
 
     def draw(self) -> None:
-        self.task_gui.fill(Colors.darkgray)
+        if self.task.is_complete():
+            self.task_gui.fill(Colors.green)
+        else:
+            self.task_gui.fill(Colors.darkgray)
         for el in self.get_elements():
             el.draw()
 
     @abstractmethod
-    def get_elements(self) -> list[Element]:
+    def get_elements(self) -> List[Element]:
         raise NotImplementedError
 
-    def handle_events(self, events: list[Event]) -> None:
+    def handle_events(self, events: List[Event]) -> None:
         for event in events:
             for el in self.get_elements():
                 el.handle_event(event)

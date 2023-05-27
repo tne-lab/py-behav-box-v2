@@ -21,7 +21,11 @@ class CSVEventLogger(FileEventLogger):
 
     def start(self) -> None:
         super(CSVEventLogger, self).start()
-        # self.log_file.write("Subject,{}".format(self.task.))
+        self.log_file.write("Subject,{}".format(self.task.metadata["subject"])+"\n")
+        self.log_file.write("Task,{}".format(type(self.task).__name__)+"\n")
+        self.log_file.write("Chamber,{}".format(self.task.metadata["chamber"] + 1)+"\n")
+        self.log_file.write("Protocol,{}".format(self.task.metadata["protocol"])+"\n")
+        self.log_file.write("AddressFile,{}".format(self.task.metadata["address_file"])+"\n\n")
         self.log_file.write("Trial,Time,Type,Code,State,Metadata\n")
 
     def log_events(self, events: list[Event]) -> None:

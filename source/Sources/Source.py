@@ -25,6 +25,9 @@ class Source:
         Sends data msg to the component described by component_id
     """
 
+    def __init__(self):
+        self.components = {}
+
     @abstractmethod
     def register_component(self, task: Task, component: Component) -> None:
         raise NotImplementedError
@@ -35,10 +38,12 @@ class Source:
     def close_component(self, component_id: str) -> None:
         pass
 
-    @abstractmethod
     def read_component(self, component_id: str) -> Any:
         pass
 
-    @abstractmethod
     def write_component(self, component_id: str, msg: Any) -> None:
         pass
+
+    @abstractmethod
+    def is_available(self):
+        raise NotImplementedError

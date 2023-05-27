@@ -1,5 +1,10 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Tuple, List
+
+from PyQt5.QtCore import QRegExp
+
+from Utilities.Exceptions import AddTaskError
+
 if TYPE_CHECKING:
     from Workstation.WorkstationGUI import WorkstationGUI
     from Events.EventLogger import EventLogger
@@ -19,7 +24,7 @@ from Events.GUIEventLogger import GUIEventLogger
 
 
 class ChamberWidget(QGroupBox):
-    def __init__(self, wsg: WorkstationGUI, chamber_index: int, task_index: int, sn: str = "default", afp: str = "", pfp: str = "", prompt: str = "", event_loggers: tuple[list[EventLogger], list[list[str]]] = ([], []),
+    def __init__(self, wsg: WorkstationGUI, chamber_index: str, task_index: int, sn: str = "default", afp: str = "", pfp: str = "", prompt: str = "", event_loggers: Tuple[List[EventLogger], List[List[str]]] = ([], []),
                  parent=None):
         super(ChamberWidget, self).__init__(parent)
         self.fd = None
@@ -39,7 +44,10 @@ class ChamberWidget(QGroupBox):
         subject_box = QGroupBox('Subject')
         subject_box_layout = QHBoxLayout(self)
         subject_box.setLayout(subject_box_layout)
+        rx = QRegExp("^[_a-zA-Z]\\w*$")
+        validator = QRegExpValidator(rx, self)
         self.subject = QLineEdit(sn)
+        self.subject.setValidator(validator)
         self.subject.textChanged.connect(self.subject_changed)
         subject_box_layout.addWidget(self.subject)
         row1.addWidget(subject_box)
@@ -50,9 +58,8 @@ class ChamberWidget(QGroupBox):
         task_box.setLayout(task_box_layout)
         self.task_name = QComboBox()
         tasks = []
-        for f in pkgutil.iter_modules(['Tasks']):  # Get all classes in the Tasks folder
-            if not f.name == "Task" and not f.name == "TaskSequence":  # Ignore the abstract class
-                tasks.append(f.name)
+        for f in pkgutil.iter_modules(['Local/Tasks']):  # Get all classes in the Tasks folder
+            tasks.append(f.name)
         self.task_name.addItems(tasks)
         self.task_name.setCurrentIndex(task_index)
         task_box_layout.addWidget(self.task_name)
@@ -135,7 +142,7 @@ class ChamberWidget(QGroupBox):
 
         self.setLayout(self.chamber)
         self.logger_params = event_loggers[1]
-        self.workstation.add_task(int(chamber_index) - 1, self.task_name.currentText(), self.address_file_path.text(),
+        self.workstation.add_task(int(chamber_index) - 1, self.task_name.currentText(), self.subject.text(), self.address_file_path.text(),
                                   self.protocol_path.text(), self.event_loggers)
         self.task = self.workstation.tasks[int(chamber_index) - 1]
         self.output_file_changed()
@@ -144,12 +151,16 @@ class ChamberWidget(QGroupBox):
         """
         Updates the representation of the Task with the Workstation based on any changes made in the GUI.
         """
-        self.workstation.remove_task(int(self.chamber_id.text()) - 1, False)
-        self.workstation.add_task(int(self.chamber_id.text()) - 1, self.task_name.currentText(),
-                                  self.address_file_path.text(),
-                                  self.protocol_path.text(), self.event_loggers)
-        self.task = self.workstation.tasks[int(self.chamber_id.text()) - 1]
-        self.output_file_changed()
+        rt = self.workstation.remove_task(int(self.chamber_id.text()) - 1, False)
+        rt.join()
+        try:
+            self.workstation.add_task(int(self.chamber_id.text()) - 1, self.task_name.currentText(),
+                                      self.subject.text(), self.address_file_path.text(),
+                                      self.protocol_path.text(), self.event_loggers)
+            self.task = self.workstation.tasks[int(self.chamber_id.text()) - 1]
+            self.output_file_changed()
+        except AddTaskError:
+            self.wsg.remove_task(int(self.chamber_id.text()))
 
     def get_file_path(self, le: QLineEdit, dir_type: str):
         """
@@ -183,14 +194,22 @@ class ChamberWidget(QGroupBox):
         On click function for the play/pause button. Behavior is different if task has yet to be started, is currently running, or is paused.
         """
         if not self.task.started:  # If the task has yet to be started
-            if len(self.prompt) > 0:  # If there is a prompt that should be shown before the task starts
+            if len(self.subject.text()) == 0:
+                self.pd = QMessageBox()
+                self.pd.setIcon(QMessageBox.Critical)
+                self.pd.setText("Subject cannot be blank")
+                self.pd.setWindowTitle("Wait")
+                self.pd.setStandardButtons(QMessageBox.Abort)
+                self.pd.show()
+            elif len(self.prompt) > 0:  # If there is a prompt that should be shown before the task starts
                 self.pd = QMessageBox()
                 self.pd.setIcon(QMessageBox.Warning)
                 self.pd.setText(self.prompt)
                 self.pd.setWindowTitle("Wait")
                 self.pd.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
                 self.pd.setDefaultButton(QMessageBox.Cancel)
-                self.pd.accept = self.play_helper
+                self.pd.buttons()[0].clicked.connect(self.play_helper)
+                self.pd.show()
             else:
                 self.play_helper()
         elif self.task.paused:  # If the task is currently paused
@@ -288,14 +307,19 @@ class ChamberWidget(QGroupBox):
         if not os.path.exists("{}/py-behav/Configurations/".format(desktop)):
             os.makedirs("{}/py-behav/Configurations/".format(desktop))
         # Create a file dialog so the user can choose the save location
-        file_name = QFileDialog.getSaveFileName(self, 'Save Configuration',
-                                                "{}/py-behav/Configurations/{}-{}-{}.csv".format(desktop,
-                                                                                                 self.chamber_id.text(),
-                                                                                                 self.subject.text(),
-                                                                                                 self.task_name.currentText()),
-                                                '*.csv')
-        if len(file_name[0]) > 1:
-            with open(file_name[0], "w", newline='') as out:  # Save all configuration variables
+        self.fd = QFileDialog(self)
+        self.fd.setFileMode(QFileDialog.AnyFile)
+        self.fd.setViewMode(QFileDialog.List)
+        self.fd.setAcceptMode(QFileDialog.AcceptSave)
+        self.fd.setDirectory("{}/py-behav/Configurations/".format(desktop))
+        self.fd.selectFile('{}-{}-{}.csv'.format(self.chamber_id.text(), self.subject.text(), self.task_name.currentText()))
+        self.fd.setWindowTitle('Save Configuration')
+        self.fd.accept = self.save_configuration_
+        self.fd.show()
+
+    def save_configuration_(self) -> None:
+        if len(self.fd.selectedFiles()[0]) > 0:  # If a file was selected
+            with open(self.fd.selectedFiles()[0], "w", newline='') as out:  # Save all configuration variables
                 w = csv.writer(out)
                 w.writerow(["Chamber", self.chamber_id.text()])  # Index of the chamber
                 w.writerow(["Subject", self.subject.text()])  # The name of the subject
@@ -309,6 +333,7 @@ class ChamberWidget(QGroupBox):
                     el_text += type(self.event_loggers[i]).__name__ + "((" + ''.join(
                         f"||{w}||" for w in self.logger_params[i - 1]) + "))"
                 w.writerow(["EventLoggers", el_text])
+        super(QFileDialog, self.fd).accept()
 
     def edit_configuration(self) -> None:
         self.ld = ConfigurationDialog(self)

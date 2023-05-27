@@ -25,9 +25,27 @@ class EventLogger:
     def __init__(self):
         self.task = None
         self.event_count = 0
+        self.started = False
+
+    def start_(self):
+        self.event_count = 0
+        self.start()
+        self.started = True
 
     def start(self) -> None:
-        self.event_count = 0
+        pass
+
+    def stop_(self) -> None:
+        self.started = False
+        self.stop()
+
+    def stop(self) -> None:
+        pass
+
+    def close_(self):
+        if self.started:
+            self.stop_()
+        self.close()
 
     def close(self) -> None:
         pass

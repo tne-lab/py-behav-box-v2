@@ -26,6 +26,7 @@ class OENetworkLogger(GUIEventLogger):
     def __init__(self, address: str, port: str, nbits: int = 8):
         super().__init__()
         context = zmq.Context()
+        self.fd = None
         self.event_count = 0
         self.socket = context.socket(zmq.REQ)
         self.socket.set(zmq.REQ_RELAXED, True)
@@ -130,10 +131,18 @@ class OENetworkLogger(GUIEventLogger):
 
     def get_file_path(self) -> None:
         desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
-        file_name = QFileDialog.getExistingDirectory(self.oe_group, 'Select Folder', "{}/py-behav/{}/".format(desktop,
-                                                                                                              self.cw.task_name.currentText()))
-        if len(file_name) > 0:
-            self.rec_dir.setText(file_name)
+        self.fd = QFileDialog(self.oe_group)
+        self.fd.setFileMode(QFileDialog.Directory)
+        self.fd.setViewMode(QFileDialog.List)
+        self.fd.setDirectory("{}/py-behav/{}/".format(desktop, self.cw.task_name.currentText()))
+        self.fd.setWindowTitle('Select Folder')
+        self.fd.accept = self.open_folder
+        self.fd.show()
+
+    def open_folder(self):
+        if len(self.fd.selectedFiles()[0]) > 1:
+            self.rec_dir.setText(self.fd.selectedFiles()[0])
+        super(QFileDialog, self.fd).accept()
 
     def send_ttl_event_code(self, ec: int) -> None:
         # Convert the code to binary

@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict
 if TYPE_CHECKING:
     from Sources.Source import Source
 
@@ -55,20 +55,23 @@ class Component:
         self.id = component_id  # The unique identifier for the component or set of related components
         self.address = component_address  # The platform-specific address for the component
         self.source = source  # The source that is used to identify the component
+        self.state = None
 
-    def write(self, msg: Any):
+    def write(self, msg: Any) -> None:
         self.source.write_component(self.id, msg)
 
     def read(self) -> Any:
         return self.source.read_component(self.id)
 
-    def initialize(self, metadata: dict) -> None:
+    def initialize(self, metadata: Dict) -> None:
         for key in metadata:
             setattr(self, key, metadata[key])
 
-    @abstractmethod
     def get_state(self) -> Any:
-        raise NotImplementedError
+        return self.state
+
+    def reset(self) -> None:
+        pass
 
     @staticmethod
     @abstractmethod

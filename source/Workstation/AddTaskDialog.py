@@ -16,6 +16,7 @@ class AddTaskDialog(QDialog):
     def __init__(self, wsg: WorkstationGUI):
         super().__init__()
 
+        self.fd = None
         self.wsg = wsg
         self.setWindowTitle("Add Task")
 
@@ -43,9 +44,8 @@ class AddTaskDialog(QDialog):
         task_box.setLayout(task_box_layout)
         self.task = QComboBox()
         self.tasks = []
-        for f in pkgutil.iter_modules(['Tasks']):
-            if not f.name == "Task" and not f.name == "TaskSequence":
-                self.tasks.append(f.name)
+        for f in pkgutil.iter_modules(['Local/Tasks']):
+            self.tasks.append(f.name)
         self.task.addItems(self.tasks)
         task_box_layout.addWidget(self.task)
         self.layout.addWidget(task_box)
@@ -65,7 +65,7 @@ class AddTaskDialog(QDialog):
                 # Check for each relevant row in the configuration
                 for row in config_reader:
                     if row[0] == "Chamber":
-                        chamber = int(row[1])
+                        chamber = row[1]
                     elif row[0] == "Subject":
                         subject = row[1]
                     elif row[0] == "Task":
@@ -95,9 +95,17 @@ class AddTaskDialog(QDialog):
 
     def load_config(self) -> None:
         desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
-        file_name = QFileDialog.getOpenFileName(self, 'Select File',
-                                                "{}/py-behav/Configurations/".format(desktop),
-                                                '*.csv')
-        if len(file_name[0]) > 1:
-            self.configuration_path = file_name[0]
+        self.fd = QFileDialog(self)
+        self.fd.setFileMode(QFileDialog.ExistingFile)
+        self.fd.setViewMode(QFileDialog.List)
+        self.fd.setNameFilter("CSV files (*.csv)")
+        self.fd.setDirectory("{}/py-behav/Configurations/".format(desktop))
+        self.fd.setWindowTitle('Select File')
+        self.fd.accept = self.open_file
+        self.fd.show()
+
+    def open_file(self):
+        if len(self.fd.selectedFiles()[0]) > 1:
+            self.configuration_path = self.fd.selectedFiles()[0]
+            super(QFileDialog, self.fd).accept()
             self.accept()

@@ -37,42 +37,40 @@ class NIDAQSource(Source):
     """
 
     def __init__(self, dev):
+        super(NIDAQSource, self).__init__()
         self.dev = dev
         try:
             dev_obj = system.Device(dev)
             dev_obj.reset_device()
             self.available = True
         except:
-            print("Error when loading DAQ")
             self.available = False
         self.tasks = {}
-        self.components = {}
         self.streams = {}
         self.ao_task = None
         self.ao_stream = None
         self.ao_inds = {}
 
     def register_component(self, _, component):
-        if self.available:
-            if component.get_type() == Component.Type.DIGITAL_OUTPUT:
-                task = nidaqmx.Task()
-                task.do_channels.add_do_chan(self.dev + component.address, line_grouping=LineGrouping.CHAN_FOR_ALL_LINES)
-                task.start()
-                self.tasks[component.id] = task
-            elif component.get_type() == Component.Type.DIGITAL_INPUT:
-                task = nidaqmx.Task()
-                task.di_channels.add_di_chan(self.dev + component.address, line_grouping=LineGrouping.CHAN_FOR_ALL_LINES)
-                task.start()
-                self.tasks[component.id] = task
-            elif component.get_type() == Component.Type.ANALOG_OUTPUT:
-                if self.ao_task is None:
-                    self.ao_task = nidaqmx.Task()
-                self.ao_task.ao_channels.add_ao_voltage_chan(self.dev + component.address)
-                self.ao_stream = stream_writers.AnalogMultiChannelWriter(self.ao_task.out_stream)
-                self.ao_inds[component.id] = len(self.ao_inds)
-            # elif component.get_type() == Component.Type.ANALOG_INPUT:
-            #     task.ai_channels.add_ai_voltage_chan(self.dev + component.address)
-            #     self.streams[component.id] = stream_writers.AnalogSingleChannelReader(task.in_stream)
+        if component.get_type() == Component.Type.DIGITAL_OUTPUT:
+            task = nidaqmx.Task()
+            task.do_channels.add_do_chan(self.dev + component.address, line_grouping=LineGrouping.CHAN_FOR_ALL_LINES)
+            task.start()
+            self.tasks[component.id] = task
+        elif component.get_type() == Component.Type.DIGITAL_INPUT:
+            task = nidaqmx.Task()
+            task.di_channels.add_di_chan(self.dev + component.address, line_grouping=LineGrouping.CHAN_FOR_ALL_LINES)
+            task.start()
+            self.tasks[component.id] = task
+        elif component.get_type() == Component.Type.ANALOG_OUTPUT:
+            if self.ao_task is None:
+                self.ao_task = nidaqmx.Task()
+            self.ao_task.ao_channels.add_ao_voltage_chan(self.dev + component.address)
+            self.ao_stream = stream_writers.AnalogMultiChannelWriter(self.ao_task.out_stream)
+            self.ao_inds[component.id] = len(self.ao_inds) - 1
+        # elif component.get_type() == Component.Type.ANALOG_INPUT:
+        #     task.ai_channels.add_ai_voltage_chan(self.dev + component.address)
+        #     self.streams[component.id] = stream_writers.AnalogSingleChannelReader(task.in_stream)
         self.components[component.id] = component
 
     def close_source(self):
@@ -114,3 +112,6 @@ class NIDAQSource(Source):
                                                         samps_per_chan=msg.shape[1])
                 self.ao_stream.write_many_sample(np.squeeze(output))
                 self.ao_task.start()
+
+    def is_available(self):
+        return self.available

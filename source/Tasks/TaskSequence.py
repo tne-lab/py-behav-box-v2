@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from enum import Enum
-from typing import overload, Any, Type
+from typing import overload, Any, Type, Dict, List, Tuple
 
 from Components.Component import Component
 from Sources.Source import Source
@@ -14,11 +14,11 @@ class TaskSequence(Task):
     __metaclass__ = ABCMeta
 
     @overload
-    def __init__(self, ws: Workstation, metadata: dict[str, Any], sources: dict[str, Source], address_file: str = "", protocol: str = ""):
+    def __init__(self, ws: Workstation, metadata: Dict[str, Any], sources: Dict[str, Source], address_file: str = "", protocol: str = ""):
         ...
 
     @overload
-    def __init__(self, task: Task, components: list[Component], protocol: str):
+    def __init__(self, task: Task, components: List[Component], protocol: str):
         ...
 
     def __init__(self, *args):
@@ -31,14 +31,14 @@ class TaskSequence(Task):
 
     @staticmethod
     @abstractmethod
-    def get_tasks() -> list[Type[Task]]:
+    def get_tasks() -> List[Type[Task]]:
         raise NotImplementedError
 
     @staticmethod
-    def get_sequence_components() -> dict[str, list[Type[Component]]]:
+    def get_sequence_components() -> Dict[str, List[Type[Component]]]:
         return {}
 
-    def get_components(self) -> dict[str, list[Type[Component]]]:
+    def get_components(self) -> Dict[str, List[Type[Component]]]:
         components = {}
         for task in self.get_tasks():
             sub_components = task.get_components()
@@ -60,10 +60,10 @@ class TaskSequence(Task):
             self.init_protocol = res[1]
 
     @abstractmethod
-    def init_sequence(self) -> tuple[Type[Task], str]:
+    def init_sequence(self) -> Tuple[Type[Task], str]:
         raise NotImplementedError
 
-    def switch_task(self, task: Task, seq_state: Enum, protocol: str, metadata: Any = None) -> None:
+    def switch_task(self, task: Type[Task], seq_state: Enum, protocol: str, metadata: Any = None) -> None:
         self.cur_task.stop()
         self.log_sequence_events()
         self.change_state(seq_state, metadata)
@@ -77,10 +77,17 @@ class TaskSequence(Task):
             event.entry_time += self.sub_start_time - self.start_time
         self.events.extend(sub_events)
 
-    def main_loop__(self) -> None:
+    def main_loop(self) -> None:
         self.cur_time = time.time()
-        self.cur_task.main_loop__()
-        self.main_loop()
+        self.cur_task.cur_time = self.cur_time
+        self.cur_task.handle_input()
+        self.handle_input()
+        if hasattr(self.cur_task, self.cur_task.state.name):
+            state_method = getattr(self.cur_task, self.cur_task.state.name)
+            state_method()
+        if hasattr(self, self.state.name):
+            state_method = getattr(self, self.state.name)
+            state_method()
         self.log_sequence_events()
 
     def start_sub(self) -> None:

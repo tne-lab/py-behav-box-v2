@@ -3,8 +3,8 @@
 ## Overview
 
 Behavioral tasks in pybehave are implemented as state machines, the basic elements of which are states and components. To create
-a task, the user develops a *task definition file* written in Python in the *py-behav-box-v2/source/Tasks* folder. Task 
-definitions are hardware-agnostic and solely program for task logic and timing, interacting with hardware or implementation specific
+a task, the user develops a *task definition file* written in Python. Tasks are associated with a Git submodule contained in the *py-behav-box-v2/source/Local* directory
+which must have a nested *Tasks* folder. Task definitions are hardware-agnostic and solely program for task logic and timing, interacting with hardware or implementation specific
 [Sources](sources.md) and [Events](events.md). Pybehave tasks are objects that are all subclasses of the base `Task` class with the ability to 
 override functionality as necessary.
 
@@ -17,6 +17,9 @@ with each state having a name and a corresponding ID:
         INITIATION = 0
         RESPONSE = 1
         INTER_TRIAL_INTERVAL = 2
+
+Each State should have a corresponding method included in the task definition which handles the logic for that state and
+transitions. These methods are described in further detail below.
 
 ## Components
 
@@ -67,7 +70,7 @@ in this example. Constants can be accessed in task code as attributes of the tas
 
 ## Variables
 
-Variables are used to track task features like trial counts, reward counts, or a block number. The default values for variables
+Variables are used to track task features like trial counts, reward counts, or the value of particular inputs. The default values for variables
 should be configured using the `get_variables` method:
 
     def get_variables(self):
@@ -132,8 +135,9 @@ An example of how to log such an Input event is shown below:
 
 Every task begins with an initialization via `init` that will contain any code that should be run when the task is first loaded
 but before starting. When the task is started the `start` method is called. Unless stopped using `stop`
-or paused using `pause`, the task will continuously call the `main_loop` method until it reaches the completion criteria defined
-by the method `is_complete`. All of these methods can be overridden by the task to control behavior over its lifetime.
+or paused using `pause`, the task will continuously call the `handle_input` method followed by the current task state method
+until it reaches the completion criteria defined by the method `is_complete`. All of these methods can be overridden by the 
+task to control behavior over its lifetime.
 
 
 ### start, stop, resume, and pause
@@ -143,25 +147,35 @@ of the task. Four methods exist for this purpose: `start`, `stop`, `resume`, and
 these methods unless particular behavior is required at these moments. No additional code needs to be written to handle task 
 timing when using the `resume`, and `pause` methods.
 
-### main_loop
+### handle_input
 
-The `main_loop` method will be repeatedly called while the task is still active and is responsible for implementing all task logic.
-`main_loop` is typically composed of a series of `if` statements corresponding to each task state:
+The `handle_input` method is responsible for querying the values of all input components. These values can be stored in a
+variable for future use, logged as events, or responded to directly. An example method which logs events and updates variables
+is shown below:
 
-    def main_loop(self):
+    def handle_input(self):
         food_lever = self.food_lever.check()
-        pressed = False
+        self.pressed = False
         if food_lever == BinaryInput.ENTERED:
-            pressed = True
-        if self.state == self.States.REWARD_AVAILABLE:
-            if pressed:
-                self.food.toggle(self.dispense_time)
-                self.change_state(self.States.REWARD_UNAVAILABLE)
-        elif self.state == self.States.REWARD_UNAVAILABLE:
-            if self.time_in_state() > self.lockout:
-                self.change_state(self.States.REWARD_AVAILABLE)
+            self.events.append(InputEvent(self, self.Inputs.LEVER_PRESSED))
+            self.pressed = True
+            self.presses += 1
+        elif food_lever == BinaryInput.EXIT:
+            self.events.append(InputEvent(self, self.Inputs.LEVER_DEPRESSED))
 
-The above example shows how `main_loop` could be used for a bar press-reward task with a timeout period.
+### State methods
+
+State methods are repeatedly called while the task is in the corresponding state. All logic for that particular state
+should be handled by the state method along with transitions to subsequent states. The example below shows how a state
+method could be used to reward following a bar press and transition to a lockout state:
+
+    def REWARD_AVAILABLE(self):
+        if self.pressed:
+            self.food.toggle(self.dispense_time)
+            if self.reward_lockout:
+                self.lockout = self.reward_lockout_min + random.random() * (
+                            self.reward_lockout_max - self.reward_lockout_min)
+                self.change_state(self.States.REWARD_UNAVAILABLE)
 
 ### is_complete
 
@@ -177,6 +191,11 @@ All pybehave tasks have GUIs written using [pygame](https://www.pygame.org/) fun
 task features if necessary. Task GUIs are written as Python files in the *source/GUIs* folder and must be named TASK_NAMEGUI.py.
 Further details on GUI development are available on the GUI [page](guis.md).
 
+## Overriding tasks
+
+Tasks can also be subclassed if a new Task has a high degree of overlap with an existing one. Each of the methods mentioned
+above can be overriden and augmented as needed.
+
 ## Class reference
 
 The methods detailed below are contained in the `Task` class.
@@ -185,7 +204,7 @@ The methods detailed below are contained in the `Task` class.
 
 #### get_components
 
-    get_components()
+    get_components() -> Dict[str, List[Type[Component]]]
 
 Returns a dictionary describing all the components used by the task. Each component name is linked to a list of Component types.
 
@@ -205,7 +224,7 @@ Returns a dictionary describing all the components used by the task. Each compon
 
 #### get_constants
 
-    get_constants()
+    get_constants() -> Dict[str, Any]
 
 Returns a dictionary describing all the constants used by the task. Constants can be of any type and modified using [Protocols]().
 
@@ -220,7 +239,7 @@ Returns a dictionary describing all the constants used by the task. Constants ca
 
 #### get_variables
 
-    get_variables()
+    get_variables() -> Dict[str, Any]
 
 Returns a dictionary describing all the variables used by the task. Variables can be of any type.
 
@@ -236,42 +255,67 @@ Returns a dictionary describing all the variables used by the task. Variables ca
 
 #### init
 
-    init()
+    init() -> None
+
+Called when the task is first loaded into the chamber.
+
+#### clear
+
+    clear() -> None
+
+Called when the task is cleared from the chamber.
 
 #### start
 
-    start()
+    start() -> None
+
+Called when the task begins.
 
 #### stop
 
-    stop()
+    stop() -> None
 
-#### resume
-
-    resume()
+Called when the task ends.
 
 #### pause
 
-    pause()
+    pause() -> None
+
+Called when the task is paused.
+
+#### resume
+
+    resume() -> None
+
+Called when the task is resumed.
 
 #### is_complete
 
-    is_complete()
+    is_complete() -> bool
 
 ### Control and timing methods
 
 #### init_state
 
-    init_state(state)
+    init_state() -> Enum
+
+Override to return the state the task should begin in (from the `States` enum).
 
 #### change_state
 
-    change_state(state, metadata=None)
+    change_state(state : Enum, metadata : Any = None)
+
+Call to change the state the task is currently in. Metadata can be provided which will be passed to the EventLogger
+with the event information.
 
 #### time_elapsed
 
-    time_elapsed()
+    time_elapsed() -> float
+
+Returns the time that has passed in seconds (and fractions of a second) since the task began.
 
 #### time_in_state
 
-    time_in_state()
+    time_in_state() -> float
+
+Returns the time that has passed in seconds (and fractions of a second) since the current state began.

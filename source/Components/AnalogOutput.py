@@ -7,26 +7,17 @@ if TYPE_CHECKING:
     from Sources.Source import Source
 
 from Components.Component import Component
-import time
 
 
-class Video(Component):
+class AnalogOutput(Output):
+
     def __init__(self, source: Source, component_id: str, component_address: str):
-        self.state = False
-        self.name = None
         super().__init__(source, component_id, component_address)
+        self.state = 0
 
-    def start(self) -> None:
-        if not self.state:
-            self.name = str(time.time())
-            self.state = True
-            self.write(self.state)
-
-    def stop(self) -> None:
-        if self.state:
-            self.state = False
-            self.write(self.state)
+    def set(self, value: float) -> None:
+        super(AnalogOutput, self).set(value)
 
     @staticmethod
     def get_type() -> Component.Type:
-        return Component.Type.BOTH
+        return Component.Type.ANALOG_OUTPUT

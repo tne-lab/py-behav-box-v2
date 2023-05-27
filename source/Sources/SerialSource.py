@@ -6,8 +6,8 @@ from Sources.Source import Source
 class SerialSource(Source):
 
     def __init__(self):
+        super(SerialSource, self).__init__()
         self.coms = {}
-        self.components = {}
 
     def register_component(self, _, component):
         self.coms[component.id] = serial.Serial(port=component.address, baudrate=component.baudrate, timeout=component.timeout, write_timeout=0)
@@ -31,3 +31,6 @@ class SerialSource(Source):
         else:
             term = ""
         self.coms[component_id].write(bytes(str(msg) + term, 'utf-8'))
+
+    def is_available(self):
+        return True

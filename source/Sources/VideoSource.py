@@ -6,6 +6,7 @@ import time
 import cv2
 
 from Sources.Source import Source
+from Utilities.Exceptions import ComponentRegisterError
 
 
 class VideoSource(Source):
@@ -48,21 +49,21 @@ class VideoSource(Source):
     """
 
     def __init__(self):
-        self.components = {}
+        super(VideoSource, self).__init__()
+        self.available = True
         self.caps = {}
         self.outs = {}
         self.out_paths = {}
         self.cur_frames = {}
         self.frame_times = {}
         self.do_close = {}
-        self.available = True
         self.tasks = {}
         vt = threading.Thread(target=self.run, args=[])
         vt.start()
 
     def register_component(self, task, component):
         self.components[component.id] = component
-        self.caps[component.id] = cv2.VideoCapture(int(component.address), cv2.CAP_DSHOW)
+        self.caps[component.id] = VideoThread(component.address)
         self.outs[component.id] = None
         self.cur_frames[component.id] = None
         self.frame_times[component.id] = time.perf_counter()
@@ -71,7 +72,10 @@ class VideoSource(Source):
         self.out_paths[component.id] = "{}\\py-behav\\{}\\Data\\{{}}\\{{}}\\".format(desktop, type(task).__name__)
         self.tasks[component.id] = task
         if not self.caps[component.id].isOpened():
-            print('error opening vid')
+            self.do_close[component.id] = True
+            raise ComponentRegisterError
+        else:
+            self.caps[component.id].start()
 
     def close_source(self):
         self.available = False
@@ -102,16 +106,13 @@ class VideoSource(Source):
                     del self.do_close[vid]
                     del self.tasks[vid]
                 # If the camera is available and more than a frame has passed since the last acquisition
-                elif self.caps[vid].isOpened() and time.perf_counter() - self.frame_times[vid] > 1 / int(
-                        self.components[vid].fr):
-                    ret, self.cur_frames[vid] = self.caps[vid].read()  # Acquire the frame
-                    # If a frame was returned
-                    if ret:
+                elif self.caps[vid].isOpened():
+                    while time.perf_counter() - self.frame_times[vid] > 1 / int(self.components[vid].fr):
                         # Update the time when the last frame was acquired
                         self.frame_times[vid] = self.frame_times[vid] + 1 / int(self.components[vid].fr)
                         # Create a window for the video frame
                         cv2.namedWindow(self.components[vid].address)
-                        cv2.imshow(self.components[vid].address, self.cur_frames[vid])
+                        cv2.imshow(self.components[vid].address, self.caps[vid].frame)
 
                         # If video should be saved
                         if self.components[vid].get_state():
@@ -120,11 +121,9 @@ class VideoSource(Source):
                                 fourcc = cv2.VideoWriter_fourcc(*'XVID')  # for AVI files
                                 self.outs[vid] = cv2.VideoWriter(
                                     self.out_paths[vid].format(self.tasks[vid].metadata["subject"], datetime.now().strftime("%m-%d-%Y")) + self.components[vid].name + ".avi", fourcc,
-                                    int(self.components[vid].fr), (
-                                        int(self.caps[vid].get(3)),
-                                        int(self.caps[vid].get(4))))
+                                    int(self.components[vid].fr), self.caps[vid].dims)
                             # Write the current frame to the output file
-                            self.outs[vid].write(self.cur_frames[vid])
+                            self.outs[vid].write(self.caps[vid].frame)
                         # If the video should not be saved and there is an active VIdeoWriter, close the writer
                         elif self.outs[vid] is not None:
                             self.outs[vid].release()
@@ -144,3 +143,37 @@ class VideoSource(Source):
             self.caps[vid].release()
             if self.outs[vid] is not None:
                 self.outs[vid].release()
+
+    def is_available(self):
+        return self.available
+
+
+class VideoThread(threading.Thread):
+
+    def __init__(self, src):
+        super(VideoThread, self).__init__()
+        self.stream = cv2.VideoCapture(int(src), cv2.CAP_DSHOW)
+        (self.grabbed, self.frame) = self.stream.read()
+        self.dims = (int(self.stream.get(3)), int(self.stream.get(4)))
+        self.stopped = False
+
+    def get(self):
+        while not self.stopped:
+            if not self.grabbed:
+                self.stop()
+            else:
+                (self.grabbed, self.frame) = self.stream.read()
+
+    def start(self):
+        threading.Thread(target=self.get, args=()).start()
+        return self
+
+    def stop(self):
+        self.stopped = True
+
+    def isOpened(self):
+        return self.stream.isOpened()
+
+    def release(self):
+        self.stop()
+        self.stream.release()

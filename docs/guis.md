@@ -38,7 +38,7 @@ The full list of default Elements and their constructors is provided in the [pac
 
 ## GUI classes
 
-All Tasks must have a GUI class saved in the `source/GUIs` folder named *TASK_NAMEGUI*. GUIs are subclasses of the base `GUI`
+All Tasks must have a GUI class saved in the *GUIs* folder of the *Local* Git submodule `source/Local/GUIs` named *TASK_NAMEGUI*. GUIs are subclasses of the base `GUI`
 class and are constructed with reference to a pygame `Screen` object named `task_gui` and the corresponding Task object `task`:
 
     def __init__(self, task_gui, task):
@@ -138,26 +138,54 @@ Additionally calls the standard GUI methods on its `sub_gui` attribute.
 
 #### BarPressElement
 
+    class BarPressElement(tg: GUI, x: int, y: int, w: int, h: int, comp: BinaryInput = None, SF: float = None)
+
 #### ButtonElement
+
+    class ButtonElement(tg: GUI, x: int, y: int, w: int, h: int, text: str, f_size: int = 12, SF: float = None)
 
 #### CircleLightElement
 
+    class CircleLightElement(tg: GUI, x: int, y: int, radius: int, on_color: tuple[int, int, int] = Colors.lightgray, background_color: tuple[int, int, int] = Colors.darkgray, comp: Toggle = None, SF: float = None)
+
 #### FanElement
+
+    class FanElement(tg: GUI, x: int, y: int, radius: int, comp: Toggle = None)
 
 #### FoodLightElement
 
+    class FoodLightElement(tg: GUI, x: int, y: int, w: int, h: int, on_color: tuple[int, int, int] = Colors.lightgray, comp: Toggle = None, line_color: tuple[int, int, int] = Colors.black, SF: float = None)
+
 #### IndicatorElement
+
+    class IndicatorElement(tg: GUI, x: int, y: int, radius: int, on_color: tuple[int, int, int] = Colors.green, off_color: tuple[int, int, int] = Colors.red)
 
 #### InfoBoxElement
 
+    class InfoBoxElement(tg: GUI, x: int, y: int, w: int, h: int, label: str, label_pos: str, text: list[str], f_size: int = 14, SF: float = None)
+
 #### LabelElement
+
+    class LabelElement(tg: GUI, x: int, y: int, w: int, h: int, text: str, f_size: int = 20, SF: float = None)
 
 #### NosePokeElement
 
-#### RectangleLightElement
+    class NosePokeElement(tg: GUI, x: int, y: int, radius: int, comp: BinaryInput = None, SF: float = None)
 
 #### ShockElement
 
+    class ShockElement(tg: GUI, x: int, y: int, radius: int, color: tuple[int, int, int] = (255, 255, 0), comp: Toggle = None)
+
 #### SoundElement
 
+    class SoundElement(tg: GUI, x: int, y: int, radius: int, comp: Toggle = None)
+
 ### Helper functions
+
+#### draw_filled_arc
+
+    draw_filled_arc(screen: pygame.Surface, center: tuple[int, int], arc_angle: float, r: float, init_angle: float, col: tuple[int, int, int], ns: int = 100) -> None
+
+#### draw_light
+
+    draw_light(screen: pygame.Surface, color: Tuple[int, int, int], line_color: Tuple[int, int, int], rect: pygame.Rect, cx: int, cy: int, radius: float) -> None
