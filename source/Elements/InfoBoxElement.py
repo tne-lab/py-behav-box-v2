@@ -10,8 +10,8 @@ from Elements.Element import Element
 
 class InfoBoxElement(Element):
 
-    def __init__(self, screen: GUI, x: int, y: int, w: int, h: int, label: str, label_pos: str, text: list[str], f_size: int = 14, SF: float = None):
-        super().__init__(screen, x, y, pygame.Rect(x, y, w, h), SF)
+    def __init__(self, tg: GUI, x: int, y: int, w: int, h: int, label: str, label_pos: str, text: list[str], f_size: int = 14, SF: float = None):
+        super().__init__(tg, x, y, pygame.Rect(x, y, w, h), SF)
         self.label_pos = label_pos  # 'TOP','LEFT','RIGHT', or 'BOTTOM'
         self.surface_color = (255, 255, 255)
         bw = int(self.SF*2)
