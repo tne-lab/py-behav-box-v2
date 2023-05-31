@@ -1,5 +1,5 @@
 import socket
-import subprocess
+import os
 import threading
 import time
 import traceback
@@ -29,9 +29,9 @@ class WhiskerLineSource(Source):
             win32gui.EnumWindows(look_for_program, 'WhiskerServer')
             if not IsWhiskerRunning:
                 ws = whisker_path
-                window = subprocess.Popen(ws)
+                os.startfile(ws)
                 time.sleep(2)
-                print("WHISKER server started", window)
+                print("WHISKER server started")
                 win32gui.EnumWindows(look_for_program, 'WhiskerServer')
             if IsWhiskerRunning:
                 self.available = True
@@ -71,7 +71,14 @@ class WhiskerLineSource(Source):
                                                                           component.id).encode('utf-8'))
             self.vals[component.id] = False
         else:
-            self.client.send('LineClaim {} -ResetOff\n'.format(component.address).encode('utf-8'))
+            if isinstance(component.address, list):
+                addr = component.address
+            else:
+                addr = [component.address]
+            msg = ""
+            for a in addr:
+                msg += 'LineClaim {} -ResetOff\n'.format(a)
+            self.client.send(msg.encode('utf-8'))
 
     def close_source(self):
         self.running.set()
@@ -80,10 +87,17 @@ class WhiskerLineSource(Source):
         return self.vals[component_id]
 
     def write_component(self, component_id, msg):
-        if msg:
-            self.client.send('LineSetState {} on\n'.format(self.components[component_id].address).encode('utf-8'))
+        if isinstance(self.components[component_id].address, list):
+            addr = self.components[component_id].address
         else:
-            self.client.send('LineSetState {} off\n'.format(self.components[component_id].address).encode('utf-8'))
+            addr = [self.components[component_id].address]
+        out = ""
+        for a in addr:
+            if msg:
+                out += 'LineSetState {} on\n'.format(a)
+            else:
+                out += 'LineSetState {} off\n'.format(a)
+        self.client.send(out.encode('utf-8'))
 
     def is_available(self):
         return self.available

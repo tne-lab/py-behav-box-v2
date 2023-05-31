@@ -41,6 +41,7 @@ class TimedToggle(Toggle):
         self.event = threading.Event()
 
     def toggle(self, dur: Union[float, bool]) -> None:
+        self.count += 1
         if isinstance(dur, float):
             if not self.state:
                 toggle_thread = threading.Thread(target=lambda: self.toggle_(dur), args=())
@@ -56,7 +57,6 @@ class TimedToggle(Toggle):
     def toggle_(self, dur: float) -> None:
         self.source.write_component(self.id, True)
         self.state = True
-        self.count += 1
         self.event.wait(dur)
         self.source.write_component(self.id, False)
         self.state = False
