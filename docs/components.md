@@ -325,12 +325,12 @@ corresponds to the number of channels. This format was inspired by programming f
 
 `start(pnum : int, stype: str) -> None` Starts the pulse train with ID `pnum`
 
-#### ParametricStim
+#### StimJim
 
-    class ParametricStim(Output)
+    class StimJim(Output)
     Type: Output
 
-ParametricStim encapsulates behavior for a component that would accept a list of instructions to generate a stimulation waveform.
+StimJim encapsulates behavior for a component that would accept a list of instructions to generate a stimulation waveform.
 The default configuration is readily compatible with the [StimJim](https://bitbucket.org/natecermak/stimjim/src/master/).
 
 *Methods:*

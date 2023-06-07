@@ -1,7 +1,7 @@
 import collections
 import pickle
 import runpy
-from multiprocessing import Process, Pipe
+from multiprocessing import Process
 from typing import OrderedDict
 import os.path
 
@@ -17,24 +17,7 @@ import matplotlib
 from sklearn.exceptions import NotFittedError
 
 from Tasks.Task import Task
-
-
-class PipeQueue:
-    def __init__(self, *args):
-        self.out_pipe, self.in_pipe = Pipe(*args)
-
-    def poll(self):
-        return self.out_pipe.poll()
-
-    def put(self, item):
-        self.in_pipe.send(item)
-
-    def get(self):
-        return self.out_pipe.recv()
-
-    def close(self):
-        self.out_pipe.close()
-        self.in_pipe.close()
+from Utilities.PipeQueue import PipeQueue
 
 
 class BayesBuilder:
@@ -182,7 +165,6 @@ class BayesOptSource(Source):
         self.outq = PipeQueue()
         self.bayesprocess = BayesProcess(self.outq, self.inq)
         self.bayesprocess.start()
-        self.components = {}
         self.next_params = {}
         self.available = True
 

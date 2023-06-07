@@ -1,5 +1,10 @@
 from __future__ import annotations
+
+import threading
 from typing import TYPE_CHECKING
+
+from Utilities.dictionary_to_save_string import dictionary_to_save_string
+
 if TYPE_CHECKING:
     from Events.Event import Event
 
@@ -23,7 +28,7 @@ from Workstation.IconButton import IconButton
 
 class OENetworkLogger(GUIEventLogger):
 
-    def __init__(self, address: str, port: str, nbits: int = 8):
+    def __init__(self, address: str, port: str):
         super().__init__()
         context = zmq.Context()
         self.fd = None
@@ -31,7 +36,6 @@ class OENetworkLogger(GUIEventLogger):
         self.socket = context.socket(zmq.REQ)
         self.socket.set(zmq.REQ_RELAXED, True)
         self.socket.connect("tcp://" + address + ":" + str(port))
-        self.nbits = nbits
 
         self.oe_group = QGroupBox('Open Ephys')
         oe_group_layout = QHBoxLayout(self.oe_group)
@@ -144,24 +148,28 @@ class OENetworkLogger(GUIEventLogger):
             self.rec_dir.setText(self.fd.selectedFiles()[0])
         super(QFileDialog, self.fd).accept()
 
-    def send_ttl_event_code(self, ec: int) -> None:
-        # Convert the code to binary
-        bc = [int(x) for x in bin(ec)[2:]]
-        bc.reverse()
-        # Activate the TTL channels according to the bit sequence
-        for i in range(len(bc)):
+    def send_ttl_event(self, ec: int, ttl_type: str | float) -> None:
+        if ttl_type == 'on':
             self.socket.send(
-                b"".join([b'TTL Channel=', str(i + 1).encode('ascii'), b' on=', str(bc[i]).encode('ascii')]))
+                b"".join([b'TTL Channel=', str(ec).encode('ascii'), b' on=1']))
             self.receive()
-        # Deactivate remaining TTL channels
-        for i in range(self.nbits - len(bc)):
-            self.socket.send(b"".join([b'TTL Channel=', str(i + len(bc) + 1).encode('ascii'), b' on=0']))
+        elif ttl_type == 'off':
+            self.socket.send(
+                b"".join([b'TTL Channel=', str(ec).encode('ascii'), b' on=0']))
             self.receive()
-        # Wait and send TTL OFF on all channels
-        time.sleep(0.005)
-        for i in range(self.nbits):
-            self.socket.send(b"".join([b'TTL Channel=', str(i + 1).encode('ascii'), b' on=0']))
-            self.receive()
+        else:
+            t = threading.Thread(target=self.send_ttl_event_, args=[ec, ttl_type])
+            t.start()
+
+    def send_ttl_event_(self, ec: int, dur: float) -> None:
+        # Activate the TTL channels according to the bit sequence
+        self.socket.send(
+            b"".join([b'TTL Channel=', str(ec).encode('ascii'), b' on=1']))
+        self.receive()
+        time.sleep(dur)
+        self.socket.send(
+            b"".join([b'TTL Channel=', str(ec).encode('ascii'), b' on=0']))
+        self.receive()
 
     def send_string(self, msg: str) -> None:
         self.socket.send(msg.encode("utf-8"))
@@ -188,27 +196,41 @@ class OENetworkLogger(GUIEventLogger):
                     self.send_string("stopRecord")
             elif isinstance(e, InitialStateEvent):
                 self.event_count += 1
-                self.send_string("{},{},Entry,{},{},{}".format(self.event_count, e.entry_time,
-                                                               e.initial_state.value, e.initial_state.name,
-                                                               str(e.metadata)))
+                if e.metadata is not None and 'ttl' in e.metadata and e.metadata['ttl']:
+                    self.send_ttl_event(e.initial_state.value, 'on')
+                else:
+                    self.send_string("{},{},Entry,{},{},{}".format(self.event_count, e.entry_time,
+                                                                   e.initial_state.value, e.initial_state.name,
+                                                                   dictionary_to_save_string(e.metadata)))
             elif isinstance(e, FinalStateEvent):
                 self.event_count += 1
-                self.send_string("{},{},Exit,{},{},{}".format(self.event_count, e.entry_time,
-                                                              e.final_state.value, e.final_state.name,
-                                                              str(e.metadata)))
+                if e.metadata is not None and 'ttl' in e.metadata and e.metadata['ttl']:
+                    self.send_ttl_event(e.final_state.value, 'off')
+                else:
+                    self.send_string("{},{},Exit,{},{},{}".format(self.event_count, e.entry_time,
+                                                                  e.final_state.value, e.final_state.name,
+                                                                  dictionary_to_save_string(e.metadata)))
             elif isinstance(e, StateChangeEvent):
                 self.event_count += 1
-                self.send_string("{},{},Exit,{},{},{}".format(self.event_count, e.entry_time,
-                                                              e.initial_state.value, e.initial_state.name,
-                                                              str(e.metadata)))
-                self.event_count += 1
-                self.send_string("{},{},Entry,{},{},{}".format(self.event_count, e.entry_time,
-                                                               e.new_state.value, e.new_state.name, str(None)))
+                if e.metadata is not None and 'ttl' in e.metadata and e.metadata['ttl']:
+                    self.send_ttl_event(e.initial_state.value, 'off')
+                    self.event_count += 1
+                    self.send_ttl_event(e.new_state.value, 'on')
+                else:
+                    self.send_string("{},{},Exit,{},{},{}".format(self.event_count, e.entry_time,
+                                                                  e.initial_state.value, e.initial_state.name,
+                                                                  dictionary_to_save_string(e.metadata)))
+                    self.event_count += 1
+                    self.send_string("{},{},Entry,{},{},{}".format(self.event_count, e.entry_time,
+                                                                   e.new_state.value, e.new_state.name, str(None)))
             elif isinstance(e, InputEvent):
                 self.event_count += 1
-                self.send_string("{},{},Input,{},{},{}".format(self.event_count, e.entry_time,
-                                                               e.input_event.value, e.input_event.name,
-                                                               str(e.metadata)))
+                if e.metadata is not None and 'ttl' in e.metadata and e.metadata['ttl']:
+                    self.send_ttl_event(e.input_event.value, e.metadata['ttl'])
+                else:
+                    self.send_string("{},{},Input,{},{},{}".format(self.event_count, e.entry_time,
+                                                                   e.input_event.value, e.input_event.name,
+                                                                   dictionary_to_save_string(e.metadata)))
 
     def close(self) -> None:
         self.socket.close()

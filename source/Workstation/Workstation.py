@@ -305,6 +305,7 @@ class Workstation:
         Master event loop for all Tasks. Handles Task logic and Task Events.
         """
         cps = 0
+        t = time.perf_counter()
         while not self.stopping:
             cps += 1
             events = pygame.event.get()  # Get mouse/keyboard events
@@ -322,6 +323,10 @@ class Workstation:
                                 self.wsg.chambers[key].stop()
                     elif key in self.thread_events and not self.thread_events[key][2].is_set():
                         self.thread_events[key][2].set()
+            if time.perf_counter() - t > 1:
+                print(cps)
+                t = time.perf_counter()
+                cps = 0
             time.sleep(0)
 
     def gui_loop(self) -> None:
