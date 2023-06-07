@@ -190,7 +190,7 @@ class OENetworkLogger(GUIEventLogger):
                     self.send_string("stopAcquisition")
                 elif e.event_type == 'startRecord':
                     self.send_string("startRecord RecDir={} prependText={} appendText={}".format(self.rec_dir.text(),
-                                                                                                 self.pre.text() + e.metadata.pre if e.metadata is not None and "pre" in e.metadata else self.pre.text(),
+                                                                                                 self.pre.text() + e.metadata["pre"] if e.metadata is not None and "pre" in e.metadata else self.pre.text(),
                                                                                                  self.app.text()))
                 elif e.event_type == 'stopRecord':
                     self.send_string("stopRecord")
