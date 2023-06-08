@@ -13,6 +13,7 @@ from Events.InitialStateEvent import InitialStateEvent
 from Events.FinalStateEvent import FinalStateEvent
 from Sources.Source import Source
 from Utilities.AddressFile import AddressFile
+from Workstation.TaskThread import TaskThread
 from Workstation.Workstation import Workstation
 import Utilities.Exceptions as pyberror
 
@@ -87,7 +88,7 @@ class Task:
             # Assign variables from base Task
             self.ws = args[0].ws
             self.metadata = args[0].metadata
-            self.components = []
+            self.components = {}
             for component in args[1]:
                 if component.id.split('-')[0] in component_definition:
                     if not hasattr(self, component.id.split('-')[0]):
@@ -99,7 +100,7 @@ class Task:
                         else:
                             setattr(self, component.id.split('-')[0],
                                     [getattr(self, component.id.split('-')[0]), component])
-                    self.components.append(component)
+                    self.components[component.id] = component
             # Load protocol is provided
             if len(args) > 2 and args[2] is not None:
                 try:
@@ -119,7 +120,7 @@ class Task:
                 address_file = args[3]
             if len(args) >= 5:
                 protocol = args[4]
-            self.components = []
+            self.components = {}
 
             # Open the provided AddressFile
             if isinstance(address_file, str) and len(address_file) > 0:
@@ -158,7 +159,7 @@ class Task:
                                         component_list = getattr(self, cid)
                                         component_list[i] = component
                                         setattr(self, cid, component_list)
-                                    self.components.append(component)
+                                    self.components[cid] = component
                                 else:
                                     raise pyberror.SourceUnavailableError
                             else:
@@ -186,7 +187,7 @@ class Task:
                             component_list = getattr(self, name)
                             component_list[i] = component
                             setattr(self, name, component_list)
-                        self.components.append(component)
+                        self.components[component.id] = component
 
             # If a Protocol is provided, replace all indicated variables with the values from the Protocol
             if isinstance(protocol, str) and len(protocol) > 0:
@@ -214,8 +215,10 @@ class Task:
     def init_state(self) -> Enum:
         raise NotImplementedError
 
-    def change_state(self, new_state: Enum, metadata: Any = None) -> None:
+    def change_state(self, new_state: Enum, timeout: float = None, metadata: Any = None) -> None:
         self.entry_time = self.cur_time
+        if timeout is not None:
+            self.task_thread.put(TaskThread.TimeoutEvent(timeout))
         # Add a StateChangeEvent to the events list indicated the pair of States representing the transition
         self.events.append(StateChangeEvent(self, self.state, new_state, metadata))
         self.state = new_state
