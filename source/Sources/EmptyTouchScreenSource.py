@@ -13,9 +13,9 @@ class EmptyTouchScreenSource(Source):
         close_source()
             No functionality
         read_component(component_id)
-            Returns the stored value for the component with id component_id
+            Returns the stored response for the component with id component_id
         write_component(component_id, msg)
-            Changes the stored value of the component with id component_id to msg
+            Changes the stored response of the component with id component_id to msg
         """
 
     def __init__(self, display_size):

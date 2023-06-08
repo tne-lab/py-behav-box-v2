@@ -36,8 +36,8 @@ class NosePokeElement(Element):
 
     def mouse_up(self, event: pygame.event.Event) -> None:
         self.entered = False
-        self.comp.toggle(self.entered)
+        self.component_changed(self.comp, self.entered)
 
     def mouse_down(self, event: pygame.event.Event) -> None:
         self.entered = True
-        self.comp.toggle(self.entered)
+        self.component_changed(self.comp, self.entered)

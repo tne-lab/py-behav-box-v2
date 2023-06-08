@@ -12,9 +12,9 @@ from Components.Component import Component
 class WaveformStim(Stimmer):
 
     def __init__(self, source: Source, component_id: str, component_address: str):
+        super().__init__(source, component_id, component_address)
         self.state = False
         self.configs = {}
-        super().__init__(source, component_id, component_address)
         self.sr = None
 
     def parametrize(self, pnum: int, _, per: int, dur: int, amps: np.ndarray, durs: list[int]) -> None:

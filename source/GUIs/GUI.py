@@ -31,7 +31,6 @@ class GUI:
     def get_elements(self) -> List[Element]:
         raise NotImplementedError
 
-    def handle_events(self, events: List[Event]) -> None:
-        for event in events:
-            for el in self.get_elements():
-                el.handle_event(event)
+    def handle_event(self, event: Event) -> None:
+        for el in self.get_elements():
+            el.handle_event(event)

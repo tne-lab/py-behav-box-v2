@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import queue
 import threading
 import time
 from typing import TYPE_CHECKING, List
+
+from Workstation.TaskThread import TaskThread
 
 if TYPE_CHECKING:
     from Events.EventLogger import EventLogger
@@ -38,8 +41,7 @@ from screeninfo import get_monitors
 class Workstation:
 
     def __init__(self):
-        self.tasks = {}
-        self.event_loggers = {}
+        self.task_threads = {}
 
         # Core application details
         QCoreApplication.setOrganizationName("TNEL")
@@ -93,17 +95,16 @@ class Workstation:
             self.compute_chambergui()
 
         self.ed = None
-        self.guis = {}
         app = QApplication(sys.argv)
         self.wsg = WorkstationGUI(self)
-        self.thread_events = {}
         self.event_notifier = threading.Event()
+        self.gui_notifier = threading.Event()
         self.stopping = False
-        guithread = threading.Thread(target=lambda: self.gui_loop())
+        guithread = threading.Thread(target=self.gui_loop)
         guithread.start()
-        taskthread = threading.Thread(target=lambda: self.loop())
-        taskthread.start()
-        eventthread = threading.Thread(target=lambda: self.event_loop())
+        gui_event_thread = threading.Thread(target=self.gui_event_loop)
+        gui_event_thread.start()
+        eventthread = threading.Thread(target=self.event_loop)
         eventthread.start()
         atexit.register(lambda: self.exit_handler())
         signal.signal(signal.SIGTERM, self.exit_handler)
@@ -152,25 +153,10 @@ class Workstation:
         task_event_loggers : list
             The list of EventLoggers for the task
         """
-        # Import the selected Task
-        task_module = importlib.import_module("Local.Tasks." + task_name)
-        task = getattr(task_module, task_name)
         metadata = {"chamber": chamber, "subject": subject_name, "protocol": protocol, "address_file": address_file}
         try:
-            self.tasks[chamber] = task(self, metadata, self.sources, address_file, protocol)  # Create the task
-            self.event_loggers[chamber] = task_event_loggers
-            self.thread_events[chamber] = (threading.Event(), threading.Event(), threading.Event(), threading.Event(),
-                                           threading.Event(), threading.Event())
-            for logger in task_event_loggers:
-                logger.set_task(self.tasks[chamber])
-            # Import the Task GUI
-            gui = getattr(importlib.import_module("Local.GUIs." + task_name + "GUI"), task_name + "GUI")
-            # Position the GUI in pygame
-            col = chamber % self.n_col
-            row = math.floor(chamber / self.n_col)
-            # Create the GUI
-            self.guis[chamber] = gui(self.task_gui.subsurface(col * self.w, row * self.h, self.w, self.h),
-                                     self.tasks[chamber])
+            self.task_threads[chamber] = TaskThread(self, task_name, metadata, queue.Queue(), task_event_loggers)  # Create the task
+            self.task_threads[chamber].start()
         except BaseException as e:
             print(type(e).__name__)
             self.ed = QMessageBox()
@@ -192,31 +178,6 @@ class Workstation:
             self.ed.show()
             raise pyberror.AddTaskError
 
-    def switch_task(self, task_base: Task, task_name: Type[Task], protocol: str = None) -> Task:
-        """
-        Switch the active Task in a sequence.
-
-        Parameters
-        ----------
-        task_base : Task
-            The base Task of the sequence
-        task_name : Class
-            The next Task in the sequence
-        protocol : dict
-            Dictionary representing the protocol for the new Task
-        """
-        # Create the new Task as part of a sequence
-        new_task = task_name(task_base, task_base.components, protocol)
-        gui = getattr(importlib.import_module("Local.GUIs." + task_name.__name__ + "GUI"), task_name.__name__ + "GUI")
-        # Position the GUI in pygame
-        col = task_base.metadata['chamber'] % self.n_col
-        row = math.floor(task_base.metadata['chamber'] / self.n_col)
-        # Create the GUI
-        self.guis[task_base.metadata['chamber']].sub_gui = gui(
-            self.task_gui.subsurface(col * self.w, row * self.h, self.w, self.h),
-            new_task)
-        return new_task
-
     def remove_task(self, chamber: int, del_loggers: bool = True) -> threading.Thread:
         """
         Remove the Task from the specified chamber.
@@ -232,132 +193,71 @@ class Workstation:
         return remove_thread
 
     def remove_task_(self, chamber: int, del_loggers: bool = True) -> None:
-        if chamber in self.thread_events:
-            self.thread_events[chamber][0].set()
-            self.event_notifier.set()
-            self.thread_events[chamber][1].wait()
-            self.thread_events[chamber][2].wait()
-            self.thread_events[chamber][4].wait()
-        if chamber in self.event_loggers.keys():
-            if del_loggers:
-                for el in self.event_loggers[chamber]:  # Close all associated EventLoggers
-                    el.close_()
-            del self.event_loggers[chamber]
-        if chamber in self.tasks.keys():
-            self.tasks[chamber].clear()
-            for c in self.tasks[chamber].components:
-                c.close()
-            del self.tasks[chamber]
-        if chamber in self.guis.keys():
-            del self.guis[chamber]
-        if chamber in self.thread_events.keys():
-            del self.thread_events[chamber]
-
-    def start_task(self, chamber: int) -> None:
-        """
-        Start the Task in the specified chamber.
-
-        Parameters
-        ----------
-        chamber : int
-            The chamber corresponding to the Task that should be started
-        """
-        self.tasks[chamber].start__()  # Start the Task
-        for el in self.event_loggers[chamber]:  # Start all EventLoggers
-            el.start_()
-        self.thread_events[chamber][3].set()
-
-    def stop_task(self, chamber: int) -> None:
-        """
-        Stop the Task in the specified chamber.
-
-        Parameters
-        ----------
-        chamber : int
-            The chamber corresponding to the Task that should be stopped
-        """
-        self.thread_events[chamber][3].clear()
-        self.tasks[chamber].stop__()  # Stop the task
-        self.event_notifier.set()
+        self.task_threads[chamber].queue.put(TaskThread.ClearEvent(del_loggers))
+        self.task_threads[chamber].join()
+        del self.task_threads[chamber]
 
     def event_loop(self) -> None:
         while not self.stopping:
             self.event_notifier.wait()
             self.event_notifier.clear()
-            keys = list(self.thread_events.keys())
+            keys = list(self.task_threads.keys())
             for key in keys:
-                if key in self.thread_events and not self.thread_events[key][0].is_set():
-                    ecopy = self.tasks[key].events.copy()
-                    self.tasks[key].events = []
-                    for el in self.event_loggers[key]:
+                if key in self.task_threads and not self.task_threads[key].stopping:
+                    ecopy = self.task_threads[key].task.events.copy()
+                    self.task_threads[key].task.events = []
+                    for el in self.task_threads[key].event_loggers:
                         if el.started:
                             el.log_events(ecopy)
-                    if not self.tasks[key].started:
-                        for el in self.event_loggers[key]:
+                    if not self.task_threads[key].task.started:
+                        for el in self.task_threads[key].event_loggers:
                             if el.started:
                                 el.stop_()
-                elif key in self.thread_events and not self.thread_events[key][4].is_set():
-                    self.thread_events[key][4].set()
-            time.sleep(0)
+                elif key in self.task_threads and not self.task_threads[key].event_disconnect.is_set():
+                    self.task_threads[key].event_disconnect.set()
 
-    def loop(self) -> None:
-        """
-        Master event loop for all Tasks. Handles Task logic and Task Events.
-        """
-        cps = 0
-        t = time.perf_counter()
+    def gui_event_loop(self) -> None:
         while not self.stopping:
-            cps += 1
-            events = pygame.event.get()  # Get mouse/keyboard events
-            task_keys = list(self.tasks.keys())
-            for key in task_keys:  # For each Task
-                keys = list(self.thread_events.keys())
-                if key in keys:
-                    if not self.thread_events[key][0].is_set():
-                        if key in self.thread_events and self.thread_events[key][3].is_set() and not self.tasks[key].paused:  # If the Task has been started and is not paused
-                            if len(self.tasks[key].events) > 0 and not self.event_notifier.is_set():
-                                self.event_notifier.set()
-                            self.tasks[key].main_loop()  # Run the Task's logic loop
-                            self.guis[key].handle_events(events)  # Handle mouse/keyboard events with the Task GUI
-                            if self.tasks[key].is_complete():  # Stop the Task if it is complete
-                                self.wsg.chambers[key].stop()
-                    elif key in self.thread_events and not self.thread_events[key][2].is_set():
-                        self.thread_events[key][2].set()
-            if time.perf_counter() - t > 1:
-                print(cps)
-                t = time.perf_counter()
-                cps = 0
-            time.sleep(0)
+            event = pygame.event.wait(500)
+            if not event.type == pygame.NOEVENT:
+                keys = list(self.task_threads.keys())
+                for key in keys:
+                    if key in self.task_threads and not self.task_threads[key].stopping:
+                        if self.task_threads[key].task.started:
+                            self.task_threads[key].gui.handle_event(event)
+                    elif key in self.task_threads and not self.task_threads[key].gui_events_disconnect.is_set():
+                        self.task_threads[key].gui_events_disconnect.set()
+                self.gui_notifier.set()
 
     def gui_loop(self) -> None:
-        last_frame = time.perf_counter()
         while not self.stopping:
-            if time.perf_counter() - last_frame > 1/30:
-                self.task_gui.fill(Colors.black)
-                keys = list(self.guis.keys())
-                for key in keys:  # For each Task
-                    if key in self.thread_events and not self.thread_events[key][0].is_set():
-                        self.guis[key].draw()  # Update the GUI
-                        # Draw GUI border and subject name
-                        col = key % self.n_col
-                        row = math.floor(key / self.n_col)
-                        pygame.draw.rect(self.task_gui, Colors.white, pygame.Rect(col * self.w, row * self.h, self.w, self.h), 1)
-                        LabelElement(self.guis[key], 10, self.h - 30, self.w, 20,
-                                     self.tasks[key].metadata["subject"], SF=1).draw()
-                    elif key in self.thread_events and not self.thread_events[key][1].is_set():
-                        self.thread_events[key][1].set()
-                pygame.display.flip()  # Signal to pygame that the whole GUI has updated
-                last_frame = time.perf_counter()
-            time.sleep(0)
+            self.gui_notifier.wait()
+            self.gui_notifier.clear()
+            self.task_gui.fill(Colors.black)
+            keys = list(self.task_threads.keys())
+            for key in keys:  # For each Task
+                if key in self.task_threads and not self.task_threads[key].stopping:
+                    self.task_threads[key].gui.draw()  # Update the GUI
+                    # Draw GUI border and subject name
+                    col = key % self.n_col
+                    row = math.floor(key / self.n_col)
+                    pygame.draw.rect(self.task_gui, Colors.white,
+                                     pygame.Rect(col * self.w, row * self.h, self.w, self.h), 1)
+                    LabelElement(self.task_threads[key].gui, 10, self.h - 30, self.w, 20,
+                                 self.task_threads[key].metadata["subject"], SF=1).draw()
+                elif key in self.task_threads and not self.task_threads[key].gui_disconnect.is_set():
+                    self.task_threads[key].gui_disconnect.set()
+            pygame.display.flip()  # Signal to pygame that the whole GUI has updated
+            time.sleep(1/30)
 
     def exit_handler(self, *args):
         """
         Callback for when py-behav is closed.
         """
         self.stopping = True
-        for key in self.tasks:  # Stop all Tasks
-            if self.tasks[key].started:
-                self.stop_task(key)
+        for key in self.task_threads:  # Stop all Tasks
+            if self.task_threads[key].task.started:
+                self.task_threads[key].queue.put(TaskThread.StopEvent())
             self.remove_task(key)
         for src in self.sources:  # Close all Sources
             self.sources[src].close_source()

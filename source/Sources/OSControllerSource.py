@@ -88,7 +88,7 @@ class OSControllerSource(Source):
         return self.values[component_id]
 
     def write_component(self, component_id, msg):
-        # If the intended value for the component differs from the current value, change it
+        # If the intended response for the component differs from the current response, change it
         if not msg == self.values[component_id]:
             if isinstance(self.components[component_id].address, list):
                 comps = self.components[component_id].address

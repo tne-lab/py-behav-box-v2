@@ -1,4 +1,6 @@
 from __future__ import annotations
+
+import queue
 from typing import TYPE_CHECKING, Dict
 if TYPE_CHECKING:
     from Sources.Source import Source
@@ -57,11 +59,11 @@ class Component:
         self.source = source  # The source that is used to identify the component
         self.state = None
 
-    def write(self, msg: Any) -> None:
-        self.source.write_component(self.id, msg)
+    def write(self, value: Any) -> None:
+        self.source.write_component(self.id, value)
 
-    def read(self) -> Any:
-        return self.source.read_component(self.id)
+    def update(self, value: Any) -> None:
+        self.state = value
 
     def initialize(self, metadata: Dict) -> None:
         for key in metadata:

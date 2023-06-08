@@ -44,8 +44,8 @@ class BarPressElement(Element):
 
     def mouse_up(self, event: pygame.event.Event) -> None:
         self.pressed = False
-        self.comp.toggle(self.pressed)
+        self.component_changed(self.comp, self.pressed)
 
     def mouse_down(self, _) -> None:
         self.pressed = True
-        self.comp.toggle(self.pressed)
+        self.component_changed(self.comp, self.pressed)

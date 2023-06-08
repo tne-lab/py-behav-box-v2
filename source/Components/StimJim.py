@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Any, List, Dict
+from typing import TYPE_CHECKING
 
 from Components.Component import Component
 
@@ -18,6 +18,7 @@ class StimJim(Stimmer):
         self.state = None
         self.in_buffer = ""
         self.cur_command = None
+        self.commands = []
         self.configs = {}
         super().__init__(source, component_id, component_address)
 
@@ -36,18 +37,17 @@ class StimJim(Stimmer):
     def start(self, pnum: int, stype: str = "T") -> None:
         self.source.write_component(self.id, "{}{}".format(stype, pnum))
 
-    def check(self) -> List[Dict]:
-        value = self.source.read_component(self.id)
+    def update(self, value: str) -> None:
         segs = value.split('\n')
         segs[0] = self.in_buffer + segs[0]
         if not segs[-1].endswith('\n'):
             self.in_buffer = segs[-1]
             del segs[-1]
-        commands = []
+        self.commands = []
         for line in segs:
             if 'Parameters' in line:
                 if self.cur_command is not None:
-                    commands.append(self.cur_command)
+                    self.commands.append(self.cur_command)
                 self.cur_command = {"command": "P", "id": int(line.split("[")[1].split("]")[0])}
             elif self.cur_command is not None and self.cur_command["command"] == "P":
                 l_segs = re.split(" +", line)
@@ -66,17 +66,17 @@ class StimJim(Stimmer):
                     else:
                         self.cur_command["stages"] = [[l_segs[2], l_segs[4], l_segs[5][:-1]]]
                 elif line[0] == '-':
-                    commands.append(self.cur_command)
+                    self.commands.append(self.cur_command)
                     self.configs[self.cur_command["id"]] = self.cur_command
                     self.cur_command = None
             elif 'Started' in line:
                 self.state = int(line[line.rindex(' ')+1:-1])
                 if self.cur_command is not None:
-                    commands.append(self.cur_command)
+                    self.commands.append(self.cur_command)
                 self.cur_command = None
             elif 'complete' in line:
                 if self.cur_command is not None:
-                    commands.append(self.cur_command)
+                    self.commands.append(self.cur_command)
                 self.cur_command = {"command": "C", "id": self.state}
                 self.state = None
                 l_segs = line.split(" ")
@@ -88,9 +88,8 @@ class StimJim(Stimmer):
                 else:
                     self.cur_command["stages"] = [[l_segs[2][:-1], l_segs[3][:-1]]]
                 if len(self.cur_command["stages"]) == len(self.configs[self.cur_command["id"]]["stages"]):
-                    commands.append(self.cur_command)
+                    self.commands.append(self.cur_command)
                     self.cur_command = None
-        return commands
 
     @staticmethod
     def get_type() -> Component.Type:

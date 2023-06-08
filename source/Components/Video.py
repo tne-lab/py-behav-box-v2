@@ -12,9 +12,9 @@ import time
 
 class Video(Component):
     def __init__(self, source: Source, component_id: str, component_address: str):
+        super().__init__(source, component_id, component_address)
         self.state = False
         self.name = None
-        super().__init__(source, component_id, component_address)
 
     def start(self) -> None:
         if not self.state:

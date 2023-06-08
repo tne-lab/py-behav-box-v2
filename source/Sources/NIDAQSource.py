@@ -116,9 +116,9 @@ class NIDAQSource(Source):
         close_component(component_id)
             Closes the task for a specific Component
         read_component(component_id)
-            Requests the current value for the Component from the DAQ
+            Requests the current response for the Component from the DAQ
         write_component(component_id, msg)
-            Writes a value for the Component to the DAQ
+            Writes a response for the Component to the DAQ
     """
 
     def __init__(self, dev):

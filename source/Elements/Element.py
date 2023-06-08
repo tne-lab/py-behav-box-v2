@@ -1,5 +1,9 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+
+from Components.Component import Component
+from Workstation.TaskThread import TaskThread
+
 if TYPE_CHECKING:
     from GUIs.GUI import GUI
 
@@ -54,6 +58,7 @@ class Element:
             self.SF = tg.SF
         else:
             self.SF = SF
+        self.gui = tg
         self.screen = tg.task_gui
         self.x = int(self.SF * x)
         self.y = int(self.SF * y)
@@ -88,3 +93,6 @@ class Element:
     @abstractmethod
     def draw(self) -> None:
         raise NotImplementedError
+
+    def component_changed(self, component: Component, value: Any):
+        self.gui.task.task_thread.queue.put(TaskThread.ComponentUpdateEvent(component.id, value))

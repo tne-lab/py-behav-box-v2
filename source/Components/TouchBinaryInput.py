@@ -1,5 +1,6 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union, Tuple
+
 if TYPE_CHECKING:
     from Sources.Source import Source
 from Components.BinaryInput import BinaryInput
@@ -12,8 +13,7 @@ class TouchBinaryInput(BinaryInput):
         super().__init__(source, component_id, component_address)
         self.pos = None
 
-    def check(self) -> int:
-        read = self.source.read_component(self.id)
+    def update(self, read: Union[Tuple[bool, float], bool]) -> None:
         if isinstance(read, tuple):
             value = read[0]
             pos = read[1]
@@ -28,9 +28,5 @@ class TouchBinaryInput(BinaryInput):
         self.state = value
         if value and not repeat:
             self.pos = pos
-            return self.ENTERED
         elif not value and not repeat:
             self.pos = None
-            return self.EXIT
-        else:
-            return self.NO_CHANGE

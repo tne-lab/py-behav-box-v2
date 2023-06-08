@@ -66,7 +66,7 @@ class Speaker(Component):  # Not implemented
 
         sound = pygame.sndarray.make_sound(buf)
         # play once, then loop until duration has passed
-        sound.set_volume(float(volume))  # volume value 0.0 to 1.0
+        sound.set_volume(float(volume))  # volume response 0.0 to 1.0
         play_time = int(duration * 1000)  # Duration in sec, need ms
         self.state = True
         sound.play(loops=-1, maxtime=play_time)  # - 1 = loops forever, max time in ms
@@ -87,7 +87,7 @@ class Speaker(Component):  # Not implemented
         buffer = 2048  # number of samples (experiment to get best sound)
         pygame.mixer.init(freq, bitsize, channels, buffer)
 
-        # volume value 0.0 to 1.0
+        # volume response 0.0 to 1.0
         pygame.mixer.music.set_volume(volume)
         try:
             pygame.mixer.music.load(music_file)

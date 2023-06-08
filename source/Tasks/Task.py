@@ -14,7 +14,6 @@ from Events.FinalStateEvent import FinalStateEvent
 from Sources.Source import Source
 from Utilities.AddressFile import AddressFile
 from Workstation.TaskThread import TaskThread
-from Workstation.Workstation import Workstation
 import Utilities.Exceptions as pyberror
 
 
@@ -59,7 +58,7 @@ class Task:
         PAUSED = 0
 
     @overload
-    def __init__(self, ws: Workstation, metadata: Dict[str, Any], sources: Dict[str, Source], address_file: str = "", protocol: str = ""):
+    def __init__(self, task_thread: TaskThread, metadata: Dict[str, Any], sources: Dict[str, Source], address_file: str = "", protocol: str = ""):
         ...
 
     @overload
@@ -111,15 +110,11 @@ class Task:
                     if hasattr(self, cons):
                         setattr(self, cons, file_globals['protocol'][cons])
         else:  # If this is a standard Task
-            self.ws = args[0]
+            self.task_thread = args[0]
             self.metadata = args[1]
             sources = args[2]
-            protocol = ""
-            address_file = ""
-            if len(args) >= 4:
-                address_file = args[3]
-            if len(args) >= 5:
-                protocol = args[4]
+            protocol = self.metadata["protocol"]
+            address_file = self.metadata["address_file"]
             self.components = {}
 
             # Open the provided AddressFile
@@ -218,7 +213,7 @@ class Task:
     def change_state(self, new_state: Enum, timeout: float = None, metadata: Any = None) -> None:
         self.entry_time = self.cur_time
         if timeout is not None:
-            self.task_thread.put(TaskThread.TimeoutEvent(timeout))
+            self.task_thread.queue.put(TaskThread.TimeoutEvent(timeout))
         # Add a StateChangeEvent to the events list indicated the pair of States representing the transition
         self.events.append(StateChangeEvent(self, self.state, new_state, metadata))
         self.state = new_state
@@ -264,14 +259,15 @@ class Task:
     def stop(self) -> None:
         pass
 
-    def main_loop(self) -> None:
+    def main_loop(self, event: TaskThread.Event) -> None:
         self.cur_time = time.time()
-        self.handle_input()
+        if isinstance(event, TaskThread.ComponentChangedEvent):
+            self.handle_input(event)
         if hasattr(self, self.state.name):
             state_method = getattr(self, self.state.name)
-            state_method()
+            state_method(event)
 
-    def handle_input(self) -> None:
+    def handle_input(self, event: TaskThread.ComponentChangedEvent) -> None:
         pass
 
     def time_elapsed(self) -> float:

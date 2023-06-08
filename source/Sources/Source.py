@@ -1,8 +1,10 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, Any
+
 if TYPE_CHECKING:
     from Components.Component import Component
     from Tasks.Task import Task
+    from Workstation.TaskThread import TaskThread
 
 from abc import ABCMeta, abstractmethod
 
@@ -27,10 +29,14 @@ class Source:
 
     def __init__(self):
         self.components = {}
+        self.tasks = {}
 
-    @abstractmethod
     def register_component(self, task: Task, component: Component) -> None:
-        raise NotImplementedError
+        self.tasks[component.id] = task
+        self.components[component.id] = component
+
+    def update_component(self, cid: str, value: Any) -> None:
+        self.tasks[cid].task_thread.queue.put(TaskThread.ComponentUpdateEvent(cid, value))
 
     def close_source(self) -> None:
         pass

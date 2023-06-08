@@ -67,7 +67,7 @@ class TaskSequence(Task):
         self.cur_task.stop()
         self.log_sequence_events()
         self.change_state(seq_state, metadata)
-        self.cur_task = self.ws.switch_task(self, task, protocol)
+        self.cur_task = self.task_thread.switch_task(task, protocol)
         self.start_sub()
 
     def log_sequence_events(self) -> None:
@@ -77,17 +77,17 @@ class TaskSequence(Task):
             event.entry_time += self.sub_start_time - self.start_time
         self.events.extend(sub_events)
 
-    def main_loop(self) -> None:
+    def main_loop(self, component) -> None:
         self.cur_time = time.time()
         self.cur_task.cur_time = self.cur_time
         self.cur_task.handle_input()
-        self.handle_input()
+        self.handle_input(component)
         if hasattr(self.cur_task, self.cur_task.state.name):
             state_method = getattr(self.cur_task, self.cur_task.state.name)
-            state_method()
+            state_method(component)
         if hasattr(self, self.state.name):
             state_method = getattr(self, self.state.name)
-            state_method()
+            state_method(component)
         self.log_sequence_events()
 
     def start_sub(self) -> None:

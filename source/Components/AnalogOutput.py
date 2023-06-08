@@ -15,8 +15,8 @@ class AnalogOutput(Output):
         super().__init__(source, component_id, component_address)
         self.state = 0
 
-    def set(self, value: float) -> None:
-        super(AnalogOutput, self).set(value)
+    def write(self, value: float) -> None:
+        super(AnalogOutput, self).write(value)
 
     @staticmethod
     def get_type() -> Component.Type:

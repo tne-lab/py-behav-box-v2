@@ -15,8 +15,8 @@ class AnalogInput(Input):
         super().__init__(source, component_id, component_address)
         self.state = 0
 
-    def check(self) -> float:
-        return super(AnalogInput, self).check()
+    def update(self, value: float) -> None:
+        super(AnalogInput, self).update(value)
 
     @staticmethod
     def get_type() -> Component.Type:
