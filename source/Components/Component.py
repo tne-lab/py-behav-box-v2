@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import queue
 from typing import TYPE_CHECKING, Dict
 if TYPE_CHECKING:
     from Sources.Source import Source

@@ -9,7 +9,6 @@ from Workstation.TaskThread import TaskThread
 
 if TYPE_CHECKING:
     from Events.EventLogger import EventLogger
-    from Tasks.Task import Task
 
 import importlib
 from pkgutil import iter_modules
@@ -18,7 +17,6 @@ import signal
 
 import math
 import atexit
-from typing import Type
 
 from GUIs import Colors
 from Elements.LabelElement import LabelElement
