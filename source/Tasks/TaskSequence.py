@@ -80,8 +80,8 @@ class TaskSequence(Task):
     def main_loop(self, component) -> None:
         self.cur_time = time.time()
         self.cur_task.cur_time = self.cur_time
-        self.cur_task.handle_input()
-        self.handle_input(component)
+        self.cur_task.all_states()
+        self.all_states(component)
         if hasattr(self.cur_task, self.cur_task.state.name):
             state_method = getattr(self.cur_task, self.cur_task.state.name)
             state_method(component)

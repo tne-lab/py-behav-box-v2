@@ -1,7 +1,8 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
-    from Events.Event import Event
+    from Events.LoggerEvent import LoggerEvent
     from Tasks.Task import Task
 
 from abc import ABCMeta
@@ -50,8 +51,13 @@ class EventLogger:
     def close(self) -> None:
         pass
 
-    def log_event(self, events: list[Event]) -> None:
+    def log_event(self, events: LoggerEvent) -> None:
         pass
 
     def set_task(self, task: Task) -> None:
         self.task = task
+
+    def format_event(self, le: LoggerEvent, event_type: str):
+        return "{},{},{},{},{},{}\n".format(self.event_count, le.entry_time, event_type,
+                                            le.eid, le.name,
+                                            str(le.event.metadata))

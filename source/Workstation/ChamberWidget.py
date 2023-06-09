@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Tuple, List
 from PyQt5.QtCore import QRegExp
 
 from Utilities.Exceptions import AddTaskError
-from Workstation.TaskThread import TaskThread
+from Tasks.TaskEvents import StartEvent, StopEvent, PauseEvent, ResumeEvent
 
 if TYPE_CHECKING:
     from Workstation.WorkstationGUI import WorkstationGUI
@@ -218,13 +218,13 @@ class ChamberWidget(QGroupBox):
             self.play_button.icon = 'Workstation/icons/pause.svg'
             self.play_button.hover_icon = 'Workstation/icons/pause_hover.svg'
             self.play_button.setIcon(QIcon(self.play_button.icon))
-            self.task_thread.queue.put(TaskThread.ResumeEvent())  # Resume the task
+            self.task_thread.queue.put(ResumeEvent())  # Resume the task
         else:  # The task is currently playing
             # Change the play to a pause button
             self.play_button.icon = 'Workstation/icons/play.svg'
             self.play_button.hover_icon = 'Workstation/icons/play_hover.svg'
             self.play_button.setIcon(QIcon(self.play_button.icon))
-            self.task_thread.queue.put(TaskThread.PauseEvent())  # Pause the task
+            self.task_thread.queue.put(PauseEvent())  # Pause the task
 
     def play_helper(self) -> None:
         # Change the play to a pause button
@@ -239,7 +239,7 @@ class ChamberWidget(QGroupBox):
         self.address_file_browse.setEnabled(False)
         self.protocol_file_browse.setEnabled(False)
         self.output_file_path.setEnabled(False)
-        self.task_thread.queue.put(TaskThread.StartEvent())
+        self.task_thread.queue.put(StartEvent())
         if self.pd is not None:
             super(QMessageBox, self.pd).accept()
             self.pd = None
@@ -248,6 +248,7 @@ class ChamberWidget(QGroupBox):
         """
         On click function for the stop button.
         """
+        self.task_thread.queue.put(StopEvent())
         # Change the pause to a play button
         self.play_button.icon = 'Workstation/icons/play.svg'
         self.play_button.hover_icon = 'Workstation/icons/play_hover.svg'
@@ -260,7 +261,6 @@ class ChamberWidget(QGroupBox):
         self.address_file_browse.setEnabled(True)
         self.protocol_file_browse.setEnabled(True)
         self.output_file_path.setEnabled(True)
-        self.task_thread.queue.put(TaskThread.StopEvent())  # Stop the task with the Workstation
 
     def subject_changed(self) -> None:
         """

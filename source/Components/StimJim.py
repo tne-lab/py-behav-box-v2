@@ -37,8 +37,8 @@ class StimJim(Stimmer):
     def start(self, pnum: int, stype: str = "T") -> None:
         self.source.write_component(self.id, "{}{}".format(stype, pnum))
 
-    def update(self, value: str) -> None:
-        segs = value.split('\n')
+    def update(self, value: bytes) -> None:
+        segs = value.decode('utf-8').split('\n')
         segs[0] = self.in_buffer + segs[0]
         if not segs[-1].endswith('\n'):
             self.in_buffer = segs[-1]

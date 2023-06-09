@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from Components.Component import Component
-from Workstation.TaskThread import TaskThread
+from Tasks.TaskEvents import ComponentUpdateEvent
 
 if TYPE_CHECKING:
     from GUIs.GUI import GUI
@@ -95,4 +95,4 @@ class Element:
         raise NotImplementedError
 
     def component_changed(self, component: Component, value: Any):
-        self.gui.task.task_thread.queue.put(TaskThread.ComponentUpdateEvent(component.id, value))
+        self.gui.task.task_thread.queue.put(ComponentUpdateEvent(component.id, value))

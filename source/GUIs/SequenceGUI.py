@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from Events.Event import Event
+    from Events.LoggerEvent import LoggerEvent
     from Tasks.Task import Task
     from pygame import Surface
     from Elements.Element import Element
@@ -26,6 +26,6 @@ class SequenceGUI(GUI):
     def get_elements(self) -> list[Element]:
         raise NotImplementedError
 
-    def handle_events(self, events: list[Event]) -> None:
+    def handle_events(self, events: list[LoggerEvent]) -> None:
         super(SequenceGUI, self).handle_events(events)
         self.sub_gui.handle_events(events)

@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from Events.Event import Event
+    from Events.LoggerEvent import LoggerEvent
 
 from abc import ABCMeta, abstractmethod
 
@@ -36,8 +36,8 @@ class FileEventLogger(EventLogger):
         raise NotImplementedError
 
     @abstractmethod
-    def log_events(self, events: list[Event]) -> None:
-        self.log_file.flush()
+    def log_event(self, event: LoggerEvent) -> None:
+        self.log_file.flush()  # Need a better solution for regular saving
 
     def start(self) -> None:
         super(FileEventLogger, self).start()

@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 from Utilities.dictionary_to_save_string import dictionary_to_save_string
 
 if TYPE_CHECKING:
-    from Events.Event import Event
+    from Events.LoggerEvent import LoggerEvent
 
 import zmq
 from datetime import datetime
@@ -101,7 +101,7 @@ class OENetworkLogger(GUIEventLogger):
             self.acq_button.icon = 'Workstation/icons/stop_play.svg'
             self.acq_button.hover_icon = 'Workstation/icons/stop_play_hover.svg'
             self.acq_button.setIcon(QIcon(self.acq_button.icon))
-            self.log_events([OEEvent(self.cw.task, "startAcquisition")])
+            self.log_events([OEEvent(self.cw.task_thread.task, "startAcquisition")])
             self.acq = True
         elif self.acq:
             self.acq_button.icon = 'Workstation/icons/play.svg'
@@ -112,7 +112,7 @@ class OENetworkLogger(GUIEventLogger):
                 self.rec_button.hover_icon = 'Workstation/icons/record_hover.svg'
                 self.rec_button.setIcon(QIcon(self.rec_button.icon))
                 self.rec = False
-            self.log_events([OEEvent(self.cw.task, "stopAcquisition")])
+            self.log_events([OEEvent(self.cw.task_thread.task, "stopAcquisition")])
             self.acq = False
 
     def record(self) -> None:
@@ -123,14 +123,14 @@ class OENetworkLogger(GUIEventLogger):
             self.rec_button.icon = 'Workstation/icons/stop_record.svg'
             self.rec_button.hover_icon = 'Workstation/icons/stop_record_hover.svg'
             self.rec_button.setIcon(QIcon(self.rec_button.icon))
-            self.log_events([OEEvent(self.cw.task, "startRecord")])
+            self.log_events([OEEvent(self.cw.task_thread.task, "startRecord")])
             self.acq = True
             self.rec = True
         elif self.rec:
             self.rec_button.icon = 'Workstation/icons/record.svg'
             self.rec_button.hover_icon = 'Workstation/icons/record_hover.svg'
             self.rec_button.setIcon(QIcon(self.rec_button.icon))
-            self.log_events([OEEvent(self.cw.task, "stopRecord")])
+            self.log_events([OEEvent(self.cw.task_thread.task, "stopRecord")])
             self.rec = False
 
     def get_file_path(self) -> None:
@@ -181,7 +181,7 @@ class OENetworkLogger(GUIEventLogger):
         except zmq.ZMQError:
             pass
 
-    def log_events(self, events: list[Event]) -> None:
+    def log_events(self, events: list[LoggerEvent]) -> None:
         for e in events:
             if isinstance(e, OEEvent):
                 if e.event_type == 'startAcquisition':

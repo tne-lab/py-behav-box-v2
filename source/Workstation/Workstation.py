@@ -5,7 +5,8 @@ import threading
 import time
 from typing import TYPE_CHECKING, List
 
-from Workstation.TaskThread import TaskThread
+from Tasks.TaskThread import TaskThread
+from Tasks.TaskEvents import StopEvent, ClearEvent, HeartbeatEvent
 
 if TYPE_CHECKING:
     from Events.EventLogger import EventLogger
@@ -47,7 +48,8 @@ class Workstation:
         QCoreApplication.setApplicationName("Pybehav")
 
         # Load information from settings or set defaults
-        settings = QSettings()
+        desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
+        settings = QSettings(desktop + "/py-behav/pybehave.ini", QSettings.IniFormat)
         # Store information on the available sources
         package_dir = "Sources/"
         for (_, module_name, _) in iter_modules([package_dir]):
@@ -95,22 +97,22 @@ class Workstation:
         self.ed = None
         app = QApplication(sys.argv)
         self.wsg = WorkstationGUI(self)
-        self.event_notifier = threading.Event()
         self.gui_notifier = threading.Event()
         self.stopping = False
+        heartbeat = threading.Thread(target=self.heartbeat)
+        heartbeat.start()
         guithread = threading.Thread(target=self.gui_loop)
         guithread.start()
         gui_event_thread = threading.Thread(target=self.gui_event_loop)
         gui_event_thread.start()
-        eventthread = threading.Thread(target=self.event_loop)
-        eventthread.start()
         atexit.register(lambda: self.exit_handler())
         signal.signal(signal.SIGTERM, self.exit_handler)
         signal.signal(signal.SIGINT, self.exit_handler)
         sys.exit(app.exec())
 
     def compute_chambergui(self) -> None:
-        settings = QSettings()
+        desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
+        settings = QSettings(desktop + "/py-behav/pybehave.ini", QSettings.IniFormat)
         szo = pygame.display.get_desktop_sizes()
         szo = szo[0]
         sz = (int(szo[0] * 5 / 6), int(szo[1] - 70))
@@ -191,28 +193,10 @@ class Workstation:
         return remove_thread
 
     def remove_task_(self, chamber: int, del_loggers: bool = True) -> None:
-        self.task_threads[chamber].queue.put(TaskThread.ClearEvent(del_loggers))
-        self.task_threads[chamber].join()
-        del self.task_threads[chamber]
-
-    def event_loop(self) -> None:
-        while not self.stopping:
-            self.event_notifier.wait()
-            self.event_notifier.clear()
-            keys = list(self.task_threads.keys())
-            for key in keys:
-                if key in self.task_threads and not self.task_threads[key].stopping:
-                    ecopy = self.task_threads[key].task.events.copy()
-                    self.task_threads[key].task.events = []
-                    for el in self.task_threads[key].event_loggers:
-                        if el.started:
-                            el.log_events(ecopy)
-                    if not self.task_threads[key].task.started:
-                        for el in self.task_threads[key].event_loggers:
-                            if el.started:
-                                el.stop_()
-                elif key in self.task_threads and not self.task_threads[key].event_disconnect.is_set():
-                    self.task_threads[key].event_disconnect.set()
+        if chamber in self.task_threads:
+            self.task_threads[chamber].queue.put(ClearEvent(del_loggers))
+            self.task_threads[chamber].join()
+            del self.task_threads[chamber]
 
     def gui_event_loop(self) -> None:
         while not self.stopping:
@@ -221,11 +205,10 @@ class Workstation:
                 keys = list(self.task_threads.keys())
                 for key in keys:
                     if key in self.task_threads and not self.task_threads[key].stopping:
-                        if self.task_threads[key].task.started:
-                            self.task_threads[key].gui.handle_event(event)
+                        self.task_threads[key].gui.handle_event(event)
                     elif key in self.task_threads and not self.task_threads[key].gui_events_disconnect.is_set():
                         self.task_threads[key].gui_events_disconnect.set()
-                self.gui_notifier.set()
+                # self.gui_notifier.set()
 
     def gui_loop(self) -> None:
         while not self.stopping:
@@ -248,6 +231,13 @@ class Workstation:
             pygame.display.flip()  # Signal to pygame that the whole GUI has updated
             time.sleep(1/30)
 
+    def heartbeat(self):
+        while not self.stopping:
+            keys = list(self.task_threads.keys())
+            for key in keys:
+                self.task_threads[key].queue.put(HeartbeatEvent())
+            time.sleep(1)
+
     def exit_handler(self, *args):
         """
         Callback for when py-behav is closed.
@@ -255,7 +245,7 @@ class Workstation:
         self.stopping = True
         for key in self.task_threads:  # Stop all Tasks
             if self.task_threads[key].task.started:
-                self.task_threads[key].queue.put(TaskThread.StopEvent())
+                self.task_threads[key].queue.put(StopEvent())
             self.remove_task(key)
         for src in self.sources:  # Close all Sources
             self.sources[src].close_source()

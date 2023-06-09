@@ -22,10 +22,9 @@ class HikVisionSource(Source):
         self.tasks = {}
 
     def register_component(self, task, component):
+        super().register_component(task, component)
         desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
         self.out_paths[component.id] = "{}\\py-behav\\{}\\Data\\{{}}\\{{}}\\".format(desktop, type(task).__name__)
-        self.components[component.id] = component
-        self.tasks[component.id] = task
         # hikutils.deleteXML(self.server, 'System/Video/inputs/channels/' + str(component.address) + '/overlays/text')
 
     def close_component(self, component_id):

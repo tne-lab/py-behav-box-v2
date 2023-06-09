@@ -9,7 +9,6 @@ import win32gui
 from Components.Component import Component
 from Sources.Source import Source
 
-
 IsWhiskerRunning = False
 
 
@@ -22,7 +21,8 @@ def look_for_program(hwnd, program_name):
 
 class WhiskerLineSource(Source):
 
-    def __init__(self, address='localhost', port=3233, whisker_path=r"C:\Program Files (x86)\WhiskerControl\WhiskerServer.exe"):
+    def __init__(self, address='localhost', port=3233,
+                 whisker_path=r"C:\Program Files (x86)\WhiskerControl\WhiskerServer.exe"):
         super(WhiskerLineSource, self).__init__()
         self.msg = ""
         try:
@@ -37,9 +37,10 @@ class WhiskerLineSource(Source):
                 self.available = True
                 self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 self.client.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+                self.client.settimeout(0.5)
                 self.client.connect((address, int(port)))
                 self.running = threading.Event()
-                rt = threading.Thread(target=lambda: self.read())
+                rt = threading.Thread(target=self.read)
                 rt.start()
                 self.vals = {}
             else:
@@ -50,25 +51,33 @@ class WhiskerLineSource(Source):
 
     def read(self):
         while not self.running.is_set():
-            self.msg += self.client.recv(4096).decode()
-            if '\n' in self.msg:
-                msgs = self.msg.split('\n')
-                self.msg = msgs[-1]
-            else:
-                msgs = []
-            for msg in msgs[:-1]:
-                if msg.startswith('Event:'):
-                    self.vals[msg.split(' ')[1]] = not self.vals[msg.split(' ')[1]]
+            try:
+                self.msg += self.client.recv(4096).decode()
+                if '\n' in self.msg:
+                    msgs = self.msg.split('\n')
+                    self.msg = msgs[-1]
+                else:
+                    msgs = []
+                for msg in msgs[:-1]:
+                    if msg.startswith('Event:'):
+                        div = msg.split(' ')[1].rindex("_")
+                        cid, direction = msg.split(' ')[1][:div], msg.split(' ')[1][div+1:]
+                        self.update_component(cid, direction == "on")
+            except TimeoutError:
+                pass
 
         self.client.send(b'LineRelinquishAll\n')
         self.client.close()
 
-    def register_component(self, _, component):
-        self.components[component.id] = component
+    def register_component(self, task, component):
+        super().register_component(task, component)
         if component.get_type() == Component.Type.DIGITAL_INPUT:
             self.client.send(
-                'LineClaim {} -ResetOff;LineSetEvent {} both {}\n'.format(component.address, component.address,
-                                                                          component.id).encode('utf-8'))
+                'LineClaim {} -ResetOff;LineSetEvent {} on {};LineSetEvent {} off {}\n'.format(component.address,
+                                                                                               component.address,
+                                                                                               component.id + "_on",
+                                                                                               component.address,
+                                                                                               component.id + "_off").encode('utf-8'))
             self.vals[component.id] = False
         else:
             if isinstance(component.address, list):
@@ -82,9 +91,6 @@ class WhiskerLineSource(Source):
 
     def close_source(self):
         self.running.set()
-
-    def read_component(self, component_id):
-        return self.vals[component_id]
 
     def write_component(self, component_id, msg):
         if isinstance(self.components[component_id].address, list):

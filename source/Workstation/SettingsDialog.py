@@ -1,4 +1,6 @@
 from __future__ import annotations
+
+import os
 from typing import TYPE_CHECKING
 
 from Utilities.find_closing_paren import find_closing_paren
@@ -72,7 +74,8 @@ class SettingsDialog(QDialog):
         self.setLayout(self.layout)
     
     def accept(self) -> None:
-        settings = QSettings()
+        desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
+        settings = QSettings(desktop + "/py-behav/pybehave.ini", QSettings.IniFormat)
         settings.setValue("n_chamber", self.n_chamber.text())
         self.workstation.n_chamber = int(self.n_chamber.text())
         self.workstation.compute_chambergui()
@@ -86,7 +89,8 @@ class SettingsDialog(QDialog):
         st = self.source_list.currentItem().text()
         st_name = st.split(" (")[0]
         if len(self.workstation.sources[st_name].components) == 0:
-            settings = QSettings()
+            desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
+            settings = QSettings(desktop + "/py-behav/pybehave.ini", QSettings.IniFormat)
             source_string = settings.value("sources")
             s_type = type(self.workstation.sources[st_name]).__name__
             search_str = '\"'+st_name+'\": ' + s_type
@@ -104,7 +108,8 @@ class SettingsDialog(QDialog):
     def remove_source(self) -> None:
         st = self.source_list.currentItem().text()
         st_name = st.split(" (")[0]
-        settings = QSettings()
+        desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
+        settings = QSettings(desktop + "/py-behav/pybehave.ini", QSettings.IniFormat)
         source_string = settings.value("sources")
         si = source_string.find(st_name)
         if si - 3 > 0:
@@ -116,7 +121,6 @@ class SettingsDialog(QDialog):
         del self.workstation.sources[st_name]
         self.source_list.takeItem(self.source_list.currentRow())
         self.remove_button.setDisabled(False)
-        settings = QSettings()
         settings.setValue("sources", source_string[0:si] + source_string[se+1:])
 
     def add_source(self) -> None:
@@ -172,7 +176,8 @@ class AddSourceDialog(QDialog):
     def accept(self) -> None:
         source_type = getattr(importlib.import_module("Sources." + self.source.currentText()),
                               self.source.currentText())
-        settings = QSettings()
+        desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
+        settings = QSettings(desktop + "/py-behav/pybehave.ini", QSettings.IniFormat)
         source_string = settings.value("sources")
         source_string = source_string[:-1] + ', "{}": {}({})'.format(self.name.text(), self.source.currentText(),
                                                                      ','.join(f'"{w}"' for w in self.params)) + "}"

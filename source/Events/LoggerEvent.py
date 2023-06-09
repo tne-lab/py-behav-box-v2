@@ -1,12 +1,13 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
+
+from Tasks.TaskEvents import TaskEvent
+
 if TYPE_CHECKING:
     from Tasks.Task import Task
 
-from typing import Any
 
-
-class Event:
+class LoggerEvent:
     """
         Simple class defining the base requirements for a Task Event.
 
@@ -18,7 +19,8 @@ class Event:
             Any metadata related to the Event
     """
 
-    def __init__(self, task: Task, metadata: Any = None):
-        self.task = task
-        self.entry_time = task.cur_time - task.start_time
-        self.metadata = metadata
+    def __init__(self, event: TaskEvent, name: str, eid: str, entry_time: float):
+        self.entry_time = entry_time
+        self.event = event
+        self.name = name
+        self.eid = eid

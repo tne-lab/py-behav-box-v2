@@ -1,4 +1,6 @@
 from __future__ import annotations
+
+import os
 from typing import TYPE_CHECKING, Tuple, List
 
 from Utilities.Exceptions import AddTaskError
@@ -24,7 +26,8 @@ class WorkstationGUI(QWidget):
         self.emsg = None
         self.n_active = 0
         self.workstation = workstation
-        settings = QSettings()
+        desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
+        settings = QSettings(desktop + "/py-behav/pybehave.ini", QSettings.IniFormat)
 
         self.setWindowTitle("Pybehav")
         self.setGeometry(0, 0, int(settings.value("pyqt/w")), int(settings.value("pyqt/h")))  # Position GUI

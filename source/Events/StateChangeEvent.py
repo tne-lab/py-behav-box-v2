@@ -4,10 +4,10 @@ if TYPE_CHECKING:
     from Tasks.Task import Task
     from enum import Enum
 
-from Events.Event import Event
+from Events.LoggerEvent import LoggerEvent
 
 
-class StateChangeEvent(Event):
+class StateChangeEvent(LoggerEvent):
     """
         Class defining an Event for a Task state change.
 

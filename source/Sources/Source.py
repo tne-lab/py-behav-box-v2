@@ -4,9 +4,9 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from Components.Component import Component
     from Tasks.Task import Task
-    from Workstation.TaskThread import TaskThread
 
 from abc import ABCMeta, abstractmethod
+from Tasks.TaskEvents import ComponentUpdateEvent
 
 
 class Source:
@@ -36,7 +36,7 @@ class Source:
         self.components[component.id] = component
 
     def update_component(self, cid: str, value: Any) -> None:
-        self.tasks[cid].task_thread.queue.put(TaskThread.ComponentUpdateEvent(cid, value))
+        self.tasks[cid].task_thread.queue.put(ComponentUpdateEvent(cid, value))
 
     def close_source(self) -> None:
         pass

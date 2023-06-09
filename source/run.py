@@ -5,7 +5,7 @@ import os
 
 if __name__ == '__main__':
     p = psutil.Process(os.getpid())
-    p.nice(psutil.HIGH_PRIORITY_CLASS)
+    p.nice(psutil.REALTIME_PRIORITY_CLASS)
 
     faulthandler.enable()
     desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')

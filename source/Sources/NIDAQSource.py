@@ -129,7 +129,8 @@ class NIDAQSource(Source):
         self.niprocess.start()
         self.values = {}
 
-    def register_component(self, _, component):
+    def register_component(self, task, component):
+        super().register_component()
         command = {'command': 'Register', 'id': component.id, 'address': component.address}
         if component.get_type() == Component.Type.DIGITAL_OUTPUT:
             command['type'] = 'DO'
@@ -139,7 +140,6 @@ class NIDAQSource(Source):
         elif component.get_type() == Component.Type.ANALOG_OUTPUT:
             command['type'] = 'AO'
         self.outq.put(command)
-        self.components[component.id] = component
 
     def close_source(self):
         self.outq.put({'command': 'CloseProcess'})

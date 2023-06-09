@@ -8,12 +8,11 @@ import runpy
 from typing import Any, Type, overload, Dict, List
 
 from Components.Component import Component
-from Events.StateChangeEvent import StateChangeEvent
-from Events.InitialStateEvent import InitialStateEvent
-from Events.FinalStateEvent import FinalStateEvent
 from Sources.Source import Source
+from Tasks import TaskEvents
+from Tasks.TimeoutThread import TimeoutThread
 from Utilities.AddressFile import AddressFile
-from Workstation.TaskThread import TaskThread
+from Tasks.TaskThread import TaskThread
 import Utilities.Exceptions as pyberror
 
 
@@ -66,7 +65,6 @@ class Task:
         ...
 
     def __init__(self, *args):
-        self.events = []  # List of Events from the current task loop
         self.state = None  # The current task state
         self.entry_time = 0  # Time when the current state began
         self.start_time = 0  # Time the task started
@@ -75,6 +73,8 @@ class Task:
         self.started = False  # Boolean indicator if task has started
         self.time_into_trial = 0  # Tracks time into trial for pausing purposes
         self.time_paused = 0
+        self.timeouts = {}
+        self.complete = False
 
         component_definition = self.get_components()
 
@@ -154,7 +154,7 @@ class Task:
                                         component_list = getattr(self, cid)
                                         component_list[i] = component
                                         setattr(self, cid, component_list)
-                                    self.components[cid] = component
+                                    self.components[component.id] = component
                                 else:
                                     raise pyberror.SourceUnavailableError
                             else:
@@ -210,22 +210,22 @@ class Task:
     def init_state(self) -> Enum:
         raise NotImplementedError
 
-    def change_state(self, new_state: Enum, timeout: float = None, metadata: Any = None) -> None:
+    def change_state(self, new_state: Enum, metadata: Any = None) -> None:
         self.entry_time = self.cur_time
-        if timeout is not None:
-            self.task_thread.queue.put(TaskThread.TimeoutEvent(timeout))
-        # Add a StateChangeEvent to the events list indicated the pair of States representing the transition
-        self.events.append(StateChangeEvent(self, self.state, new_state, metadata))
-        self.state = new_state
+        self.task_thread.queue.put(TaskEvents.StateExitEvent(self.state, metadata))
+        if not self._is_complete():
+            self.task_thread.queue.put(TaskEvents.StateEnterEvent(new_state, metadata))
+        else:
+            self.task_thread.queue.put(TaskEvents.TaskCompleteEvent())
 
     def start__(self) -> None:
+        self.complete = False
         self.state = self.init_state()
         for key, value in self.get_variables().items():
             setattr(self, key, value)
         self.start()
         self.started = True
-        self.entry_time = self.start_time = self.cur_time = time.time()
-        self.events.append(InitialStateEvent(self, self.state))
+        self.entry_time = self.start_time = self.cur_time = time.perf_counter()
 
     def start(self) -> None:
         pass
@@ -233,41 +233,41 @@ class Task:
     def pause__(self) -> None:
         self.paused = True
         self.time_into_trial = self.time_in_state()
-        self.events.append(StateChangeEvent(self, self.state, self.SessionStates.PAUSED, None))
-        self.pause()
-
-    def pause(self) -> None:
-        pass
+        for name in self.timeouts.keys():
+            self.pause_timeout(name)
+        # self.events.append(StateChangeEvent(self, self.state, self.SessionStates.PAUSED, None))
 
     def resume__(self) -> None:
-        self.resume()
         self.paused = False
-        time_temp = time.time()
+        time_temp = time.perf_counter()
         self.time_paused += time_temp - self.cur_time
         self.cur_time = time_temp
         self.entry_time = self.cur_time - self.time_into_trial
-        self.events.append(StateChangeEvent(self, self.SessionStates.PAUSED, self.state, None))
-
-    def resume(self) -> None:
-        pass
+        for name in self.timeouts.keys():
+            self.resume_timeout(name)
+        # self.events.append(StateChangeEvent(self, self.SessionStates.PAUSED, self.state, None))
 
     def stop__(self) -> None:
         self.started = False
-        self.events.append(FinalStateEvent(self, self.state))
+        keys = list(self.timeouts.keys())
+        for name in keys:
+            self.cancel_timeout(name)
+        # self.events.append(FinalStateEvent(self, self.state))
         self.stop()
 
     def stop(self) -> None:
         pass
 
-    def main_loop(self, event: TaskThread.Event) -> None:
-        self.cur_time = time.time()
-        if isinstance(event, TaskThread.ComponentChangedEvent):
-            self.handle_input(event)
-        if hasattr(self, self.state.name):
+    def main_loop(self, event: TaskEvents.TaskEvent) -> None:
+        self.cur_time = time.perf_counter()
+        if isinstance(event, TaskEvents.StateEnterEvent):
+            self.state = event.state
+        all_handled = self.all_states(event)
+        if not all_handled and hasattr(self, self.state.name):
             state_method = getattr(self, self.state.name)
             state_method(event)
 
-    def handle_input(self, event: TaskThread.ComponentChangedEvent) -> None:
+    def all_states(self, event: TaskEvents.TaskEvent) -> bool:
         pass
 
     def time_elapsed(self) -> float:
@@ -291,3 +291,38 @@ class Task:
     @abstractmethod
     def is_complete(self) -> bool:
         raise NotImplementedError
+
+    def _is_complete(self) -> bool:
+        return self.complete or self.is_complete()
+
+    def task_complete(self):
+        self.task_thread.queue.put(TaskEvents.TaskCompleteEvent())
+
+    def _send_timeout(self, name: str, metadata: Dict):
+        self.task_thread.queue.put(TaskEvents.TimeoutEvent(name, metadata))
+        del self.timeouts[name]
+
+    def set_timeout(self, name: str, timeout: float, metadata: Dict = None):
+        if name not in self.timeouts:
+            self.timeouts[name] = TimeoutThread(lambda: self._send_timeout(name, metadata))
+            self.timeouts[name].start(timeout)
+        else:
+            self.timeouts[name].cancel()
+            self.timeouts[name].start(timeout)
+
+    def cancel_timeout(self, name: str):
+        if name in self.timeouts:
+            self.timeouts[name].stop()
+            del self.timeouts[name]
+
+    def pause_timeout(self, name: str):
+        if name in self.timeouts:
+            self.timeouts[name].pause()
+
+    def resume_timeout(self, name: str):
+        if name in self.timeouts:
+            self.timeouts[name].resume()
+
+    def extend_timeout(self, name: str, timeout: float):
+        if name in self.timeouts:
+            self.timeouts[name].extend(timeout)

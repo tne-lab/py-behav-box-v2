@@ -28,9 +28,6 @@ class OESource(Source):
             self.available = False
         self.addresses = {}
 
-    def register_component(self, _, component):
-        self.components[component.id] = component
-
     def close_source(self):
         self.stop_event.set()
         self.thread.join()
