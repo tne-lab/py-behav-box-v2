@@ -2,9 +2,12 @@ from __future__ import annotations
 import importlib
 import math
 import threading
+import time
 from queue import Queue
 from threading import Thread
 from typing import List, Dict, Type, TYPE_CHECKING
+
+import pygame
 
 from Events.LoggerEvent import LoggerEvent
 from Tasks import TaskEvents
@@ -29,9 +32,7 @@ class TaskThread(Thread):
             logger.set_task(self.task)
         gui = getattr(importlib.import_module("Local.GUIs." + task_name + "GUI"), task_name + "GUI")
         # Position the GUI in pygame
-        col = metadata["chamber"] % ws.n_col
-        row = math.floor(metadata["chamber"] / ws.n_col)
-        self.gui = gui(ws.task_gui.subsurface(col * ws.w, row * ws.h, ws.w, ws.h), self.task)
+        self.gui = gui(pygame.Surface((ws.w, ws.h)), self.task)
         self.timeout = None
         self.stopping = False
         self.event_disconnect = threading.Event()
@@ -43,6 +44,7 @@ class TaskThread(Thread):
         del_loggers = False
         while not self.stopping:
             event = self.queue.get()
+            t = time.perf_counter()
             if isinstance(event, TaskEvents.StartEvent):
                 for el in self.event_loggers:  # Start all EventLoggers
                     el.start_()
@@ -93,6 +95,7 @@ class TaskThread(Thread):
             elif isinstance(event, TaskEvents.HeartbeatEvent):
                 if self.task.started:
                     self.task.main_loop(event)
+            print(time.perf_counter() - t)
             # self.ws.gui_notifier.set()
 
         self.gui_disconnect.wait()

@@ -37,7 +37,8 @@ class FileEventLogger(EventLogger):
 
     @abstractmethod
     def log_event(self, event: LoggerEvent) -> None:
-        self.log_file.flush()  # Need a better solution for regular saving
+        pass
+        # self.log_file.flush()  # Need a better solution for regular saving
 
     def start(self) -> None:
         super(FileEventLogger, self).start()

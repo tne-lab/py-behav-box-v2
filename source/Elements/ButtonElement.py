@@ -22,6 +22,8 @@ class ButtonElement(Element):
         self.pt4 = self.x, self.y+self.h
         self.face_color = (150, 150, 150)
         self.clicked = False
+        self.font = pygame.font.SysFont('arial', self.f_size)
+        self._msg = self.font.render(self.text, True, Colors.white)
 
     def draw(self) -> None:
         ln_color = Colors.black
@@ -37,13 +39,11 @@ class ButtonElement(Element):
         pygame.draw.line(self.screen, (100, 100, 100), self.pt1, self.pt2)
         pygame.draw.line(self.screen, (100, 100, 100), self.pt2, self.pt3)
         # WRITE LABEL
-        my_font = pygame.font.SysFont('arial', self.f_size)
-        msg_in_font = my_font.render(self.text, True, Colors.white)
-        msg_ht = msg_in_font.get_height()
-        msg_wd = msg_in_font.get_width()
+        msg_ht = self._msg.get_height()
+        msg_wd = self._msg.get_width()
         msg_x = (self.rect.width - msg_wd) / 2
         msg_y = (self.rect.height - msg_ht) / 2
-        self.screen.blit(msg_in_font, self.rect.move(msg_x, msg_y))
+        self.screen.blit(self._msg, self.rect.move(msg_x, msg_y))
 
     def mouse_up(self, event: pygame.event.Event) -> None:
         self.clicked = False

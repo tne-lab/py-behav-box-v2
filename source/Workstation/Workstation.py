@@ -90,7 +90,7 @@ class Workstation:
             self.n_col = int(settings.value("pygame/n_col"))
             self.w = int(settings.value("pygame/w"))
             self.h = int(settings.value("pygame/h"))
-            self.task_gui = pygame.display.set_mode((self.w * self.n_col, self.h * self.n_row), pygame.RESIZABLE, 32)
+            self.task_gui = pygame.display.set_mode((self.w * self.n_col, self.h * self.n_row), pygame.DOUBLEBUF | pygame.HWSURFACE, 32)
         else:
             self.compute_chambergui()
 
@@ -203,32 +203,38 @@ class Workstation:
             event = pygame.event.wait(500)
             if not event.type == pygame.NOEVENT:
                 keys = list(self.task_threads.keys())
+                handled = False
                 for key in keys:
                     if key in self.task_threads and not self.task_threads[key].stopping:
-                        self.task_threads[key].gui.handle_event(event)
+                        handled = handled or self.task_threads[key].gui.handle_event(event)
                     elif key in self.task_threads and not self.task_threads[key].gui_events_disconnect.is_set():
                         self.task_threads[key].gui_events_disconnect.set()
-                # self.gui_notifier.set()
+                # if handled:
+                #     self.gui_notifier.set()
 
     def gui_loop(self) -> None:
         while not self.stopping:
             self.gui_notifier.wait()
-            self.gui_notifier.clear()
             self.task_gui.fill(Colors.black)
             keys = list(self.task_threads.keys())
+            updates = []
             for key in keys:  # For each Task
+                col = key % self.n_col
+                row = math.floor(key / self.n_col)
+                rect = pygame.Rect((col * self.w, row * self.h, self.w, self.h))
                 if key in self.task_threads and not self.task_threads[key].stopping:
                     self.task_threads[key].gui.draw()  # Update the GUI
                     # Draw GUI border and subject name
-                    col = key % self.n_col
-                    row = math.floor(key / self.n_col)
-                    pygame.draw.rect(self.task_gui, Colors.white,
-                                     pygame.Rect(col * self.w, row * self.h, self.w, self.h), 1)
-                    LabelElement(self.task_threads[key].gui, 10, self.h - 30, self.w, 20,
-                                 self.task_threads[key].metadata["subject"], SF=1).draw()
+                    # LabelElement(self.task_threads[key].gui, 10, self.h - 30, self.w, 20,
+                    #             self.task_threads[key].metadata["subject"], SF=1).draw()
+                    t = time.perf_counter()
+                    updates.append(self.task_gui.blit(self.task_threads[key].gui.task_gui, rect))
                 elif key in self.task_threads and not self.task_threads[key].gui_disconnect.is_set():
+                    updates.append(rect)
                     self.task_threads[key].gui_disconnect.set()
-            pygame.display.flip()  # Signal to pygame that the whole GUI has updated
+            if len(updates) > 0:
+                pygame.display.update(updates)  # Signal to pygame that the whole GUI has updated
+            self.gui_notifier.clear()
             time.sleep(1/30)
 
     def heartbeat(self):

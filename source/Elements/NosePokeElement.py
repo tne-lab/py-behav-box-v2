@@ -25,12 +25,12 @@ class NosePokeElement(Element):
         self.entered = self.comp.get_state()
 
         pygame.draw.circle(self.screen, Colors.lightgray, (cx, cy), self.radius, 0)  # MAIN BULB
-        surf1 = pygame.Surface((500, 990), pygame.SRCALPHA)
-        surf2 = pygame.Surface((500, 990), pygame.SRCALPHA)
-        pygame.draw.circle(surf1, Colors.darkgray, (cx, cy), self.radius)
-        pygame.draw.circle(surf2, Colors.darkgray, (cx + self.radius / 2, cy - self.radius / 2), self.radius)
+        surf1 = pygame.Surface((self.radius*2, self.radius*2), pygame.SRCALPHA)
+        surf2 = pygame.Surface((self.radius*2, self.radius*2), pygame.SRCALPHA)
+        pygame.draw.circle(surf1, Colors.darkgray, (self.radius, self.radius), self.radius)
+        pygame.draw.circle(surf2, Colors.darkgray, (self.radius + self.radius / 2, self.radius - self.radius / 2), self.radius)
         surf1.blit(surf2, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)
-        self.screen.blit(surf1, (0, 0))
+        self.screen.blit(surf1, (cx-self.radius, cy-self.radius))
         pygame.draw.circle(self.screen, Colors.black, (cx, cy), self.radius + 2, 3)  # Black circle
 
         if self.entered:

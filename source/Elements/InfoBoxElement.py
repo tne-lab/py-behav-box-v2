@@ -1,4 +1,6 @@
 from __future__ import annotations
+
+import time
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from GUIs.GUI import GUI
@@ -25,6 +27,8 @@ class InfoBoxElement(Element):
         self.pt2 = self.x+w, self.y
         self.pt3 = self.x+w, self.y+h
         self.pt4 = self.x, self.y+h
+        self.font = pygame.font.SysFont('arial', self.f_size)
+        self._lbl = self.font.render(self.label, True, (0, 0, 0))
 
     def get_text(self) -> list[str]:
         return self.text
@@ -37,10 +41,8 @@ class InfoBoxElement(Element):
         txt_color = (0, 0, 0)
 
         # WRITE LABEL
-        my_font = pygame.font.SysFont('arial', self.f_size, bold=True)
-        lbl_in_font = my_font.render(self.label, True, (0, 0, 0))
-        lbl_ht = lbl_in_font.get_height()
-        lbl_wd = lbl_in_font.get_width()
+        lbl_ht = self._lbl.get_height()
+        lbl_wd = self._lbl.get_width()
         if self.label_pos == 'BOTTOM':
             lbl_x = (self.rect.width - lbl_wd)/2  # Center in box
             lbl_y = self.rect.height  # Below Box
@@ -54,13 +56,12 @@ class InfoBoxElement(Element):
             lbl_x = self.rect.width + 5 * self.SF
             lbl_y = (self.rect.height - lbl_ht)/2
 
-        self.screen.blit(lbl_in_font, self.rect.move(lbl_x,  lbl_y+1))
+        self.screen.blit(self._lbl, self.rect.move(lbl_x,  lbl_y+1))
 
         # WRITE TEXT
         lines_in_txt = len(self.text)
         if lines_in_txt > 0:  # NOT EMPTY BOX, No info_boxes
-            my_font = pygame.font.SysFont('arial', self.f_size)
-            msg_in_font = my_font.render(self.text[0], True, (0, 0, 0))
+            msg_in_font = self.font.render(self.text[0], True, (0, 0, 0))
             msg_ht = msg_in_font.get_height()
             msg_wd = msg_in_font.get_width()
 
@@ -71,7 +72,7 @@ class InfoBoxElement(Element):
 
             ln_count = 0
             for line in self.text:
-                msg_in_font = my_font.render(line, True, txt_color)
+                msg_in_font = self.font.render(line, True, txt_color)
                 msg_y = ln_count * msg_ht - 2 * self.SF
                 self.screen.blit(msg_in_font, self.rect.move(msg_x,  msg_y+1))
                 ln_count += 1
