@@ -1,4 +1,8 @@
 from __future__ import annotations
+
+import threading
+from queue import Queue, Empty
+from threading import Thread
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -8,7 +12,7 @@ if TYPE_CHECKING:
 from abc import ABCMeta
 
 
-class EventLogger:
+class EventLogger(Thread):
     __metaclass__ = ABCMeta
     """
     Abstract class defining the base requirements for an event logging system. Event loggers parse Event objects.
@@ -24,21 +28,35 @@ class EventLogger:
     """
 
     def __init__(self):
+        super().__init__()
         self.task = None
         self.event_count = 0
         self.started = False
+        self.queue = Queue()
+        self.stop_event = threading.Event()
 
-    def start_(self):
+    def start(self):
+        self.stop_event.clear()
         self.event_count = 0
-        self.start()
+        self.begin()
         self.started = True
+        super().start()
 
-    def start(self) -> None:
+    def run(self):
+        while not self.stop_event.is_set():
+            try:
+                le = self.queue.get(timeout=0.5)
+                self.log_event(le)
+            except Empty:
+                pass
+
+    def begin(self) -> None:
         pass
 
     def stop_(self) -> None:
         self.started = False
         self.stop()
+        self.stop_event.set()
 
     def stop(self) -> None:
         pass
@@ -46,6 +64,7 @@ class EventLogger:
     def close_(self):
         if self.started:
             self.stop_()
+        self.join()
         self.close()
 
     def close(self) -> None:

@@ -38,10 +38,10 @@ class FileEventLogger(EventLogger):
     @abstractmethod
     def log_event(self, event: LoggerEvent) -> None:
         pass
-        # self.log_file.flush()  # Need a better solution for regular saving
+        self.log_file.flush()  # Need a better solution for regular saving
 
-    def start(self) -> None:
-        super(FileEventLogger, self).start()
+    def begin(self) -> None:
+        super(FileEventLogger, self).begin()
         if not os.path.exists(self.output_folder):
             os.makedirs(self.output_folder)
         self.log_file = open(self.get_file_path(), "w")

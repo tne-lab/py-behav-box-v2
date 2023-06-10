@@ -126,9 +126,9 @@ class WorkstationGUI(QWidget):
         chamber_index : str
             The index of the task
         """
-        self.workstation.remove_task(int(chamber_index) - 1)  # Remove the task from the main Workstation
-        if int(chamber_index) - 1 in self.chambers:
-            self.chamber_container.removeWidget(self.chambers[int(chamber_index) - 1])  # Remove the widget
-            self.chambers[int(chamber_index) - 1].deleteLater()
-            del self.chambers[int(chamber_index) - 1]
+        self.workstation.remove_task(chamber_index - 1)  # Remove the task from the main Workstation
+        if chamber_index - 1 in self.chambers:
+            self.chamber_container.removeWidget(self.chambers[chamber_index - 1])  # Remove the widget
+            self.chambers[chamber_index - 1].deleteLater()
+            del self.chambers[chamber_index - 1]
         self.n_active -= 1  # Decrement the number of active tasks

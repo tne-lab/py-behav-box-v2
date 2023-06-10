@@ -28,6 +28,6 @@ class TextEventLogger(GUIEventLogger):
     def get_widget(self) -> QWidget:
         return self.event_log
 
-    def start(self) -> None:
-        super(TextEventLogger, self).start()
+    def begin(self) -> None:
+        super(TextEventLogger, self).begin()
         self.event_log.setText("")

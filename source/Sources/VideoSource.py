@@ -75,7 +75,7 @@ class VideoSource(Source):
             self.do_close[component.id] = True
             raise ComponentRegisterError
         else:
-            self.caps[component.id].start()
+            self.caps[component.id].begin()
 
     def close_source(self):
         self.available = False

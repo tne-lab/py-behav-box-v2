@@ -218,13 +218,13 @@ class ChamberWidget(QGroupBox):
             self.play_button.icon = 'Workstation/icons/pause.svg'
             self.play_button.hover_icon = 'Workstation/icons/pause_hover.svg'
             self.play_button.setIcon(QIcon(self.play_button.icon))
-            self.task_thread.queue.put(ResumeEvent())  # Resume the task
+            self.task_thread.queue.put(ResumeEvent(), block=False)  # Resume the task
         else:  # The task is currently playing
             # Change the play to a pause button
             self.play_button.icon = 'Workstation/icons/play.svg'
             self.play_button.hover_icon = 'Workstation/icons/play_hover.svg'
             self.play_button.setIcon(QIcon(self.play_button.icon))
-            self.task_thread.queue.put(PauseEvent())  # Pause the task
+            self.task_thread.queue.put(PauseEvent(), block=False)  # Pause the task
 
     def play_helper(self) -> None:
         # Change the play to a pause button
@@ -239,7 +239,7 @@ class ChamberWidget(QGroupBox):
         self.address_file_browse.setEnabled(False)
         self.protocol_file_browse.setEnabled(False)
         self.output_file_path.setEnabled(False)
-        self.task_thread.queue.put(StartEvent())
+        self.task_thread.queue.put(StartEvent(), block=False)
         if self.pd is not None:
             super(QMessageBox, self.pd).accept()
             self.pd = None
@@ -248,7 +248,7 @@ class ChamberWidget(QGroupBox):
         """
         On click function for the stop button.
         """
-        self.task_thread.queue.put(StopEvent())
+        self.task_thread.queue.put(StopEvent(), block=False)
         # Change the pause to a play button
         self.play_button.icon = 'Workstation/icons/play.svg'
         self.play_button.hover_icon = 'Workstation/icons/play_hover.svg'
@@ -297,7 +297,7 @@ class ChamberWidget(QGroupBox):
             save_config = menu.addAction("Save Configuration")  # Saves the current configuration of the chamber
             save_config.triggered.connect(self.save_configuration)
             clear_chamber = menu.addAction("Clear Chamber")  # Alerts the Workstation to remove the Task
-            clear_chamber.triggered.connect(lambda: self.wsg.remove_task(self.chamber_id.text()))
+            clear_chamber.triggered.connect(lambda: self.wsg.remove_task(int(self.chamber_id.text())))
             edit_config = menu.addAction("Edit Configuration")  # Edits the Task configuration
             edit_config.triggered.connect(self.edit_configuration)
             menu.popup(QCursor.pos())

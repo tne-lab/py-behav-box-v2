@@ -36,7 +36,7 @@ class Source:
         self.components[component.id] = component
 
     def update_component(self, cid: str, value: Any) -> None:
-        self.tasks[cid].task_thread.queue.put(ComponentUpdateEvent(cid, value))
+        self.tasks[cid].task_thread.queue.put(ComponentUpdateEvent(cid, value, {"value": value}), block=False)
 
     def close_source(self) -> None:
         pass

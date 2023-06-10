@@ -95,4 +95,4 @@ class Element:
         raise NotImplementedError
 
     def component_changed(self, component: Component, value: Any):
-        self.gui.task.task_thread.queue.put(ComponentUpdateEvent(component.id, value))
+        self.gui.task.task_thread.queue.put(ComponentUpdateEvent(component.id, value, {"value": value}), block=False)

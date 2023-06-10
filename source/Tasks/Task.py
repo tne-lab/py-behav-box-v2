@@ -212,11 +212,11 @@ class Task:
 
     def change_state(self, new_state: Enum, metadata: Any = None) -> None:
         self.entry_time = self.cur_time
-        self.task_thread.queue.put(TaskEvents.StateExitEvent(self.state, metadata))
-        if not self._is_complete():
-            self.task_thread.queue.put(TaskEvents.StateEnterEvent(new_state, metadata))
+        self.task_thread.queue.put(TaskEvents.StateExitEvent(self.state, metadata), block=False)
+        if not self.is_complete_():
+            self.task_thread.queue.put(TaskEvents.StateEnterEvent(new_state, metadata), block=False)
         else:
-            self.task_thread.queue.put(TaskEvents.TaskCompleteEvent())
+            self.task_thread.queue.put(TaskEvents.TaskCompleteEvent(), block=False)
 
     def start__(self) -> None:
         self.complete = False
@@ -235,7 +235,6 @@ class Task:
         self.time_into_trial = self.time_in_state()
         for name in self.timeouts.keys():
             self.pause_timeout(name)
-        # self.events.append(StateChangeEvent(self, self.state, self.SessionStates.PAUSED, None))
 
     def resume__(self) -> None:
         self.paused = False
@@ -245,14 +244,12 @@ class Task:
         self.entry_time = self.cur_time - self.time_into_trial
         for name in self.timeouts.keys():
             self.resume_timeout(name)
-        # self.events.append(StateChangeEvent(self, self.SessionStates.PAUSED, self.state, None))
 
     def stop__(self) -> None:
         self.started = False
-        keys = list(self.timeouts.keys())
-        for name in keys:
+        for name in self.timeouts.keys():
             self.cancel_timeout(name)
-        # self.events.append(FinalStateEvent(self, self.state))
+        self.timeouts = {}
         self.stop()
 
     def stop(self) -> None:
@@ -292,14 +289,14 @@ class Task:
     def is_complete(self) -> bool:
         raise NotImplementedError
 
-    def _is_complete(self) -> bool:
+    def is_complete_(self) -> bool:
         return self.complete or self.is_complete()
 
     def task_complete(self):
-        self.task_thread.queue.put(TaskEvents.TaskCompleteEvent())
+        self.task_thread.queue.put(TaskEvents.TaskCompleteEvent(), block=False)
 
     def _send_timeout(self, name: str, metadata: Dict):
-        self.task_thread.queue.put(TaskEvents.TimeoutEvent(name, metadata))
+        self.task_thread.queue.put(TaskEvents.TimeoutEvent(name, metadata), block=False)
         del self.timeouts[name]
 
     def set_timeout(self, name: str, timeout: float, metadata: Dict = None):
@@ -313,7 +310,6 @@ class Task:
     def cancel_timeout(self, name: str):
         if name in self.timeouts:
             self.timeouts[name].stop()
-            del self.timeouts[name]
 
     def pause_timeout(self, name: str):
         if name in self.timeouts:

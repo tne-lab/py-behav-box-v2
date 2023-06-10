@@ -194,7 +194,7 @@ class Workstation:
 
     def remove_task_(self, chamber: int, del_loggers: bool = True) -> None:
         if chamber in self.task_threads:
-            self.task_threads[chamber].queue.put(ClearEvent(del_loggers))
+            self.task_threads[chamber].queue.put(ClearEvent(del_loggers), block=False)
             self.task_threads[chamber].join()
             del self.task_threads[chamber]
 
@@ -209,12 +209,13 @@ class Workstation:
                         handled = handled or self.task_threads[key].gui.handle_event(event)
                     elif key in self.task_threads and not self.task_threads[key].gui_events_disconnect.is_set():
                         self.task_threads[key].gui_events_disconnect.set()
-                # if handled:
-                #     self.gui_notifier.set()
+                if handled:
+                    self.gui_notifier.set()
 
     def gui_loop(self) -> None:
         while not self.stopping:
             self.gui_notifier.wait()
+            self.gui_notifier.clear()
             self.task_gui.fill(Colors.black)
             keys = list(self.task_threads.keys())
             updates = []
@@ -234,14 +235,13 @@ class Workstation:
                     self.task_threads[key].gui_disconnect.set()
             if len(updates) > 0:
                 pygame.display.update(updates)  # Signal to pygame that the whole GUI has updated
-            self.gui_notifier.clear()
             time.sleep(1/30)
 
     def heartbeat(self):
         while not self.stopping:
             keys = list(self.task_threads.keys())
             for key in keys:
-                self.task_threads[key].queue.put(HeartbeatEvent())
+                self.task_threads[key].queue.put(HeartbeatEvent(), block=False)
             time.sleep(1)
 
     def exit_handler(self, *args):
@@ -251,7 +251,7 @@ class Workstation:
         self.stopping = True
         for key in self.task_threads:  # Stop all Tasks
             if self.task_threads[key].task.started:
-                self.task_threads[key].queue.put(StopEvent())
+                self.task_threads[key].queue.put(StopEvent(), block=False)
             self.remove_task(key)
         for src in self.sources:  # Close all Sources
             self.sources[src].close_source()

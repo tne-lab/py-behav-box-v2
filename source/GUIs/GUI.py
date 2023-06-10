@@ -46,4 +46,4 @@ class GUI:
         return handled
 
     def log_gui_event(self, event: Enum, metadata: Dict = None):
-        self.task.task_thread.queue.put(GUIEvent(event, metadata))
+        self.task.task_thread.queue.put(GUIEvent(event, metadata), block=False)

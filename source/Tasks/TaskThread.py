@@ -44,16 +44,20 @@ class TaskThread(Thread):
         del_loggers = False
         while not self.stopping:
             event = self.queue.get()
-            t = time.perf_counter()
             if isinstance(event, TaskEvents.StartEvent):
                 for el in self.event_loggers:  # Start all EventLoggers
-                    el.start_()
+                    el.start()
                 self.task.start__()
-                self.queue.put(TaskEvents.StateEnterEvent(self.task.state))
+                new_event = TaskEvents.StateEnterEvent(self.task.state, event.metadata)
+                self.task.main_loop(new_event)
+                self.log_event(LoggerEvent(new_event, new_event.state.name, new_event.state.value, self.task.time_elapsed()))
             elif isinstance(event, TaskEvents.TaskCompleteEvent):
                 self.ws.wsg.chambers[self.metadata["chamber"]].stop()
                 self.task.complete = True
             elif isinstance(event, TaskEvents.StopEvent):
+                new_event = TaskEvents.StateExitEvent(self.task.state, event.metadata)
+                self.task.main_loop(new_event)
+                self.log_event(LoggerEvent(new_event, new_event.state.name, new_event.state.value, self.task.time_elapsed()))
                 self.task.stop__()
             elif isinstance(event, TaskEvents.PauseEvent):
                 self.task.pause__()
@@ -79,24 +83,23 @@ class TaskThread(Thread):
                 if self.task.started:
                     new_event = TaskEvents.ComponentChangedEvent(comp, event.metadata)
                     self.task.main_loop(new_event)
-                    if self.task._is_complete():
-                        self.queue.put(TaskEvents.TaskCompleteEvent())
+                    if self.task.is_complete_():
+                        self.queue.put(TaskEvents.TaskCompleteEvent(), block=False)
                     self.log_event(LoggerEvent(new_event, comp.id, comp.address, self.task.time_elapsed()))
             elif isinstance(event, TaskEvents.GUIEvent):
                 if self.task.started:
                     self.task.main_loop(event)
-                    if self.task._is_complete():
-                        self.queue.put(TaskEvents.TaskCompleteEvent())
+                    if self.task.is_complete_():
+                        self.queue.put(TaskEvents.TaskCompleteEvent(), block=False)
                     self.log_event(LoggerEvent(event, event.event.name, event.event.value, self.task.time_elapsed()))
             elif isinstance(event, TaskEvents.TimeoutEvent):  # Should this log an event?
                 self.task.main_loop(event)
-                if self.task._is_complete():
-                    self.queue.put(TaskEvents.TaskCompleteEvent())
+                if self.task.is_complete_():
+                    self.queue.put(TaskEvents.TaskCompleteEvent(), block=False)
             elif isinstance(event, TaskEvents.HeartbeatEvent):
                 if self.task.started:
                     self.task.main_loop(event)
-            print(time.perf_counter() - t)
-            # self.ws.gui_notifier.set()
+            self.ws.gui_notifier.set()
 
         self.gui_disconnect.wait()
         self.gui_events_disconnect.wait()
@@ -120,4 +123,4 @@ class TaskThread(Thread):
 
     def log_event(self, event: LoggerEvent):
         for logger in self.event_loggers:
-            logger.log_event(event)
+            logger.queue.put(event, block=False)
