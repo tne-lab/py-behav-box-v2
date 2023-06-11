@@ -1,18 +1,16 @@
 from __future__ import annotations
 
-import threading
-from queue import Queue, Empty
-from threading import Thread
+import asyncio
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from Events.LoggerEvent import LoggerEvent
     from Tasks.Task import Task
 
-from abc import ABCMeta
+from abc import ABCMeta, abstractmethod
 
 
-class EventLogger(Thread):
+class EventLogger:
     __metaclass__ = ABCMeta
     """
     Abstract class defining the base requirements for an event logging system. Event loggers parse Event objects.
@@ -31,52 +29,43 @@ class EventLogger(Thread):
         super().__init__()
         self.task = None
         self.event_count = 0
-        self.started = False
-        self.queue = Queue()
-        self.stop_event = threading.Event()
+        self.queue = asyncio.Queue()
+        self.event_loop = asyncio.create_task(self.run())
 
-    def start(self):
-        self.stop_event.clear()
+    async def run(self):
+        while True:
+            le = await self.queue.get()
+            await self.log_event(le)
+
+    def start_(self):
         self.event_count = 0
-        self.begin()
-        self.started = True
-        super().start()
+        self.start()
 
-    def run(self):
-        while not self.stop_event.is_set():
-            try:
-                le = self.queue.get(timeout=0.5)
-                self.log_event(le)
-            except Empty:
-                pass
-
-    def begin(self) -> None:
+    def start(self) -> None:
         pass
 
-    def stop_(self) -> None:
-        self.started = False
+    def stop_(self):
         self.stop()
-        self.stop_event.set()
 
     def stop(self) -> None:
         pass
 
     def close_(self):
-        if self.started:
-            self.stop_()
-        self.join()
+        self.stop_()
+        self.event_loop.cancel()
         self.close()
 
     def close(self) -> None:
         pass
 
-    def log_event(self, events: LoggerEvent) -> None:
-        pass
+    @abstractmethod
+    async def log_event(self, events: LoggerEvent) -> None:
+        raise NotImplementedError
 
     def set_task(self, task: Task) -> None:
         self.task = task
 
     def format_event(self, le: LoggerEvent, event_type: str):
-        return "{},{},{},{},{},{}\n".format(self.event_count, le.entry_time, event_type,
+        return "{},{},{},{},{},\"{}\"\n".format(self.event_count, le.entry_time, event_type,
                                             le.eid, le.name,
                                             str(le.event.metadata))

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import time
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from GUIs.GUI import GUI
@@ -36,10 +35,11 @@ class NosePokeElement(Element):
         if self.entered:
             pygame.draw.polygon(self.screen, Colors.black, [(cx, cy), (cx - self.radius / 2, cy + self.radius), (cx + self.radius / 2, cy + self.radius)])
 
+    def has_updated(self) -> bool:
+        return self.entered != self.comp.get_state()
+
     def mouse_up(self, event: pygame.event.Event) -> None:
-        self.entered = False
-        self.component_changed(self.comp, self.entered)
+        self.component_changed(self.comp, False)
 
     def mouse_down(self, event: pygame.event.Event) -> None:
-        self.entered = True
-        self.component_changed(self.comp, self.entered)
+        self.component_changed(self.comp, True)

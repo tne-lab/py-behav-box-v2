@@ -41,6 +41,8 @@ class FoodLightElement(Element):
                        pygame.Rect(self.x - self.h / 8, self.y + self.h / 2 - self.h / 8, self.h / 8 * 2,
                                    self.h / 8 * 2), self.x, self.y + self.h / 2, self.h / 8)
 
+    def has_updated(self) -> bool:
+        return self.on != self.comp.get_state()
+
     def mouse_up(self, event: pygame.event.Event) -> None:
-        self.on = not self.on
-        self.comp.toggle(self.on)
+        self.comp.toggle(not self.on)

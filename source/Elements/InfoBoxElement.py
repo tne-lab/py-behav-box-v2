@@ -33,6 +33,9 @@ class InfoBoxElement(Element):
     def get_text(self) -> list[str]:
         return self.text
 
+    def has_updated(self) -> bool:
+        return self.get_text() != self.text
+
     def draw(self) -> None:
         self.text = self.get_text()
         # Draw Box

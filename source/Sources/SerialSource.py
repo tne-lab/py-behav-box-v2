@@ -1,6 +1,6 @@
-import threading
+import asyncio
 
-import serial
+import serial_asyncio
 
 from Components.Component import Component
 from Sources.Source import Source
@@ -10,24 +10,20 @@ class SerialSource(Source):
 
     def __init__(self):
         super(SerialSource, self).__init__()
-        self.close_events = {}
-        self.coms = {}
-        self.read_threads = {}
+        self.readers = {}
+        self.writers = {}
+        self.read_tasks = {}
 
-    def register_component(self, task, component):
-        super().register_component(task, component)
+    async def register_component(self, task, component):
+        await super().register_component(task, component)
         com_opened = False
-        if component.address not in self.coms:
-            self.coms[component.address] = serial.Serial(port=component.address, baudrate=component.baudrate,
-                                                         timeout=0.5,
-                                                         write_timeout=0)
+        if component.address not in self.readers:
+            self.readers[component.address], self.writers[component.address] = await serial_asyncio.open_serial_connection(port=component.address, baudrate=component.baudrate)
             com_opened = True
         ct = component.get_type()
         if (ct == Component.Type.INPUT or ct == Component.Type.DIGITAL_INPUT or ct == Component.Type.ANALOG_INPUT or ct == Component.Type.BOTH)\
                 and com_opened:
-            self.close_events[component.address] = threading.Event()
-            self.read_threads[component.address] = threading.Thread(target=self.read, args=[component.address])
-            self.read_threads[component.address].start()
+            self.read_tasks[component.address] = asyncio.create_task(self.read(component.address))
 
     def close_component(self, component_id):
         address = self.components[component_id].address
@@ -38,20 +34,20 @@ class SerialSource(Source):
                 close_com = False
                 break
         if close_com:
-            self.close_events[address].set()
-            self.read_threads[address].join()
-            del self.close_events[address]
-            del self.read_threads[address]
-            del self.coms[address]
+            self.read_tasks[address].cancel()
+            self.writers[address].close()
+            del self.read_tasks[address]
+            del self.writers[address]
+            del self.readers[address]
 
     def close_source(self):
         keys = list(self.components.keys())
         for key in keys:
             self.close_component(key)
 
-    def read(self, com):
-        while not self.close_events[com].is_set():
-            msg = self.coms[com].read(max(1, self.coms[com].in_waiting))
+    async def read(self, com):
+        while True:
+            msg = await self.readers[com].read()
             print(msg)
             if len(msg) > 0:
                 for comp in self.components.values():
@@ -63,7 +59,7 @@ class SerialSource(Source):
             term = self.components[component_id].terminator
         else:
             term = ""
-        self.coms[self.components[component_id].address].write(bytes(str(msg) + term, 'utf-8'))
+        self.writers[self.components[component_id].address].write(bytes(str(msg) + term, 'utf-8'))
 
     def is_available(self):
         return True

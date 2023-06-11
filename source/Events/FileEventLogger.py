@@ -36,12 +36,10 @@ class FileEventLogger(EventLogger):
         raise NotImplementedError
 
     @abstractmethod
-    def log_event(self, event: LoggerEvent) -> None:
-        pass
+    async def log_event(self, event: LoggerEvent) -> None:
         self.log_file.flush()  # Need a better solution for regular saving
 
-    def begin(self) -> None:
-        super(FileEventLogger, self).begin()
+    def start(self) -> None:
         if not os.path.exists(self.output_folder):
             os.makedirs(self.output_folder)
         self.log_file = open(self.get_file_path(), "w")

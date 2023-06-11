@@ -8,12 +8,12 @@ import runpy
 from typing import Any, Type, overload, Dict, List
 
 from Components.Component import Component
+from Events import PybEvents
 from Sources.Source import Source
-from Tasks import TaskEvents
-from Tasks.TimeoutThread import TimeoutThread
+from Tasks.Timeout import Timeout
 from Utilities.AddressFile import AddressFile
-from Tasks.TaskThread import TaskThread
 import Utilities.Exceptions as pyberror
+from Workstation.Workstation import Workstation
 
 
 class Task:
@@ -56,25 +56,24 @@ class Task:
     class SessionStates(Enum):
         PAUSED = 0
 
-    @overload
-    def __init__(self, task_thread: TaskThread, metadata: Dict[str, Any], sources: Dict[str, Source], address_file: str = "", protocol: str = ""):
-        ...
-
-    @overload
-    def __init__(self, task: Task, components: List[Component], protocol: str):
-        ...
-
-    def __init__(self, *args):
-        self.state = None  # The current task state
-        self.entry_time = 0  # Time when the current state began
-        self.start_time = 0  # Time the task started
-        self.cur_time = 0  # The time for the current task loop
-        self.paused = False  # Boolean indicator if task is paused
-        self.started = False  # Boolean indicator if task has started
-        self.time_into_trial = 0  # Tracks time into trial for pausing purposes
-        self.time_paused = 0
+    def __init__(self):
+        self.state = None
+        self.entry_time = self.start_time = self.cur_time = self.time_into_trial = self.time_paused = 0
+        self.paused = self.started = self.complete = False
         self.timeouts = {}
-        self.complete = False
+        self.ws = None
+        self.metadata = None
+        self.components = {}
+
+    @overload
+    async def initialize(self, workstation: Workstation, metadata: Dict[str, Any], sources: Dict[str, Source]) -> None:
+        ...
+
+    @overload
+    async def initialize(self, task: Task, components: List[Component], protocol: str) -> None:
+        ...
+
+    async def initialize(self, *args) -> None:
 
         component_definition = self.get_components()
 
@@ -85,9 +84,8 @@ class Task:
         # If this task is being created as part of a Task sequence
         if isinstance(args[0], Task):
             # Assign variables from base Task
-            self.ws = args[0].ws
+            self.ws = args[0]
             self.metadata = args[0].metadata
-            self.components = {}
             for component in args[1]:
                 if component.id.split('-')[0] in component_definition:
                     if not hasattr(self, component.id.split('-')[0]):
@@ -101,21 +99,13 @@ class Task:
                                     [getattr(self, component.id.split('-')[0]), component])
                     self.components[component.id] = component
             # Load protocol is provided
-            if len(args) > 2 and args[2] is not None:
-                try:
-                    file_globals = runpy.run_path(args[2])
-                except:
-                    raise pyberror.MalformedProtocolError
-                for cons in file_globals['protocol']:
-                    if hasattr(self, cons):
-                        setattr(self, cons, file_globals['protocol'][cons])
+            protocol = args[2]
         else:  # If this is a standard Task
-            self.task_thread = args[0]
+            self.ws = args[0]
             self.metadata = args[1]
             sources = args[2]
             protocol = self.metadata["protocol"]
             address_file = self.metadata["address_file"]
-            self.components = {}
 
             # Open the provided AddressFile
             if isinstance(address_file, str) and len(address_file) > 0:
@@ -128,14 +118,17 @@ class Task:
                         comps = file_globals['addresses'].addresses[cid]
                         for i, comp in enumerate(comps):
                             # Import and instantiate the indicated Component with the provided ID and address
-                            component_type = getattr(importlib.import_module("Components." + comp.component_type), comp.component_type)
+                            component_type = getattr(importlib.import_module("Components." + comp.component_type),
+                                                     comp.component_type)
                             if issubclass(component_type, component_definition[cid][i]):
                                 if sources[comp.source_name].is_available():
-                                    component = component_type(sources[comp.source_name], "{}-{}-{}".format(cid, str(self.metadata["chamber"]), str(i)), comp.component_address)
+                                    component = component_type(sources[comp.source_name],
+                                                               "{}-{}-{}".format(cid, str(self.metadata["chamber"]),
+                                                                                 str(i)), comp.component_address)
                                     if comp.metadata is not None:
                                         component.initialize(comp.metadata)
                                     try:
-                                        sources[comp.source_name].register_component(self, component)
+                                        await sources[comp.source_name].register_component(self, component)
                                     except:
                                         print(traceback.format_exc())
                                         raise pyberror.ComponentRegisterError
@@ -162,12 +155,13 @@ class Task:
 
             for name in component_definition:
                 for i in range(len(component_definition[name])):
-                    if not hasattr(self, name) or (type(getattr(self, name)) is list and getattr(self, name)[i] is None):
+                    if not hasattr(self, name) or (
+                            type(getattr(self, name)) is list and getattr(self, name)[i] is None):
                         component = component_definition[name][i](sources["es"],
                                                                   name + "-" + str(
                                                                       self.metadata["chamber"]) + "-" + str(i),
                                                                   sources["es"].next_id)
-                        sources["es"].register_component(self, component)
+                        await sources["es"].register_component(self, component)
                         if not hasattr(self, name):
                             # If the Component is part of a list
                             if len(component_definition[name]) > 1:
@@ -184,21 +178,19 @@ class Task:
                             setattr(self, name, component_list)
                         self.components[component.id] = component
 
-            # If a Protocol is provided, replace all indicated variables with the values from the Protocol
-            if isinstance(protocol, str) and len(protocol) > 0:
-                try:
-                    file_globals = runpy.run_path(protocol)
-                except:
-                    raise pyberror.MalformedProtocolError
-                for cons in file_globals['protocol']:
-                    if hasattr(self, cons):
-                        setattr(self, cons, file_globals['protocol'][cons])
+        # If a Protocol is provided, replace all indicated variables with the values from the Protocol
+        if isinstance(protocol, str) and len(protocol) > 0:
+            try:
+                file_globals = runpy.run_path(protocol)
+            except:
+                raise pyberror.MalformedProtocolError
+            for cons in file_globals['protocol']:
+                if hasattr(self, cons):
+                    setattr(self, cons, file_globals['protocol'][cons])
 
         # Get all default values for task variables
         for key, value in self.get_variables().items():
             setattr(self, key, value)
-
-        self.init()
 
     def init(self) -> None:
         pass
@@ -212,11 +204,11 @@ class Task:
 
     def change_state(self, new_state: Enum, metadata: Any = None) -> None:
         self.entry_time = self.cur_time
-        self.task_thread.queue.put(TaskEvents.StateExitEvent(self.state, metadata), block=False)
+        self.ws.queue.put_nowait(PybEvents.StateExitEvent(self.metadata["chamber"], self.state, metadata))
         if not self.is_complete_():
-            self.task_thread.queue.put(TaskEvents.StateEnterEvent(new_state, metadata), block=False)
+            self.ws.queue.put_nowait(PybEvents.StateEnterEvent(self.metadata["chamber"], new_state, metadata))
         else:
-            self.task_thread.queue.put(TaskEvents.TaskCompleteEvent(), block=False)
+            self.ws.queue.put_nowait(PybEvents.TaskCompleteEvent(self.metadata["chamber"]))
 
     def start__(self) -> None:
         self.complete = False
@@ -255,16 +247,16 @@ class Task:
     def stop(self) -> None:
         pass
 
-    def main_loop(self, event: TaskEvents.TaskEvent) -> None:
+    def main_loop(self, event: PybEvents.PybEvent) -> None:
         self.cur_time = time.perf_counter()
-        if isinstance(event, TaskEvents.StateEnterEvent):
+        if isinstance(event, PybEvents.StateEnterEvent):
             self.state = event.state
         all_handled = self.all_states(event)
         if not all_handled and hasattr(self, self.state.name):
             state_method = getattr(self, self.state.name)
             state_method(event)
 
-    def all_states(self, event: TaskEvents.TaskEvent) -> bool:
+    def all_states(self, event: PybEvents.PybEvent) -> bool:
         pass
 
     def time_elapsed(self) -> float:
@@ -293,15 +285,15 @@ class Task:
         return self.complete or self.is_complete()
 
     def task_complete(self):
-        self.task_thread.queue.put(TaskEvents.TaskCompleteEvent(), block=False)
+        self.ws.queue.put_nowait(PybEvents.TaskCompleteEvent(self.metadata["chamber"]))
 
     def _send_timeout(self, name: str, metadata: Dict):
-        self.task_thread.queue.put(TaskEvents.TimeoutEvent(name, metadata), block=False)
+        self.ws.queue.put_nowait(PybEvents.TimeoutEvent(self.metadata["chamber"], name, metadata))
         del self.timeouts[name]
 
     def set_timeout(self, name: str, timeout: float, metadata: Dict = None):
         if name not in self.timeouts:
-            self.timeouts[name] = TimeoutThread(lambda: self._send_timeout(name, metadata))
+            self.timeouts[name] = Timeout(lambda: self._send_timeout(name, metadata))
             self.timeouts[name].start(timeout)
         else:
             self.timeouts[name].cancel()

@@ -1,5 +1,6 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
+
 if TYPE_CHECKING:
     from GUIs.GUI import GUI
 
@@ -24,12 +25,17 @@ class ButtonElement(Element):
         self.clicked = False
         self.font = pygame.font.SysFont('arial', self.f_size)
         self._msg = self.font.render(self.text, True, Colors.white)
+        self.draw_state = False
+
+    def has_updated(self) -> bool:
+        return self.clicked != self.draw_state
 
     def draw(self) -> None:
+        self.draw_state = self.clicked
         ln_color = Colors.black
         # draw box
         pygame.draw.rect(self.screen, ln_color, self.rect)
-        if self.clicked:
+        if self.draw_state:
             pygame.draw.rect(self.screen, (100, 100, 100), self.face)
         else:
             pygame.draw.rect(self.screen, self.face_color, self.face)

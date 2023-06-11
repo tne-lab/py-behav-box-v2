@@ -39,3 +39,9 @@ class SoundElement(Element):
         for c in range(4):
             pygame.draw.circle(self.screen, col, (cx - 23 * sf + incr, cy + 15 * sf), 5 * sf, 1)
             incr += 15 * sf
+
+    def has_updated(self) -> bool:
+        return self.on != self.comp.get_state()
+
+    def mouse_up(self, event: pygame.event.Event) -> None:
+        self.comp.toggle(not self.on)

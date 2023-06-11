@@ -47,11 +47,16 @@ class LabelElement(Element):
         self.text = text
         self.f_size = int(self.SF * f_size)
         self.font = pygame.font.SysFont('arial', self.f_size)
-        txt_color = (255, 255, 255)  # Font color, could be made a parameter in the future
-        self._msg = self.font.render(self.text, True, txt_color)  # Create the font object
+        self.txt_color = (255, 255, 255)  # Font color, could be made a parameter in the future
+        self.shown_text = self.text
+
+    def has_updated(self) -> bool:
+        return self.shown_text != self.text
 
     def draw(self) -> None:
-        msg_ht = self._msg.get_height()  # Position the label to the left of its containing rectangle
+        self.shown_text = self.text
+        _msg = self.font.render(self.text, True, self.txt_color)
+        msg_ht = _msg.get_height()  # Position the label to the left of its containing rectangle
         msg_x = 0
         msg_y = (self.rect.height - msg_ht)/2
-        self.screen.blit(self._msg, self.rect.move(msg_x,  msg_y+1))  # Draw the label
+        self.screen.blit(_msg, self.rect.move(msg_x,  msg_y+1))  # Draw the label

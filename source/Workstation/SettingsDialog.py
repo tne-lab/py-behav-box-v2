@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import os
 from typing import TYPE_CHECKING
 
@@ -54,7 +55,7 @@ class SettingsDialog(QDialog):
         self.refresh_button.setText("⟳")
         self.refresh_button.setFixedWidth(30)
         self.refresh_button.setDisabled(True)
-        self.refresh_button.clicked.connect(self.refresh_source)
+        self.refresh_button.clicked.connect(lambda: asyncio.create_task(self.refresh_source()))
         source_as_layout.addWidget(self.refresh_button)
         self.remove_button = QPushButton()
         self.remove_button.setText("−")
@@ -85,7 +86,7 @@ class SettingsDialog(QDialog):
         self.remove_button.setDisabled(False)
         self.refresh_button.setDisabled(False)
 
-    def refresh_source(self) -> None:
+    async def refresh_source(self) -> None:
         st = self.source_list.currentItem().text()
         st_name = st.split(" (")[0]
         if len(self.workstation.sources[st_name].components) == 0:
@@ -100,6 +101,7 @@ class SettingsDialog(QDialog):
             attribute = getattr(source_module, s_type)
             globals()[s_type] = attribute
             self.workstation.sources[st_name] = eval(type(self.workstation.sources[st_name]).__name__ + source_string[open_ind:close_ind])
+            await self.workstation.sources[st_name].initialize()
             if self.workstation.sources[st_name].is_available():
                 self.source_list.currentItem().setIcon(self.source_list.style().standardIcon(QStyle.SP_DialogApplyButton))
             else:
@@ -183,6 +185,7 @@ class AddSourceDialog(QDialog):
                                                                      ','.join(f'"{w}"' for w in self.params)) + "}"
         settings.setValue("sources", source_string)
         self.sd.workstation.sources[self.name.text()] = source_type(*self.params)
+        asyncio.create_task(self.sd.workstation.sources[self.name.text()].initialize())
         ql = QListWidgetItem("{} ({})".format(self.name.text(), self.source.currentText()), self.sd.source_list)
         if self.sd.workstation.sources[self.name.text()].is_available():
             ql.setIcon(self.sd.source_list.style().standardIcon(QStyle.SP_DialogApplyButton))

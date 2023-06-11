@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, List, Dict
 import pygame
 from pygame.event import Event
 
-from Tasks.TaskEvents import GUIEvent
+from Events.PybEvents import GUIEvent
 
 if TYPE_CHECKING:
     from Tasks.Task import Task
@@ -46,4 +46,4 @@ class GUI:
         return handled
 
     def log_gui_event(self, event: Enum, metadata: Dict = None):
-        self.task.task_thread.queue.put(GUIEvent(event, metadata), block=False)
+        self.task.ws.queue.put_nowait(GUIEvent(self.task.metadata["chamber"], event, metadata))

@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-import queue
-import threading
+import asyncio
 import time
 from typing import TYPE_CHECKING, List
 
-from Tasks.TaskThread import TaskThread
-from Tasks.TaskEvents import StopEvent, ClearEvent, HeartbeatEvent
+from Events import PybEvents
+from Events.LoggerEvent import LoggerEvent
+from Utilities.handle_task_result import handle_task_result
 
 if TYPE_CHECKING:
     from Events.EventLogger import EventLogger
@@ -20,27 +20,43 @@ import math
 import atexit
 
 from GUIs import Colors
-from Elements.LabelElement import LabelElement
 import pygame
 
 from Sources.EmptySource import EmptySource
-from Sources.EmptyTouchScreenSource import EmptyTouchScreenSource
 from Workstation.WorkstationGUI import WorkstationGUI
 import Utilities.Exceptions as pyberror
 
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
-import sys
 import os
 import ast
 import traceback
 from screeninfo import get_monitors
+from line_profiler import LineProfiler
 
 
 class Workstation:
 
     def __init__(self):
-        self.task_threads = {}
+        self.tasks = {}
+        self.task_event_loggers = {}
+        self.guis = {}
+        self.sources = {}
+        self.n_chamber, self.n_col, self.n_row, self.w, self.h = 0, 0, 0, 0, 0
+        self.ed = None
+        self.wsg = None
+        self.queue = asyncio.Queue()
+        self.loop = asyncio.get_event_loop()
+        self.gui_event_task = None
+        self.main_task = None
+        self.heartbeat_task = None
+        self.delay_heartbeat = False
+        self.fr = 10
+        self.last_frame = 0
+        self.task_gui = None
+        self.gui_updates = []
+        # self.lp = LineProfiler()
+        # self.gui_wrapper = self.lp(self.update_gui)
 
         # Core application details
         QCoreApplication.setOrganizationName("TNEL")
@@ -50,28 +66,6 @@ class Workstation:
         # Load information from settings or set defaults
         desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
         settings = QSettings(desktop + "/py-behav/pybehave.ini", QSettings.IniFormat)
-        # Store information on the available sources
-        package_dir = "Sources/"
-        for (_, module_name, _) in iter_modules([package_dir]):
-            # import the module and iterate through its attributes
-            module = importlib.import_module(f"Sources.{module_name}")
-            for attribute_name in dir(module):
-                attribute = getattr(module, attribute_name)
-                if isclass(attribute):
-                    # Add the class to this package's variables
-                    globals()[attribute_name] = attribute
-        if settings.contains("sources"):
-            self.sources = eval(settings.value("sources"))
-        else:
-            self.sources = {"es": EmptySource(), "etss": EmptyTouchScreenSource("(1024, 768)")}
-            settings.setValue("sources", '{"es": EmptySource(), "etss": EmptyTouchScreenSource("(1024, 768)")}')
-        # Store the number of available chambers
-        if settings.contains("n_chamber"):
-            self.n_chamber = int(settings.value("n_chamber"))
-        else:
-            self.n_chamber = 1
-            settings.setValue("n_chamber", self.n_chamber)
-
         # Store the position of the pygame window
         if settings.contains("pygame/offset"):
             offset = ast.literal_eval(settings.value("pygame/offset"))
@@ -90,25 +84,128 @@ class Workstation:
             self.n_col = int(settings.value("pygame/n_col"))
             self.w = int(settings.value("pygame/w"))
             self.h = int(settings.value("pygame/h"))
-            self.task_gui = pygame.display.set_mode((self.w * self.n_col, self.h * self.n_row), pygame.DOUBLEBUF | pygame.HWSURFACE, 32)
+            self.task_gui = pygame.display.set_mode((self.w * self.n_col, self.h * self.n_row),
+                                                    pygame.DOUBLEBUF | pygame.HWSURFACE, 32)
         else:
             self.compute_chambergui()
 
-        self.ed = None
-        app = QApplication(sys.argv)
+    async def start_workstation(self):
+        # Load information from settings or set defaults
+        desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
+        settings = QSettings(desktop + "/py-behav/pybehave.ini", QSettings.IniFormat)
+        # Store information on the available sources
+        package_dir = "Sources/"
+        for (_, module_name, _) in iter_modules([package_dir]):
+            # import the module and iterate through its attributes
+            module = importlib.import_module(f"Sources.{module_name}")
+            for attribute_name in dir(module):
+                attribute = getattr(module, attribute_name)
+                if isclass(attribute):
+                    # Add the class to this package's variables
+                    globals()[attribute_name] = attribute
+        if settings.contains("sources"):
+            self.sources = eval(settings.value("sources"))
+            for source in self.sources.values():
+                await source.initialize()
+        else:
+            self.sources = {"es": EmptySource()}
+            settings.setValue("sources", '{"es": EmptySource()}')
+        # Store the number of available chambers
+        if settings.contains("n_chamber"):
+            self.n_chamber = int(settings.value("n_chamber"))
+        else:
+            self.n_chamber = 1
+            settings.setValue("n_chamber", self.n_chamber)
+
         self.wsg = WorkstationGUI(self)
-        self.gui_notifier = threading.Event()
-        self.stopping = False
-        heartbeat = threading.Thread(target=self.heartbeat)
-        heartbeat.start()
-        guithread = threading.Thread(target=self.gui_loop)
-        guithread.start()
-        gui_event_thread = threading.Thread(target=self.gui_event_loop)
-        gui_event_thread.start()
+        self.gui_event_task = self.loop.run_in_executor(None, self.gui_event_loop)
+        self.main_task = asyncio.create_task(self.run())
+        self.main_task.add_done_callback(handle_task_result)
+        self.heartbeat_task = asyncio.create_task(self.heartbeat())
+
         atexit.register(lambda: self.exit_handler())
         signal.signal(signal.SIGTERM, self.exit_handler)
         signal.signal(signal.SIGINT, self.exit_handler)
-        sys.exit(app.exec())
+
+    async def run(self):
+        while True:
+            event = await self.queue.get()
+            if isinstance(event, PybEvents.StartEvent):
+                for el in self.task_event_loggers[event.chamber]:  # Start all EventLoggers
+                    el.start_()
+                self.tasks[event.chamber].start__()
+                new_event = PybEvents.StateEnterEvent(event.chamber, self.tasks[event.chamber].state, event.metadata)
+                self.tasks[event.chamber].main_loop(new_event)
+                self.log_event(event.chamber, LoggerEvent(new_event, new_event.state.name, new_event.state.value,
+                                                          self.tasks[event.chamber].time_elapsed()))
+            elif isinstance(event, PybEvents.TaskCompleteEvent):
+                self.wsg.chambers[event.chamber].stop()
+                self.tasks[event.chamber].complete = True
+            elif isinstance(event, PybEvents.StopEvent):
+                new_event = PybEvents.StateExitEvent(event.chamber, self.tasks[event.chamber].state, event.metadata)
+                self.tasks[event.chamber].main_loop(new_event)
+                self.log_event(event.chamber, LoggerEvent(new_event, new_event.state.name, new_event.state.value,
+                                                          self.tasks[event.chamber].time_elapsed()))
+                self.tasks[event.chamber].stop__()
+            elif isinstance(event, PybEvents.PauseEvent):
+                self.tasks[event.chamber].pause__()
+                self.tasks[event.chamber].main_loop(event)
+                self.log_event(event.chamber, LoggerEvent(event, self.tasks[event.chamber].state.name,
+                                                          self.tasks[event.chamber].state.name.value,
+                                                          self.tasks[event.chamber].time_elapsed()))
+            elif isinstance(event, PybEvents.ResumeEvent):
+                self.tasks[event.chamber].resume__()
+                self.tasks[event.chamber].main_loop(event)
+                self.log_event(event.chamber, LoggerEvent(event, self.tasks[event.chamber].state.name, self.tasks[event.chamber].state.name.value, self.tasks[event.chamber].time_elapsed()))
+            elif isinstance(event, PybEvents.InitEvent):
+                self.tasks[event.chamber].init()
+            elif isinstance(event, PybEvents.ClearEvent):
+                self.tasks[event.chamber].clear()
+                del_loggers = event.del_loggers
+                if del_loggers:
+                    for logger in self.task_event_loggers[event.chamber]:
+                        logger.close_()
+                    del self.task_event_loggers[event.chamber]
+                del self.tasks[event.chamber]
+                del self.guis[event.chamber]
+                event.done.set()
+            elif isinstance(event, PybEvents.HeartbeatEvent):
+                for key in self.tasks.keys():
+                    if self.tasks[key].started:
+                        self.tasks[key].main_loop(event)
+            elif isinstance(event, PybEvents.StateEnterEvent):
+                self.tasks[event.chamber].main_loop(event)
+                self.log_event(event.chamber, LoggerEvent(event, event.state.name, event.state.value, self.tasks[event.chamber].time_elapsed()))
+            elif isinstance(event, PybEvents.StateExitEvent):
+                self.tasks[event.chamber].main_loop(event)
+                self.log_event(event.chamber, LoggerEvent(event, event.state.name, event.state.value, self.tasks[event.chamber].time_elapsed()))
+            elif isinstance(event, PybEvents.ComponentUpdateEvent):
+                comp = self.tasks[event.chamber].components[event.comp_id]
+                comp.update(event.value)
+                if self.tasks[event.chamber].started:
+                    new_event = PybEvents.ComponentChangedEvent(event.chamber, comp, event.metadata)
+                    self.tasks[event.chamber].main_loop(new_event)
+                    if self.tasks[event.chamber].is_complete_():
+                        self.queue.put_nowait(PybEvents.TaskCompleteEvent(event.chamber))
+                    self.log_event(event.chamber, LoggerEvent(new_event, comp.id, comp.address, self.tasks[event.chamber].time_elapsed()))
+            elif isinstance(event, PybEvents.GUIEvent):
+                if self.tasks[event.chamber].started:
+                    self.tasks[event.chamber].main_loop(event)
+                    if self.tasks[event.chamber].is_complete_():
+                        self.queue.put_nowait(PybEvents.TaskCompleteEvent(event.chamber))
+                    self.log_event(event.chamber, LoggerEvent(event, event.event.name, event.event.value, self.tasks[event.chamber].time_elapsed()))
+            elif isinstance(event, PybEvents.TimeoutEvent):  # Should this log an event?
+                self.tasks[event.chamber].main_loop(event)
+                if self.tasks[event.chamber].is_complete_():
+                    self.queue.put_nowait(PybEvents.TaskCompleteEvent(event.chamber))
+            elif isinstance(event, PybEvents.PygameEvent):
+                handled = False
+                for key in self.guis.keys():
+                    handled = handled or self.guis[key].handle_event(event.event)
+            self.delay_heartbeat = True
+            self.update_gui(event)
+            # self.gui_wrapper(event)
+            # self.lp.print_stats()
 
     def compute_chambergui(self) -> None:
         desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
@@ -136,7 +233,7 @@ class Workstation:
         settings.setValue("pyqt/h", int(szo[1] - 70))
         self.task_gui = pygame.display.set_mode((self.w * self.n_col, self.h * self.n_row), pygame.RESIZABLE, 32)
 
-    def add_task(self, chamber: int, task_name: str, subject_name: str, address_file: str, protocol: str, task_event_loggers: List[EventLogger]) -> None:
+    async def add_task(self, chamber: int, task_name: str, subject_name: str, address_file: str, protocol: str, task_event_loggers: List[EventLogger]) -> None:
         """
         Creates a Task and adds it to the chamber.
 
@@ -155,8 +252,19 @@ class Workstation:
         """
         metadata = {"chamber": chamber, "subject": subject_name, "protocol": protocol, "address_file": address_file}
         try:
-            self.task_threads[chamber] = TaskThread(self, task_name, metadata, queue.Queue(), task_event_loggers)  # Create the task
-            self.task_threads[chamber].start()
+            task_module = importlib.import_module("Local.Tasks." + task_name)
+            task = getattr(task_module, task_name)
+            self.tasks[chamber] = task()
+            await self.tasks[chamber].initialize(self, metadata, self.sources)  # Create the task
+            self.task_event_loggers[chamber] = task_event_loggers
+            for logger in task_event_loggers:
+                logger.set_task(self.tasks[chamber])
+            gui = getattr(importlib.import_module("Local.GUIs." + task_name + "GUI"), task_name + "GUI")
+            # Position the GUI in pygame
+            col = chamber % self.n_col
+            row = math.floor(chamber / self.n_col)
+            self.guis[chamber] = gui(self.task_gui.subsurface(col * self.w, row * self.h, self.w, self.h), self.tasks[chamber])
+            self.queue.put_nowait(PybEvents.InitEvent(chamber))
         except BaseException as e:
             print(type(e).__name__)
             self.ed = QMessageBox()
@@ -178,7 +286,7 @@ class Workstation:
             self.ed.show()
             raise pyberror.AddTaskError
 
-    def remove_task(self, chamber: int, del_loggers: bool = True) -> threading.Thread:
+    def remove_task(self, chamber: int, del_loggers: bool = True) -> asyncio.Event:
         """
         Remove the Task from the specified chamber.
 
@@ -188,70 +296,65 @@ class Workstation:
         chamber : int
             The chamber from which a Task should be removed
         """
-        remove_thread = threading.Thread(target=lambda: self.remove_task_(chamber, del_loggers))
-        remove_thread.start()
-        return remove_thread
-
-    def remove_task_(self, chamber: int, del_loggers: bool = True) -> None:
-        if chamber in self.task_threads:
-            self.task_threads[chamber].queue.put(ClearEvent(del_loggers), block=False)
-            self.task_threads[chamber].join()
-            del self.task_threads[chamber]
+        done = asyncio.Event()
+        self.queue.put_nowait(PybEvents.ClearEvent(chamber, del_loggers, done))
+        return done
 
     def gui_event_loop(self) -> None:
-        while not self.stopping:
-            event = pygame.event.wait(500)
-            if not event.type == pygame.NOEVENT:
-                keys = list(self.task_threads.keys())
-                handled = False
-                for key in keys:
-                    if key in self.task_threads and not self.task_threads[key].stopping:
-                        handled = handled or self.task_threads[key].gui.handle_event(event)
-                    elif key in self.task_threads and not self.task_threads[key].gui_events_disconnect.is_set():
-                        self.task_threads[key].gui_events_disconnect.set()
-                if handled:
-                    self.gui_notifier.set()
+        while True:
+            event = pygame.event.wait()
+            asyncio.run_coroutine_threadsafe(self.queue.put(PybEvents.PygameEvent(event)), loop=self.loop)
 
-    def gui_loop(self) -> None:
-        while not self.stopping:
-            self.gui_notifier.wait()
-            self.gui_notifier.clear()
-            self.task_gui.fill(Colors.black)
-            keys = list(self.task_threads.keys())
-            updates = []
-            for key in keys:  # For each Task
-                col = key % self.n_col
-                row = math.floor(key / self.n_col)
-                rect = pygame.Rect((col * self.w, row * self.h, self.w, self.h))
-                if key in self.task_threads and not self.task_threads[key].stopping:
-                    self.task_threads[key].gui.draw()  # Update the GUI
-                    # Draw GUI border and subject name
-                    # LabelElement(self.task_threads[key].gui, 10, self.h - 30, self.w, 20,
-                    #             self.task_threads[key].metadata["subject"], SF=1).draw()
-                    t = time.perf_counter()
-                    updates.append(self.task_gui.blit(self.task_threads[key].gui.task_gui, rect))
-                elif key in self.task_threads and not self.task_threads[key].gui_disconnect.is_set():
-                    updates.append(rect)
-                    self.task_threads[key].gui_disconnect.set()
-            if len(updates) > 0:
-                pygame.display.update(updates)  # Signal to pygame that the whole GUI has updated
-            time.sleep(1/30)
+    def update_gui(self, event: PybEvents.PybEvent) -> None:
+        if isinstance(event, PybEvents.TaskEvent):
+            col = event.chamber % self.n_col
+            row = math.floor(event.chamber / self.n_col)
+            rect = pygame.Rect((col * self.w, row * self.h, self.w, self.h))
+            if isinstance(event, PybEvents.InitEvent) or isinstance(event, PybEvents.TaskCompleteEvent):
+                self.guis[event.chamber].draw()
+                self.gui_updates.append(rect)
+            elif isinstance(event, PybEvents.ClearEvent):
+                pygame.draw.rect(self.task_gui, Colors.black, rect)
+                self.gui_updates.append(rect)
+            else:
+                for element in self.guis[event.chamber].get_elements():
+                    if element.has_updated():
+                        element.draw()
+                        self.gui_updates.append(element.rect)
+        elif isinstance(event, PybEvents.HeartbeatEvent):
+            for key in self.guis.keys():
+                for element in self.guis[key].get_elements():
+                    if element.has_updated():
+                        element.draw()
+                        self.gui_updates.append(element.rect)
+        if time.perf_counter() - self.last_frame > 1 / self.fr:
+            if len(self.gui_updates) > 0:
+                pygame.display.update(self.gui_updates)
+                self.gui_updates = []
+            self.last_frame = time.perf_counter()
 
-    def heartbeat(self):
-        while not self.stopping:
-            keys = list(self.task_threads.keys())
-            for key in keys:
-                self.task_threads[key].queue.put(HeartbeatEvent(), block=False)
-            time.sleep(1)
+    async def heartbeat(self):
+        while True:
+            await asyncio.sleep(1 / self.fr)
+            if self.delay_heartbeat:
+                self.delay_heartbeat = False
+            else:
+                self.queue.put_nowait(PybEvents.HeartbeatEvent())
 
-    def exit_handler(self, *args):
+    def log_event(self, chamber: int, event: LoggerEvent):
+        for logger in self.task_event_loggers[chamber]:
+            logger.queue.put_nowait(event)
+
+    def exit_handler(self, *args):  # Make async
         """
         Callback for when py-behav is closed.
         """
-        self.stopping = True
-        for key in self.task_threads:  # Stop all Tasks
-            if self.task_threads[key].task.started:
-                self.task_threads[key].queue.put(StopEvent(), block=False)
-            self.remove_task(key)
+        self.gui_event_task.cancel()
+        self.heartbeat_task.cancel()
+        self.main_task.cancel()
+        for chamber in self.tasks.keys():  # Stop all Tasks
+            if self.tasks[chamber].started:
+                self.queue.put_nowait(PybEvents.StopEvent(chamber))
+            self.remove_task(chamber)
         for src in self.sources:  # Close all Sources
             self.sources[src].close_source()

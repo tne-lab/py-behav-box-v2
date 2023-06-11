@@ -15,8 +15,8 @@ class CSVEventLogger(FileEventLogger):
     def get_file_path(self) -> str:
         return "{}{}.csv".format(self.output_folder, math.floor(time.time() * 1000))
 
-    def begin(self) -> None:
-        super(CSVEventLogger, self).begin()
+    def start(self) -> None:
+        super().start()
         self.log_file.write("Subject,{}".format(self.task.metadata["subject"])+"\n")
         self.log_file.write("Task,{}".format(type(self.task).__name__)+"\n")
         self.log_file.write("Chamber,{}".format(self.task.metadata["chamber"] + 1)+"\n")
@@ -24,7 +24,7 @@ class CSVEventLogger(FileEventLogger):
         self.log_file.write("AddressFile,{}".format(self.task.metadata["address_file"])+"\n\n")
         self.log_file.write("Trial,Time,Type,Code,State,Metadata\n")
 
-    def log_event(self, le: LoggerEvent) -> None:
+    async def log_event(self, le: LoggerEvent) -> None:
         self.event_count += 1
         self.log_file.write(self.format_event(le, type(le.event).__name__))
-        super().log_event(le)
+        await super().log_event(le)

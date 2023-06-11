@@ -1,8 +1,8 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, List
 
 from Components.Component import Component
-from Tasks.TaskEvents import ComponentUpdateEvent
+from Events.PybEvents import ComponentUpdateEvent
 
 if TYPE_CHECKING:
     from GUIs.GUI import GUI
@@ -94,5 +94,9 @@ class Element:
     def draw(self) -> None:
         raise NotImplementedError
 
+    @abstractmethod
+    def has_updated(self) -> bool:
+        raise NotImplementedError
+
     def component_changed(self, component: Component, value: Any):
-        self.gui.task.task_thread.queue.put(ComponentUpdateEvent(component.id, value, {"value": value}), block=False)
+        self.gui.task.ws.queue.put_nowait(ComponentUpdateEvent(self.gui.task.metadata["chamber"], component.id, value, {"value": value}))

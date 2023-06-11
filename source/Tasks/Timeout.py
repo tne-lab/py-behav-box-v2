@@ -1,11 +1,12 @@
+import asyncio
 import threading
 import time
 
 
-class TimeoutThread:
+class Timeout:
     def __init__(self, target):
         self.target = target
-        self.thread = None
+        self.task = None
         self.start_time = None
         self.started = False
         self.duration = 0
@@ -13,34 +14,28 @@ class TimeoutThread:
 
     def start(self, duration):
         if not self.started:
-            self.thread = threading.Timer(duration, self.handler)
-            self.thread.start()
-            self.start_time = time.perf_counter()
-            self.started = True
-            self.elapsed_time = 0
             self.duration = duration
+            self.task = asyncio.create_task(self.handler())
+            self.started = True
 
     def pause(self):
         if self.started and self.start_time is not None:
-            self.thread.cancel()
+            self.task.cancel()
             self.elapsed_time = time.perf_counter() - self.start_time
             self.start_time = None
 
     def stop(self):
         if self.started:
-            self.thread.cancel()
+            self.task.cancel()
             self.elapsed_time = 0
             self.start_time = None
             self.started = False
+            self.task = None
 
     def resume(self):
         if self.started and self.start_time is None:
-            new_duration = self.time_remaining()
-            self.thread = threading.Timer(new_duration, self.handler)
-            self.thread.start()
-            self.start_time = time.perf_counter()
-            self.elapsed_time = 0
-            self.duration = new_duration
+            self.duration = self.time_remaining()
+            self.task = asyncio.create_task(self.handler())
 
     def extend(self, duration):
         self.pause()
@@ -52,10 +47,13 @@ class TimeoutThread:
         else:
             return self.duration - self.elapsed_time
 
-    def handler(self):
+    async def handler(self):
+        self.start_time = time.perf_counter()
+        await asyncio.sleep(self.duration)
+        self.elapsed_time = 0
         self.started = False
         self.start_time = None
         self.duration = 0
         self.elapsed_time = 0
         self.target()
-        self.thread = None
+        self.task = None

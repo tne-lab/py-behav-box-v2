@@ -6,7 +6,7 @@ if TYPE_CHECKING:
     from Tasks.Task import Task
 
 from abc import ABCMeta, abstractmethod
-from Tasks.TaskEvents import ComponentUpdateEvent
+from Events.PybEvents import ComponentUpdateEvent
 
 
 class Source:
@@ -31,20 +31,20 @@ class Source:
         self.components = {}
         self.tasks = {}
 
-    def register_component(self, task: Task, component: Component) -> None:
+    async def initialize(self):
+        pass
+
+    async def register_component(self, task: Task, component: Component) -> None:
         self.tasks[component.id] = task
         self.components[component.id] = component
 
     def update_component(self, cid: str, value: Any) -> None:
-        self.tasks[cid].task_thread.queue.put(ComponentUpdateEvent(cid, value, {"value": value}), block=False)
+        self.tasks[cid].ws.queue.put_nowait(ComponentUpdateEvent(self.tasks[cid].metadata["chamber"], cid, value, {"value": value}))
 
     def close_source(self) -> None:
         pass
 
     def close_component(self, component_id: str) -> None:
-        pass
-
-    def read_component(self, component_id: str) -> Any:
         pass
 
     def write_component(self, component_id: str, msg: Any) -> None:

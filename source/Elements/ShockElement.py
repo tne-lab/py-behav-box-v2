@@ -44,6 +44,8 @@ class ShockElement(Element):
         pygame.draw.polygon(self.screen, (0, 0, 0), ptlist, 1)  # top white line
         pygame.draw.circle(self.screen, col, (cx, cy), self.radius, 2)
 
+    def has_updated(self) -> bool:
+        return self.on != self.comp.get_state()
+
     def mouse_up(self, event: pygame.event.Event) -> None:
-        self.on = not self.on
-        self.comp.toggle(self.on)
+        self.comp.toggle(not self.on)

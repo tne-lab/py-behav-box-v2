@@ -19,7 +19,7 @@ class TextEventLogger(GUIEventLogger):
         self.event_log.verticalScrollBar().rangeChanged.connect(
             lambda: self.event_log.verticalScrollBar().setValue(self.event_log.verticalScrollBar().maximum()))
 
-    def log_event(self, le: LoggerEvent):
+    async def log_event(self, le: LoggerEvent):
         cur_text = self.event_log.text()
         self.event_count += 1
         cur_text += self.format_event(le, type(le.event).__name__)
@@ -28,6 +28,5 @@ class TextEventLogger(GUIEventLogger):
     def get_widget(self) -> QWidget:
         return self.event_log
 
-    def begin(self) -> None:
-        super(TextEventLogger, self).begin()
+    def start(self) -> None:
         self.event_log.setText("")
