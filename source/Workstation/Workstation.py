@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import queue
 import time
 from typing import TYPE_CHECKING, List
 
@@ -47,6 +48,7 @@ class Workstation:
         self.wsg = None
         self.queue = asyncio.Queue()
         self.loop = asyncio.get_event_loop()
+        self.gui_task = None
         self.gui_event_task = None
         self.main_task = None
         self.heartbeat_task = None
@@ -55,6 +57,7 @@ class Workstation:
         self.last_frame = 0
         self.task_gui = None
         self.gui_updates = []
+        self.gui_queue = queue.Queue()
         # self.lp = LineProfiler()
         # self.gui_wrapper = self.lp(self.update_gui)
 
@@ -118,6 +121,7 @@ class Workstation:
             settings.setValue("n_chamber", self.n_chamber)
 
         self.wsg = WorkstationGUI(self)
+        self.gui_task = self.loop.run_in_executor(None, self.update_gui)
         self.gui_event_task = self.loop.run_in_executor(None, self.gui_event_loop)
         self.main_task = asyncio.create_task(self.run())
         self.main_task.add_done_callback(handle_task_result)
@@ -203,7 +207,7 @@ class Workstation:
                 for key in self.guis.keys():
                     handled = handled or self.guis[key].handle_event(event.event)
             self.delay_heartbeat = True
-            self.update_gui(event)
+            self.gui_queue.put_nowait(event)
             # self.gui_wrapper(event)
             # self.lp.print_stats()
 
@@ -305,33 +309,35 @@ class Workstation:
             event = pygame.event.wait()
             asyncio.run_coroutine_threadsafe(self.queue.put(PybEvents.PygameEvent(event)), loop=self.loop)
 
-    def update_gui(self, event: PybEvents.PybEvent) -> None:
-        if isinstance(event, PybEvents.TaskEvent):
-            col = event.chamber % self.n_col
-            row = math.floor(event.chamber / self.n_col)
-            rect = pygame.Rect((col * self.w, row * self.h, self.w, self.h))
-            if isinstance(event, PybEvents.InitEvent) or isinstance(event, PybEvents.TaskCompleteEvent):
-                self.guis[event.chamber].draw()
-                self.gui_updates.append(rect)
-            elif isinstance(event, PybEvents.ClearEvent):
-                pygame.draw.rect(self.task_gui, Colors.black, rect)
-                self.gui_updates.append(rect)
-            else:
-                for element in self.guis[event.chamber].get_elements():
-                    if element.has_updated():
-                        element.draw()
-                        self.gui_updates.append(element.rect)
-        elif isinstance(event, PybEvents.HeartbeatEvent):
-            for key in self.guis.keys():
-                for element in self.guis[key].get_elements():
-                    if element.has_updated():
-                        element.draw()
-                        self.gui_updates.append(element.rect)
-        if time.perf_counter() - self.last_frame > 1 / self.fr:
-            if len(self.gui_updates) > 0:
-                pygame.display.update(self.gui_updates)
-                self.gui_updates = []
-            self.last_frame = time.perf_counter()
+    def update_gui(self) -> None:
+        while True:
+            event = self.gui_queue.get()
+            if isinstance(event, PybEvents.TaskEvent):
+                col = event.chamber % self.n_col
+                row = math.floor(event.chamber / self.n_col)
+                rect = pygame.Rect((col * self.w, row * self.h, self.w, self.h))
+                if isinstance(event, PybEvents.InitEvent) or isinstance(event, PybEvents.TaskCompleteEvent):
+                    self.guis[event.chamber].draw()
+                    self.gui_updates.append(rect)
+                elif isinstance(event, PybEvents.ClearEvent):
+                    pygame.draw.rect(self.task_gui, Colors.black, rect)
+                    self.gui_updates.append(rect)
+                else:
+                    for element in self.guis[event.chamber].get_elements():
+                        if element.has_updated():
+                            element.draw()
+                            self.gui_updates.append(element.rect)
+            elif isinstance(event, PybEvents.HeartbeatEvent):
+                for key in self.guis.keys():
+                    for element in self.guis[key].get_elements():
+                        if element.has_updated():
+                            element.draw()
+                            self.gui_updates.append(element.rect)
+            if time.perf_counter() - self.last_frame > 1 / self.fr:
+                if len(self.gui_updates) > 0:
+                    pygame.display.update(self.gui_updates)
+                    self.gui_updates = []
+                self.last_frame = time.perf_counter()
 
     async def heartbeat(self):
         while True:
@@ -349,6 +355,7 @@ class Workstation:
         """
         Callback for when py-behav is closed.
         """
+        self.gui_task.cancel()
         self.gui_event_task.cancel()
         self.heartbeat_task.cancel()
         self.main_task.cancel()
