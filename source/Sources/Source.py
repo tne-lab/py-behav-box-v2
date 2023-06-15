@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Dict
 
 if TYPE_CHECKING:
     from Components.Component import Component
@@ -38,8 +38,8 @@ class Source:
         self.tasks[component.id] = task
         self.components[component.id] = component
 
-    def update_component(self, cid: str, value: Any) -> None:
-        self.tasks[cid].ws.queue.put_nowait(ComponentUpdateEvent(self.tasks[cid], cid, value, {"value": value}))
+    def update_component(self, cid: str, value: Any, metadata: Dict = None) -> None:
+        self.tasks[cid].ws.queue.put_nowait(ComponentUpdateEvent(self.tasks[cid], cid, value, metadata))
 
     def close_source(self) -> None:
         pass

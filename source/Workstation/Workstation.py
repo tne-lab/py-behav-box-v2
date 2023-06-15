@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING, List
 from Events import PybEvents
 from Events.LoggerEvent import LoggerEvent
 from Utilities.create_task import create_task
-from Utilities.handle_task_result import handle_task_result
 
 if TYPE_CHECKING:
     from Events.EventLogger import EventLogger
@@ -134,7 +133,9 @@ class Workstation:
     async def run(self):
         while True:
             event = await self.queue.get()
-            if isinstance(event, PybEvents.StartEvent):
+            if isinstance(event, PybEvents.ExitEvent):
+                return
+            elif isinstance(event, PybEvents.StartEvent):
                 for el in self.task_event_loggers[event.task.metadata["chamber"]]:  # Start all EventLoggers
                     el.start_()
                 event.task.start__()
@@ -149,9 +150,11 @@ class Workstation:
                 event.task.main_loop(new_event)
                 self.log_event(new_event.format())
                 event.task.stop__()
+                self.log_event(event.format())
             elif isinstance(event, PybEvents.PauseEvent):
                 event.task.pause__()
                 event.task.main_loop(event)
+                self.log_event(event.format())
             elif isinstance(event, PybEvents.ResumeEvent):
                 event.task.resume__()
                 event.task.main_loop(event)
@@ -169,12 +172,15 @@ class Workstation:
                 event.done.set()
             elif isinstance(event, PybEvents.HeartbeatEvent):
                 for key in self.tasks.keys():
-                    if self.tasks[key].started:
+                    if self.tasks[key].started and not self.tasks[key].paused:
                         self.tasks[key].main_loop(event)
             elif isinstance(event, PybEvents.ComponentUpdateEvent):
                 comp = event.task.components[event.comp_id][0]
                 comp.update(event.value)
-                if event.task.started:
+                if event.task.started and not event.task.paused:
+                    if event.metadata is None:
+                        event.metadata = {}
+                    event.metadata["value"] = comp.state
                     new_event = PybEvents.ComponentChangedEvent(event.task, comp, event.metadata)
                     event.task.main_loop(new_event)
                     self.log_event(new_event.format())
@@ -185,12 +191,12 @@ class Workstation:
                 for key in self.guis.keys():
                     handled = handled or self.guis[key].handle_event(event.event)
             elif isinstance(event, PybEvents.StatefulEvent):
-                if event.task.started:
+                if event.task.started and not event.task.paused:
                     event.task.main_loop(event)
                     if event.task.is_complete_():
                         self.queue.put_nowait(PybEvents.TaskCompleteEvent(event.task))
             if isinstance(event, PybEvents.Loggable):
-                if event.task.started:
+                if event.task.started and not event.task.paused:
                     self.log_event(event.format())
             self.delay_heartbeat = True
             self.gui_queue.put_nowait(event)
@@ -293,7 +299,7 @@ class Workstation:
     def gui_event_loop(self) -> None:
         while True:
             event = pygame.event.wait()
-            asyncio.run_coroutine_threadsafe(self.queue.put(PybEvents.PygameEvent(event)), loop=self.loop)
+            self.queue.put_nowait(PybEvents.PygameEvent(event))
 
     def update_gui(self) -> None:
         while True:
@@ -338,17 +344,22 @@ class Workstation:
         for logger in self.task_event_loggers[event.event.task.metadata["chamber"]]:
             logger.queue.put_nowait(event)
 
-    def exit_handler(self, *args):  # Make async
+    def exit_handler(self, *args):
+        self.loop.run_until_complete(self.exit_handler_())
+
+    async def exit_handler_(self):  # Make async
         """
         Callback for when py-behav is closed.
         """
-        self.gui_task.cancel()
-        self.gui_event_task.cancel()
         self.heartbeat_task.cancel()
-        self.main_task.cancel()
+        self.gui_event_task.cancel()
         for chamber in self.tasks.keys():  # Stop all Tasks
             if self.tasks[chamber].started:
                 self.queue.put_nowait(PybEvents.StopEvent(chamber))
-            self.remove_task(chamber)
+            done = self.remove_task(chamber)
+            await done.wait()
+        self.queue.put_nowait(PybEvents.ExitEvent())
+        await self.main_task
+        self.gui_task.cancel()
         for src in self.sources:  # Close all Sources
             self.sources[src].close_source()

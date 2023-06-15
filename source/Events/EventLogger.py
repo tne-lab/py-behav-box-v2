@@ -4,7 +4,7 @@ import asyncio
 from typing import TYPE_CHECKING
 
 from Utilities.create_task import create_task
-from Utilities.handle_task_result import handle_task_result
+from Events.LoggerEvent import StopLoggerEvent
 
 if TYPE_CHECKING:
     from Events.LoggerEvent import LoggerEvent
@@ -38,7 +38,10 @@ class EventLogger:
     async def run(self):
         while True:
             le = await self.queue.get()
-            await self.log_event(le)
+            if isinstance(le, StopLoggerEvent):
+                self.stop()
+            else:
+                await self.log_event(le)
 
     def start_(self):
         self.event_count = 0
@@ -47,14 +50,11 @@ class EventLogger:
     def start(self) -> None:
         pass
 
-    def stop_(self):
-        self.stop()
-
     def stop(self) -> None:
         pass
 
     def close_(self):
-        self.stop_()
+        self.stop()
         self.event_loop.cancel()
         self.close()
 

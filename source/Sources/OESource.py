@@ -39,7 +39,6 @@ class OESource(Source):
         self.read_task.cancel()
         self.in_socket.close()
         self.out_socket.close()
-        self.context.close()
 
     async def read(self):
         while True:

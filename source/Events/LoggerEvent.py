@@ -23,3 +23,7 @@ class LoggerEvent:
         self.event = event
         self.name = name
         self.eid = eid
+
+
+class StopLoggerEvent(LoggerEvent):
+    pass

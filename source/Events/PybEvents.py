@@ -6,7 +6,7 @@ from typing import Dict, Any, TYPE_CHECKING
 
 import pygame.event
 
-from Events.LoggerEvent import LoggerEvent
+from Events.LoggerEvent import LoggerEvent, StopLoggerEvent
 
 if TYPE_CHECKING:
     from Components.Component import Component
@@ -14,6 +14,10 @@ if TYPE_CHECKING:
 
 
 class PybEvent:
+    pass
+
+
+class ExitEvent(PybEvent):
     pass
 
 
@@ -64,18 +68,19 @@ class StartEvent(TaskEvent):
     pass
 
 
-class StopEvent(TaskEvent):
-    pass
+class StopEvent(Loggable):
+    def format(self) -> StopLoggerEvent:
+        return StopLoggerEvent(self, "", 0, self.task.time_elapsed())
 
 
 class PauseEvent(Loggable, StatefulEvent):
     def format(self) -> LoggerEvent:
-        return LoggerEvent(self, self.task.state.name, self.task.state.name.value, self.task.time_elapsed())
+        return LoggerEvent(self, self.task.state.name, self.task.state.value, self.task.time_elapsed())
 
 
 class ResumeEvent(Loggable, StatefulEvent):
     def format(self) -> LoggerEvent:
-        return LoggerEvent(self, self.task.state.name, self.task.state.name.value, self.task.time_elapsed())
+        return LoggerEvent(self, self.task.state.name, self.task.state.value, self.task.time_elapsed())
 
 
 class InitEvent(TaskEvent):
