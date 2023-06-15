@@ -210,11 +210,11 @@ class Task:
 
     def change_state(self, new_state: Enum, metadata: Any = None) -> None:
         self.entry_time = self.cur_time
-        self.log_event(PybEvents.StateExitEvent(self.metadata["chamber"], self.state, metadata))
+        self.log_event(PybEvents.StateExitEvent(self, self.state, metadata))
         if not self.is_complete_():
-            self.log_event(PybEvents.StateEnterEvent(self.metadata["chamber"], new_state, metadata))
+            self.log_event(PybEvents.StateEnterEvent(self, new_state, metadata))
         else:
-            self.log_event(PybEvents.TaskCompleteEvent(self.metadata["chamber"]))
+            self.log_event(PybEvents.TaskCompleteEvent(self))
 
     def start__(self) -> None:
         self.complete = False
@@ -258,9 +258,9 @@ class Task:
         if isinstance(event, PybEvents.StateEnterEvent):
             self.state = event.state
         elif isinstance(event, PybEvents.StateExitEvent):
-            for tm, close in self.state_timeouts[self.state]:
-                if close:
-                    tm.stop()
+            for tm in self.state_timeouts[self.state].values():
+                if tm[1]:
+                    tm[0].stop()
         all_handled = self.all_states(event)
         if not all_handled and hasattr(self, self.state.name):
             state_method = getattr(self, self.state.name)
@@ -288,16 +288,16 @@ class Task:
         return {}
 
     def is_complete(self) -> bool:
-        raise False
+        return False
 
     def is_complete_(self) -> bool:
         return self.complete or self.is_complete()
 
     def task_complete(self):
-        self.log_event(PybEvents.TaskCompleteEvent(self.metadata["chamber"]))
+        self.log_event(PybEvents.TaskCompleteEvent(self))
 
     def _send_timeout(self, name: str, metadata: Dict):
-        self.log_event(PybEvents.TimeoutEvent(self.metadata["chamber"], name, metadata))
+        self.log_event(PybEvents.TimeoutEvent(self, name, metadata))
         del self.timeouts[name]
 
     def set_timeout(self, name: str, timeout: float, end_with_state=True, metadata: Dict = None):
@@ -306,10 +306,10 @@ class Task:
             self.timeouts[name] = tm
             if self.state not in self.state_timeouts:
                 self.state_timeouts[self.state] = {}
-            self.state_timeouts[self.state][name] = (timeout, end_with_state)
+            self.state_timeouts[self.state][name] = (tm, end_with_state)
             self.timeouts[name].start(timeout)
         else:
-            self.timeouts[name].cancel()
+            self.timeouts[name].stop()
             self.timeouts[name].start(timeout)
 
     def cancel_timeout(self, name: str):

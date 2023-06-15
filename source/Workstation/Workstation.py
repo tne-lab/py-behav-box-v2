@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, List
 
 from Events import PybEvents
 from Events.LoggerEvent import LoggerEvent
+from Utilities.create_task import create_task
 from Utilities.handle_task_result import handle_task_result
 
 if TYPE_CHECKING:
@@ -123,9 +124,8 @@ class Workstation:
         self.wsg = WorkstationGUI(self)
         self.gui_task = self.loop.run_in_executor(None, self.update_gui)
         self.gui_event_task = self.loop.run_in_executor(None, self.gui_event_loop)
-        self.main_task = asyncio.create_task(self.run())
-        self.main_task.add_done_callback(handle_task_result)
-        self.heartbeat_task = asyncio.create_task(self.heartbeat())
+        self.main_task = create_task(self.run())
+        self.heartbeat_task = create_task(self.heartbeat())
 
         atexit.register(lambda: self.exit_handler())
         signal.signal(signal.SIGTERM, self.exit_handler)
@@ -135,17 +135,19 @@ class Workstation:
         while True:
             event = await self.queue.get()
             if isinstance(event, PybEvents.StartEvent):
-                for el in self.task_event_loggers[event.task["chamber"]]:  # Start all EventLoggers
+                for el in self.task_event_loggers[event.task.metadata["chamber"]]:  # Start all EventLoggers
                     el.start_()
                 event.task.start__()
                 new_event = PybEvents.StateEnterEvent(event.task, event.task.state, event.metadata)
                 event.task.main_loop(new_event)
+                self.log_event(new_event.format())
             elif isinstance(event, PybEvents.TaskCompleteEvent):
-                self.wsg.chambers[event.task["chamber"]].stop()
+                self.wsg.chambers[event.task.metadata["chamber"]].stop()
                 event.task.complete = True
             elif isinstance(event, PybEvents.StopEvent):
                 new_event = PybEvents.StateExitEvent(event.task, event.task.state, event.metadata)
                 event.task.main_loop(new_event)
+                self.log_event(new_event.format())
                 event.task.stop__()
             elif isinstance(event, PybEvents.PauseEvent):
                 event.task.pause__()
@@ -159,11 +161,11 @@ class Workstation:
                 event.task.clear()
                 del_loggers = event.del_loggers
                 if del_loggers:
-                    for logger in self.task_event_loggers[event.task["chamber"]]:
+                    for logger in self.task_event_loggers[event.task.metadata["chamber"]]:
                         logger.close_()
-                    del self.task_event_loggers[event.task["chamber"]]
-                del self.tasks[event.task["chamber"]]
-                del self.guis[event.task["chamber"]]
+                    del self.task_event_loggers[event.task.metadata["chamber"]]
+                del self.tasks[event.task.metadata["chamber"]]
+                del self.guis[event.task.metadata["chamber"]]
                 event.done.set()
             elif isinstance(event, PybEvents.HeartbeatEvent):
                 for key in self.tasks.keys():
@@ -175,6 +177,7 @@ class Workstation:
                 if event.task.started:
                     new_event = PybEvents.ComponentChangedEvent(event.task, comp, event.metadata)
                     event.task.main_loop(new_event)
+                    self.log_event(new_event.format())
                     if event.task.is_complete_():
                         self.queue.put_nowait(PybEvents.TaskCompleteEvent(event.task))
             elif isinstance(event, PybEvents.PygameEvent):
@@ -299,7 +302,8 @@ class Workstation:
                 col = event.task.metadata["chamber"] % self.n_col
                 row = math.floor(event.task.metadata["chamber"] / self.n_col)
                 rect = pygame.Rect((col * self.w, row * self.h, self.w, self.h))
-                if isinstance(event, PybEvents.InitEvent) or isinstance(event, PybEvents.TaskCompleteEvent):
+                if isinstance(event, PybEvents.InitEvent) or isinstance(event, PybEvents.TaskCompleteEvent) \
+                        or isinstance(event, PybEvents.StartEvent):
                     self.guis[event.task.metadata["chamber"]].draw()
                     self.gui_updates.append(rect)
                 elif isinstance(event, PybEvents.ClearEvent):

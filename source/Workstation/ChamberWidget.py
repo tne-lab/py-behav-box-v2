@@ -1,10 +1,13 @@
 from __future__ import annotations
+
+import asyncio
 from typing import TYPE_CHECKING, Tuple, List
 
 from PyQt5.QtCore import QRegExp
 
 from Events import PybEvents
 from Utilities.Exceptions import AddTaskError
+from Utilities.create_task import create_task
 
 if TYPE_CHECKING:
     from Workstation.WorkstationGUI import WorkstationGUI
@@ -25,6 +28,13 @@ from Events.GUIEventLogger import GUIEventLogger
 
 
 class ChamberWidget(QGroupBox):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.fd = self.ld = self.pd = self.workstation = self.wsg = self.chamber = self.chamber_id = None
+        self.subject = self.task_name = self.address_file_path = self.address_file_browse = None
+        self.protocol_path = self.protocol_file_browse = self.output_file_path = self.play_button = None
+        self.stop_button = self.prompt = self.event_loggers = self.logger_params = self.task = None
+
     @classmethod
     async def create_widget(cls, wsg: WorkstationGUI, chamber_index: str, task_index: int, sn: str = "default", afp: str = "",
                  pfp: str = "", prompt: str = "", event_loggers: Tuple[List[EventLogger], List[List[str]]] = ([], []),
@@ -192,7 +202,7 @@ class ChamberWidget(QGroupBox):
     def open_file(self, le: QLineEdit) -> None:
         if len(self.fd.selectedFiles()[0]) > 0:  # If a file was selected
             le.setText(self.fd.selectedFiles()[0])
-            self.refresh()  # Update the Task representation with the new file
+            create_task(self.refresh())  # Update the Task representation with the new file
         super(QFileDialog, self.fd).accept()
 
     def play_pause(self) -> None:
@@ -223,13 +233,13 @@ class ChamberWidget(QGroupBox):
             self.play_button.icon = 'Workstation/icons/pause.svg'
             self.play_button.hover_icon = 'Workstation/icons/pause_hover.svg'
             self.play_button.setIcon(QIcon(self.play_button.icon))
-            self.workstation.queue.put_nowait(PybEvents.ResumeEvent(int(self.chamber_id.text()) - 1))  # Resume the task
+            self.workstation.queue.put_nowait(PybEvents.ResumeEvent(self.task))  # Resume the task
         else:  # The task is currently playing
             # Change the play to a pause button
             self.play_button.icon = 'Workstation/icons/play.svg'
             self.play_button.hover_icon = 'Workstation/icons/play_hover.svg'
             self.play_button.setIcon(QIcon(self.play_button.icon))
-            self.task.workstation.put_nowait(PybEvents.PauseEvent(int(self.chamber_id.text()) - 1))  # Pause the task
+            self.task.workstation.put_nowait(PybEvents.PauseEvent(self.task))  # Pause the task
 
     def play_helper(self) -> None:
         # Change the play to a pause button
@@ -244,7 +254,7 @@ class ChamberWidget(QGroupBox):
         self.address_file_browse.setEnabled(False)
         self.protocol_file_browse.setEnabled(False)
         self.output_file_path.setEnabled(False)
-        self.workstation.queue.put_nowait(PybEvents.StartEvent(int(self.chamber_id.text()) - 1))
+        self.workstation.queue.put_nowait(PybEvents.StartEvent(self.task))
         if self.pd is not None:
             super(QMessageBox, self.pd).accept()
             self.pd = None
@@ -253,7 +263,7 @@ class ChamberWidget(QGroupBox):
         """
         On click function for the stop button.
         """
-        self.workstation.queue.put_nowait(PybEvents.StopEvent(int(self.chamber_id.text()) - 1))
+        self.workstation.queue.put_nowait(PybEvents.StopEvent(self.task))
         # Change the pause to a play button
         self.play_button.icon = 'Workstation/icons/play.svg'
         self.play_button.hover_icon = 'Workstation/icons/play_hover.svg'

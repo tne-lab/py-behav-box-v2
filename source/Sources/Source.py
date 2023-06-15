@@ -39,7 +39,7 @@ class Source:
         self.components[component.id] = component
 
     def update_component(self, cid: str, value: Any) -> None:
-        self.tasks[cid].ws.queue.put_nowait(ComponentUpdateEvent(self.tasks[cid].metadata["chamber"], cid, value, {"value": value}))
+        self.tasks[cid].ws.queue.put_nowait(ComponentUpdateEvent(self.tasks[cid], cid, value, {"value": value}))
 
     def close_source(self) -> None:
         pass

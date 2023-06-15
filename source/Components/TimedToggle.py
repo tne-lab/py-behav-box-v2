@@ -1,8 +1,9 @@
 from __future__ import annotations
+
+import asyncio
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from Sources.Source import Source
-import threading
 from typing import Union
 
 from Components.Toggle import Toggle
@@ -38,25 +39,27 @@ class TimedToggle(Toggle):
     def __init__(self, source: Source, component_id: str, component_address: str):
         super().__init__(source, component_id, component_address)
         self.count = 0
-        self.event = threading.Event()
+        self.time_task = None
 
     def toggle(self, dur: Union[float, bool]) -> None:
         self.count += 1
         if isinstance(dur, float):
             if not self.state:
-                toggle_thread = threading.Thread(target=lambda: self.toggle_(dur), args=())
-                toggle_thread.start()
+                self.time_task = asyncio.create_task(self.toggle_(dur))
         elif isinstance(dur, bool):
             if not dur:
-                self.event.set()
-                self.event.clear()
+                if self.time_task is not None:
+                    self.time_task.cancel()
+                    self.time_task = None
+                self.source.write_component(self.id, False)
+                self.state = False
             elif not self.state:
                 self.source.write_component(self.id, True)
                 self.state = True
 
-    def toggle_(self, dur: float) -> None:
+    async def toggle_(self, dur: float) -> None:
         self.source.write_component(self.id, True)
         self.state = True
-        self.event.wait(dur)
+        await asyncio.sleep(dur)
         self.source.write_component(self.id, False)
         self.state = False

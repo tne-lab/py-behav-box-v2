@@ -4,6 +4,7 @@ import serial_asyncio
 
 from Components.Component import Component
 from Sources.Source import Source
+from Utilities.create_task import create_task
 
 
 class SerialSource(Source):
@@ -18,12 +19,12 @@ class SerialSource(Source):
         await super().register_component(task, component)
         com_opened = False
         if component.address not in self.readers:
-            self.readers[component.address], self.writers[component.address] = await serial_asyncio.open_serial_connection(port=component.address, baudrate=component.baudrate)
+            self.readers[component.address], self.writers[component.address] = await serial_asyncio.open_serial_connection(url=component.address, baudrate=component.baudrate)
             com_opened = True
         ct = component.get_type()
         if (ct == Component.Type.INPUT or ct == Component.Type.DIGITAL_INPUT or ct == Component.Type.ANALOG_INPUT or ct == Component.Type.BOTH)\
                 and com_opened:
-            self.read_tasks[component.address] = asyncio.create_task(self.read(component.address))
+            self.read_tasks[component.address] = create_task(self.read(component.address))
 
     def close_component(self, component_id):
         address = self.components[component_id].address

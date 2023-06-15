@@ -42,16 +42,22 @@ class Loggable(ABC, TaskEvent):
         pass
 
 
-class OEEvent(TaskEvent):
+class OEEvent(Loggable):
     def __init__(self, task: Task, event_type: str, metadata: Dict = None):
         super().__init__(task, metadata)
         self.event_type = event_type
 
+    def format(self) -> LoggerEvent:
+        return LoggerEvent(self, self.event_type, 0, self.task.time_elapsed())
 
-class InfoEvent(TaskEvent):
+
+class InfoEvent(Loggable):
     def __init__(self, task: Task, event: Enum, metadata: Dict = None):
         super().__init__(task, metadata)
         self.event = event
+
+    def format(self) -> LoggerEvent:
+        return LoggerEvent(self, self.event.name, self.event.value, self.task.time_elapsed())
 
 
 class StartEvent(TaskEvent):

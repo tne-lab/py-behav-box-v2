@@ -4,6 +4,7 @@ import asyncio
 import os
 from typing import TYPE_CHECKING
 
+from Utilities.create_task import create_task
 from Utilities.find_closing_paren import find_closing_paren
 
 if TYPE_CHECKING:
@@ -55,7 +56,7 @@ class SettingsDialog(QDialog):
         self.refresh_button.setText("⟳")
         self.refresh_button.setFixedWidth(30)
         self.refresh_button.setDisabled(True)
-        self.refresh_button.clicked.connect(lambda: asyncio.create_task(self.refresh_source()))
+        self.refresh_button.clicked.connect(lambda: create_task(self.refresh_source()))
         source_as_layout.addWidget(self.refresh_button)
         self.remove_button = QPushButton()
         self.remove_button.setText("−")
@@ -185,7 +186,7 @@ class AddSourceDialog(QDialog):
                                                                      ','.join(f'"{w}"' for w in self.params)) + "}"
         settings.setValue("sources", source_string)
         self.sd.workstation.sources[self.name.text()] = source_type(*self.params)
-        asyncio.create_task(self.sd.workstation.sources[self.name.text()].initialize())
+        create_task(self.sd.workstation.sources[self.name.text()].initialize())
         ql = QListWidgetItem("{} ({})".format(self.name.text(), self.source.currentText()), self.sd.source_list)
         if self.sd.workstation.sources[self.name.text()].is_available():
             ql.setIcon(self.sd.source_list.style().standardIcon(QStyle.SP_DialogApplyButton))

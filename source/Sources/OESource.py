@@ -1,8 +1,15 @@
-import asyncio
+from __future__ import annotations
+from typing import TYPE_CHECKING
+
 import zmq
 import zmq.asyncio
 import json
 from Sources.Source import Source
+from Utilities.create_task import create_task
+
+if TYPE_CHECKING:
+    from Components.Component import Component
+    from Tasks.Task import Task
 
 
 class OESource(Source):
@@ -13,7 +20,7 @@ class OESource(Source):
             self.in_socket = self.context.socket(zmq.SUB)
             self.in_socket.connect("tcp://" + address + ":" + str(in_port))
             self.in_socket.setsockopt(zmq.SUBSCRIBE, b'ttl')
-            self.read_task = asyncio.create_task(self.read())
+            self.read_task = create_task(self.read())
 
             self.out_socket = self.context.socket(zmq.REQ)
             self.out_socket.set(zmq.REQ_RELAXED, True)
@@ -23,6 +30,10 @@ class OESource(Source):
         except:
             self.available = False
         self.addresses = {}
+
+    async def register_component(self, task: Task, component: Component) -> None:
+        await super().register_component(task, component)
+        self.addresses[int(component.address) - 1] = component.id
 
     def close_source(self):
         self.read_task.cancel()

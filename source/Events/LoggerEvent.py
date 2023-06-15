@@ -1,10 +1,9 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
 
-from Events.PybEvents import TaskEvent
-
 if TYPE_CHECKING:
     from Tasks.Task import Task
+    from Events.PybEvents import TaskEvent
 
 
 class LoggerEvent:

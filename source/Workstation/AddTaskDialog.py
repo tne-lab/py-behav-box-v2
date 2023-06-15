@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import asyncio
 from typing import TYPE_CHECKING
+
+from Utilities.create_task import create_task
+
 if TYPE_CHECKING:
     from Workstation.WorkstationGUI import WorkstationGUI
 
@@ -90,9 +93,9 @@ class AddTaskDialog(QDialog):
                             event_loggers.append(logger_type(*param_vals))  # Instantiate the logger
                             logger_params.append(param_vals)
 
-                asyncio.create_task(self.wsg.add_task(chamber, task, subject, afp, pfp, prompt, (event_loggers, logger_params)))
+                create_task(self.wsg.add_task(chamber, task, subject, afp, pfp, prompt, (event_loggers, logger_params)))
         else:
-            asyncio.create_task(self.wsg.add_task(self.chamber.currentText(), self.task.currentIndex()))
+            create_task(self.wsg.add_task(self.chamber.currentText(), self.task.currentIndex()))
         super(AddTaskDialog, self).accept()
 
     def load_config(self) -> None:

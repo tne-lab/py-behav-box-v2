@@ -4,6 +4,7 @@ import sys
 import qasync
 from PyQt5.QtWidgets import QApplication
 
+from Utilities.create_task import create_task
 from Workstation.Workstation import Workstation
 import faulthandler
 import psutil
@@ -22,7 +23,7 @@ if __name__ == '__main__':
     loop = qasync.QEventLoop(app)
     asyncio.set_event_loop(loop)
     ws = Workstation()
-    task = asyncio.create_task(ws.start_workstation())
+    task = create_task(ws.start_workstation())
     try:
         loop.run_forever()
     except KeyboardInterrupt:

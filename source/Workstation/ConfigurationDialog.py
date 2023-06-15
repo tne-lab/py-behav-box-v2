@@ -1,5 +1,10 @@
 from __future__ import annotations
+
+import asyncio
 from typing import TYPE_CHECKING
+
+from Utilities.create_task import create_task
+
 if TYPE_CHECKING:
     from Workstation.ChamberWidget import ChamberWidget
 
@@ -63,7 +68,7 @@ class ConfigurationDialog(QDialog):
     
     def accept(self) -> None:
         self.cw.prompt = self.prompt.text()  # Update the prompt from the configuration
-        self.cw.refresh()
+        create_task(self.cw.refresh())
         super(ConfigurationDialog, self).accept()
 
     def on_logger_clicked(self, _) -> None:

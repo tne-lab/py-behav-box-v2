@@ -99,4 +99,4 @@ class Element:
         raise NotImplementedError
 
     def component_changed(self, component: Component, value: Any):
-        self.gui.task.ws.queue.put_nowait(ComponentUpdateEvent(self.gui.task.metadata["chamber"], component.id, value, {"value": value}))
+        self.gui.task.ws.queue.put_nowait(ComponentUpdateEvent(self.gui.task, component.id, value, {"value": value}))

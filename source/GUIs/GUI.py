@@ -46,4 +46,4 @@ class GUI:
         return handled
 
     def log_gui_event(self, event: Enum, metadata: Dict = None):
-        self.task.ws.queue.put_nowait(GUIEvent(self.task.metadata["chamber"], event, metadata))
+        self.task.ws.queue.put_nowait(GUIEvent(self.task, event, metadata))

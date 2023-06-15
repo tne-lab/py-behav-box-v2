@@ -6,6 +6,7 @@ import win32gui
 
 from Components.Component import Component
 from Sources.Source import Source
+from Utilities.create_task import create_task
 from Utilities.handle_task_result import handle_task_result
 
 IsWhiskerRunning = False
@@ -42,8 +43,7 @@ class WhiskerLineSource(Source):
                 win32gui.EnumWindows(look_for_program, 'WhiskerServer')
             if IsWhiskerRunning:
                 self.reader, self.writer = await asyncio.open_connection(self.address, self.port)
-                self.read_task = asyncio.create_task(self.read())
-                self.read_task.add_done_callback(handle_task_result)
+                self.read_task = create_task(self.read())
             else:
                 self.available = False
         except:

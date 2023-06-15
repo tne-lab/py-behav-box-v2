@@ -3,6 +3,9 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING
 
+from Utilities.create_task import create_task
+from Utilities.handle_task_result import handle_task_result
+
 if TYPE_CHECKING:
     from Events.LoggerEvent import LoggerEvent
     from Tasks.Task import Task
@@ -30,7 +33,7 @@ class EventLogger:
         self.task = None
         self.event_count = 0
         self.queue = asyncio.Queue()
-        self.event_loop = asyncio.create_task(self.run())
+        self.event_loop = create_task(self.run())
 
     async def run(self):
         while True:

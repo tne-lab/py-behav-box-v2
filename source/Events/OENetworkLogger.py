@@ -96,7 +96,7 @@ class OENetworkLogger(GUIEventLogger):
             self.acq_button.icon = 'Workstation/icons/stop_play.svg'
             self.acq_button.hover_icon = 'Workstation/icons/stop_play_hover.svg'
             self.acq_button.setIcon(QIcon(self.acq_button.icon))
-            self.cw.workstation.queue.put_nowait(PybEvents.OEEvent(self.cw.task, "startAcquisition"))
+            self.queue.put_nowait(PybEvents.OEEvent(self.cw.task, "startAcquisition").format())
             self.acq = True
         elif self.acq:
             self.acq_button.icon = 'Workstation/icons/play.svg'
@@ -107,7 +107,7 @@ class OENetworkLogger(GUIEventLogger):
                 self.rec_button.hover_icon = 'Workstation/icons/record_hover.svg'
                 self.rec_button.setIcon(QIcon(self.rec_button.icon))
                 self.rec = False
-            self.cw.workstation.queue.put_nowait(PybEvents.OEEvent(self.cw.task, "stopAcquisition"))
+            self.queue.put_nowait(PybEvents.OEEvent(self.cw.task, "stopAcquisition").format())
             self.acq = False
 
     def record(self) -> None:
@@ -118,14 +118,14 @@ class OENetworkLogger(GUIEventLogger):
             self.rec_button.icon = 'Workstation/icons/stop_record.svg'
             self.rec_button.hover_icon = 'Workstation/icons/stop_record_hover.svg'
             self.rec_button.setIcon(QIcon(self.rec_button.icon))
-            self.cw.workstation.queue.put_nowait(PybEvents.OEEvent(self.cw.task, "startRecord"))
+            self.queue.put_nowait(PybEvents.OEEvent(self.cw.task, "startRecord").format())
             self.acq = True
             self.rec = True
         elif self.rec:
             self.rec_button.icon = 'Workstation/icons/record.svg'
             self.rec_button.hover_icon = 'Workstation/icons/record_hover.svg'
             self.rec_button.setIcon(QIcon(self.rec_button.icon))
-            self.cw.workstation.queue.put_nowait(PybEvents.OEEvent(self.cw.task, "stopRecord"))
+            self.queue.put_nowait(PybEvents.OEEvent(self.cw.task, "stopRecord").format())
             self.rec = False
 
     def get_file_path(self) -> None:
