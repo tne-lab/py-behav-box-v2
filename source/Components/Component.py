@@ -61,8 +61,11 @@ class Component:
     def write(self, value: Any) -> None:
         self.source.write_component(self.id, value)
 
-    def update(self, value: Any) -> None:
-        self.state = value
+    def update(self, value: Any) -> bool:
+        if self.state != value:
+            self.state = value
+            return True
+        return False
 
     def initialize(self, metadata: Dict) -> None:
         for key in metadata:

@@ -133,6 +133,7 @@ class Workstation:
     async def run(self):
         while True:
             event = await self.queue.get()
+            self.delay_heartbeat = True
             if isinstance(event, PybEvents.ExitEvent):
                 return
             elif isinstance(event, PybEvents.StartEvent):
@@ -174,10 +175,10 @@ class Workstation:
                 for key in self.tasks.keys():
                     if self.tasks[key].started and not self.tasks[key].paused:
                         self.tasks[key].main_loop(event)
+                self.delay_heartbeat = False
             elif isinstance(event, PybEvents.ComponentUpdateEvent):
                 comp = event.task.components[event.comp_id][0]
-                comp.update(event.value)
-                if event.task.started and not event.task.paused:
+                if comp.update(event.value) and event.task.started and not event.task.paused:
                     if event.metadata is None:
                         event.metadata = {}
                     event.metadata["value"] = comp.state
@@ -198,7 +199,6 @@ class Workstation:
             if isinstance(event, PybEvents.Loggable):
                 if event.task.started and not event.task.paused:
                     self.log_event(event.format())
-            self.delay_heartbeat = True
             self.gui_queue.put_nowait(event)
             # self.gui_wrapper(event)
             # self.lp.print_stats()
@@ -299,7 +299,7 @@ class Workstation:
     def gui_event_loop(self) -> None:
         while True:
             event = pygame.event.wait()
-            self.queue.put_nowait(PybEvents.PygameEvent(event))
+            asyncio.run_coroutine_threadsafe(self.queue.put(PybEvents.PygameEvent(event)), loop=self.loop)
 
     def update_gui(self) -> None:
         while True:

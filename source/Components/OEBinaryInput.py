@@ -13,14 +13,19 @@ class OEBinaryInput(BinaryInput):
         self.rising = True
         self.falling = False
 
-    def update(self, value: dict) -> None:
+    def update(self, value: dict) -> bool:
         if self.rising and self.falling:
             if not self.state and value['metaData']['Direction'] == '1' and value['data']:
                 self.state = True
+                return True
             elif self.state and value['metaData']['Direction'] == '0' and not value['data']:
                 self.state = False
+                return True
         else:
             if not self.state and value['data']:
                 self.state = True
+                return True
             elif self.state and not value['data']:
                 self.state = False
+                return True
+        return False

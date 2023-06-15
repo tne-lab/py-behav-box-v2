@@ -37,7 +37,7 @@ class StimJim(Stimmer):
     def start(self, pnum: int, stype: str = "T") -> None:
         self.source.write_component(self.id, "{}{}".format(stype, pnum))
 
-    def update(self, value: bytes) -> None:
+    def update(self, value: bytes) -> bool:
         segs = value.decode('utf-8').split('\n')
         segs[0] = self.in_buffer + segs[0]
         if not segs[-1].endswith('\n'):
@@ -90,6 +90,7 @@ class StimJim(Stimmer):
                 if len(self.cur_command["stages"]) == len(self.configs[self.cur_command["id"]]["stages"]):
                     self.commands.append(self.cur_command)
                     self.cur_command = None
+        return len(self.commands) > 0
 
     @staticmethod
     def get_type() -> Component.Type:

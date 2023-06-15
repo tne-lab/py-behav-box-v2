@@ -4,27 +4,34 @@ import serial_asyncio
 
 from Components.Component import Component
 from Sources.Source import Source
-from Utilities.create_task import create_task
 
 
 class SerialSource(Source):
+    class ReaderWriter(asyncio.Protocol):
+        def connection_made(self, transport):
+            self.transport = transport
+            self.com = transport.serial.port
+
+        def connect_to_source(self, source):
+            self.source = source
+
+        def data_received(self, data):
+            for comp in self.source.components.values():
+                if comp.address == self.com and (comp.get_type() == Component.Type.DIGITAL_INPUT or
+                                                 comp.get_type() == Component.Type.INPUT or
+                                                 comp.get_type() == Component.Type.ANALOG_INPUT or
+                                                 comp.get_type() == Component.Type.BOTH):
+                    self.source.update_component(comp.id, data)
 
     def __init__(self):
         super(SerialSource, self).__init__()
-        self.readers = {}
-        self.writers = {}
-        self.read_tasks = {}
+        self.connections = {}
 
     async def register_component(self, task, component):
         await super().register_component(task, component)
-        com_opened = False
-        if component.address not in self.readers:
-            self.readers[component.address], self.writers[component.address] = await serial_asyncio.open_serial_connection(url=component.address, baudrate=component.baudrate)
-            com_opened = True
-        ct = component.get_type()
-        if (ct == Component.Type.INPUT or ct == Component.Type.DIGITAL_INPUT or ct == Component.Type.ANALOG_INPUT or ct == Component.Type.BOTH)\
-                and com_opened:
-            self.read_tasks[component.address] = create_task(self.read(component.address))
+        if component.address not in self.connections:
+            self.connections[component.address] = await serial_asyncio.create_serial_connection(asyncio.get_event_loop(), self.ReaderWriter, component.address, baudrate=component.baudrate)
+            self.connections[component.address][1].connect_to_source(self)
 
     def close_component(self, component_id):
         address = self.components[component_id].address
@@ -35,32 +42,20 @@ class SerialSource(Source):
                 close_com = False
                 break
         if close_com:
-            self.read_tasks[address].cancel()
-            self.writers[address].close()
-            del self.read_tasks[address]
-            del self.writers[address]
-            del self.readers[address]
+            self.connections[address][0].close()
+            del self.connections[address]
 
     def close_source(self):
         keys = list(self.components.keys())
         for key in keys:
             self.close_component(key)
 
-    async def read(self, com):
-        while True:
-            msg = await self.readers[com].read()
-            print(msg)
-            if len(msg) > 0:
-                for comp in self.components.values():
-                    if comp.address == com:
-                        self.update_component(comp.id, msg)
-
     def write_component(self, component_id, msg):
         if hasattr(self.components[component_id], "terminator"):
             term = self.components[component_id].terminator
         else:
             term = ""
-        self.writers[self.components[component_id].address].write(bytes(str(msg) + term, 'utf-8'))
+        self.connections[self.components[component_id].address][0].serial.write(bytes(str(msg) + term, 'utf-8'))
 
     def is_available(self):
         return True

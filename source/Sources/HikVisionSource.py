@@ -1,6 +1,7 @@
+import asyncio
+
 from hikload.hikvisionapi.classes import HikvisionServer
 import hikload.hikvisionapi.utils as hikutils
-import threading
 import os
 from datetime import datetime
 from Sources.Source import Source
@@ -85,8 +86,7 @@ class HikVisionSource(Source):
                 command = command[:index] + coords + command[index:]
                 hikutils.putXML(self.server, 'System/Video/inputs/channels/' + cam[0] + '/privacyMask/regions', xmldata=command)
         else:
-            vt = threading.Thread(target=self.download, args=[component_id])
-            vt.start()
+            asyncio.get_event_loop().run_in_executor(None, self.download, component_id)
 
     def download(self, component_id):
         op = self.out_paths[component_id]
