@@ -135,77 +135,60 @@ class Workstation:
         while True:
             event = await self.queue.get()
             if isinstance(event, PybEvents.StartEvent):
-                for el in self.task_event_loggers[event.chamber]:  # Start all EventLoggers
+                for el in self.task_event_loggers[event.task["chamber"]]:  # Start all EventLoggers
                     el.start_()
-                self.tasks[event.chamber].start__()
-                new_event = PybEvents.StateEnterEvent(event.chamber, self.tasks[event.chamber].state, event.metadata)
-                self.tasks[event.chamber].main_loop(new_event)
-                self.log_event(event.chamber, LoggerEvent(new_event, new_event.state.name, new_event.state.value,
-                                                          self.tasks[event.chamber].time_elapsed()))
+                event.task.start__()
+                new_event = PybEvents.StateEnterEvent(event.task, event.task.state, event.metadata)
+                event.task.main_loop(new_event)
             elif isinstance(event, PybEvents.TaskCompleteEvent):
-                self.wsg.chambers[event.chamber].stop()
-                self.tasks[event.chamber].complete = True
+                self.wsg.chambers[event.task["chamber"]].stop()
+                event.task.complete = True
             elif isinstance(event, PybEvents.StopEvent):
-                new_event = PybEvents.StateExitEvent(event.chamber, self.tasks[event.chamber].state, event.metadata)
-                self.tasks[event.chamber].main_loop(new_event)
-                self.log_event(event.chamber, LoggerEvent(new_event, new_event.state.name, new_event.state.value,
-                                                          self.tasks[event.chamber].time_elapsed()))
-                self.tasks[event.chamber].stop__()
+                new_event = PybEvents.StateExitEvent(event.task, event.task.state, event.metadata)
+                event.task.main_loop(new_event)
+                event.task.stop__()
             elif isinstance(event, PybEvents.PauseEvent):
-                self.tasks[event.chamber].pause__()
-                self.tasks[event.chamber].main_loop(event)
-                self.log_event(event.chamber, LoggerEvent(event, self.tasks[event.chamber].state.name,
-                                                          self.tasks[event.chamber].state.name.value,
-                                                          self.tasks[event.chamber].time_elapsed()))
+                event.task.pause__()
+                event.task.main_loop(event)
             elif isinstance(event, PybEvents.ResumeEvent):
-                self.tasks[event.chamber].resume__()
-                self.tasks[event.chamber].main_loop(event)
-                self.log_event(event.chamber, LoggerEvent(event, self.tasks[event.chamber].state.name, self.tasks[event.chamber].state.name.value, self.tasks[event.chamber].time_elapsed()))
+                event.task.resume__()
+                event.task.main_loop(event)
             elif isinstance(event, PybEvents.InitEvent):
-                self.tasks[event.chamber].init()
+                event.task.init()
             elif isinstance(event, PybEvents.ClearEvent):
-                self.tasks[event.chamber].clear()
+                event.task.clear()
                 del_loggers = event.del_loggers
                 if del_loggers:
-                    for logger in self.task_event_loggers[event.chamber]:
+                    for logger in self.task_event_loggers[event.task["chamber"]]:
                         logger.close_()
-                    del self.task_event_loggers[event.chamber]
-                del self.tasks[event.chamber]
-                del self.guis[event.chamber]
+                    del self.task_event_loggers[event.task["chamber"]]
+                del self.tasks[event.task["chamber"]]
+                del self.guis[event.task["chamber"]]
                 event.done.set()
             elif isinstance(event, PybEvents.HeartbeatEvent):
                 for key in self.tasks.keys():
                     if self.tasks[key].started:
                         self.tasks[key].main_loop(event)
-            elif isinstance(event, PybEvents.StateEnterEvent):
-                self.tasks[event.chamber].main_loop(event)
-                self.log_event(event.chamber, LoggerEvent(event, event.state.name, event.state.value, self.tasks[event.chamber].time_elapsed()))
-            elif isinstance(event, PybEvents.StateExitEvent):
-                self.tasks[event.chamber].main_loop(event)
-                self.log_event(event.chamber, LoggerEvent(event, event.state.name, event.state.value, self.tasks[event.chamber].time_elapsed()))
             elif isinstance(event, PybEvents.ComponentUpdateEvent):
-                comp = self.tasks[event.chamber].components[event.comp_id]
+                comp = event.task.components[event.comp_id][0]
                 comp.update(event.value)
-                if self.tasks[event.chamber].started:
-                    new_event = PybEvents.ComponentChangedEvent(event.chamber, comp, event.metadata)
-                    self.tasks[event.chamber].main_loop(new_event)
-                    if self.tasks[event.chamber].is_complete_():
-                        self.queue.put_nowait(PybEvents.TaskCompleteEvent(event.chamber))
-                    self.log_event(event.chamber, LoggerEvent(new_event, comp.id, comp.address, self.tasks[event.chamber].time_elapsed()))
-            elif isinstance(event, PybEvents.GUIEvent):
-                if self.tasks[event.chamber].started:
-                    self.tasks[event.chamber].main_loop(event)
-                    if self.tasks[event.chamber].is_complete_():
-                        self.queue.put_nowait(PybEvents.TaskCompleteEvent(event.chamber))
-                    self.log_event(event.chamber, LoggerEvent(event, event.event.name, event.event.value, self.tasks[event.chamber].time_elapsed()))
-            elif isinstance(event, PybEvents.TimeoutEvent):  # Should this log an event?
-                self.tasks[event.chamber].main_loop(event)
-                if self.tasks[event.chamber].is_complete_():
-                    self.queue.put_nowait(PybEvents.TaskCompleteEvent(event.chamber))
+                if event.task.started:
+                    new_event = PybEvents.ComponentChangedEvent(event.task, comp, event.metadata)
+                    event.task.main_loop(new_event)
+                    if event.task.is_complete_():
+                        self.queue.put_nowait(PybEvents.TaskCompleteEvent(event.task))
             elif isinstance(event, PybEvents.PygameEvent):
                 handled = False
                 for key in self.guis.keys():
                     handled = handled or self.guis[key].handle_event(event.event)
+            elif isinstance(event, PybEvents.StatefulEvent):
+                if event.task.started:
+                    event.task.main_loop(event)
+                    if event.task.is_complete_():
+                        self.queue.put_nowait(PybEvents.TaskCompleteEvent(event.task))
+            if isinstance(event, PybEvents.Loggable):
+                if event.task.started:
+                    self.log_event(event.format())
             self.delay_heartbeat = True
             self.gui_queue.put_nowait(event)
             # self.gui_wrapper(event)
@@ -268,7 +251,7 @@ class Workstation:
             col = chamber % self.n_col
             row = math.floor(chamber / self.n_col)
             self.guis[chamber] = gui(self.task_gui.subsurface(col * self.w, row * self.h, self.w, self.h), self.tasks[chamber])
-            self.queue.put_nowait(PybEvents.InitEvent(chamber))
+            self.queue.put_nowait(PybEvents.InitEvent(self.tasks[chamber]))
         except BaseException as e:
             print(type(e).__name__)
             self.ed = QMessageBox()
@@ -301,7 +284,7 @@ class Workstation:
             The chamber from which a Task should be removed
         """
         done = asyncio.Event()
-        self.queue.put_nowait(PybEvents.ClearEvent(chamber, del_loggers, done))
+        self.queue.put_nowait(PybEvents.ClearEvent(self.tasks[chamber], del_loggers, done))
         return done
 
     def gui_event_loop(self) -> None:
@@ -313,17 +296,17 @@ class Workstation:
         while True:
             event = self.gui_queue.get()
             if isinstance(event, PybEvents.TaskEvent):
-                col = event.chamber % self.n_col
-                row = math.floor(event.chamber / self.n_col)
+                col = event.task.metadata["chamber"] % self.n_col
+                row = math.floor(event.task.metadata["chamber"] / self.n_col)
                 rect = pygame.Rect((col * self.w, row * self.h, self.w, self.h))
                 if isinstance(event, PybEvents.InitEvent) or isinstance(event, PybEvents.TaskCompleteEvent):
-                    self.guis[event.chamber].draw()
+                    self.guis[event.task.metadata["chamber"]].draw()
                     self.gui_updates.append(rect)
                 elif isinstance(event, PybEvents.ClearEvent):
                     pygame.draw.rect(self.task_gui, Colors.black, rect)
                     self.gui_updates.append(rect)
                 else:
-                    for element in self.guis[event.chamber].get_elements():
+                    for element in self.guis[event.task.metadata["chamber"]].get_elements():
                         if element.has_updated():
                             element.draw()
                             self.gui_updates.append(element.rect)
@@ -347,8 +330,8 @@ class Workstation:
             else:
                 self.queue.put_nowait(PybEvents.HeartbeatEvent())
 
-    def log_event(self, chamber: int, event: LoggerEvent):
-        for logger in self.task_event_loggers[chamber]:
+    def log_event(self, event: LoggerEvent):
+        for logger in self.task_event_loggers[event.event.task.metadata["chamber"]]:
             logger.queue.put_nowait(event)
 
     def exit_handler(self, *args):  # Make async

@@ -19,7 +19,7 @@ class LoggerEvent:
             Any metadata related to the Event
     """
 
-    def __init__(self, event: TaskEvent, name: str, eid: str, entry_time: float):
+    def __init__(self, event: TaskEvent, name: str, eid: int, entry_time: float):
         self.entry_time = entry_time
         self.event = event
         self.name = name

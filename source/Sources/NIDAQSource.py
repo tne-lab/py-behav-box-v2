@@ -129,8 +129,8 @@ class NIDAQSource(Source):
         self.niprocess.start()
         self.values = {}
 
-    def register_component(self, task, component):
-        super().register_component()
+    async def register_component(self, task, component):
+        await super().register_component(task, component)
         command = {'command': 'Register', 'id': component.id, 'address': component.address}
         if component.get_type() == Component.Type.DIGITAL_OUTPUT:
             command['type'] = 'DO'

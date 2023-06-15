@@ -1,10 +1,15 @@
+from Events import PybEvents
 from Events.GUIEventLogger import GUIEventLogger
-from Events.InputEvent import InputEvent
-from enum import Enum
 from PyQt5.QtWidgets import *
+
+from Events.LoggerEvent import LoggerEvent
 
 
 class ManualEventLogger(GUIEventLogger):
+
+    class ManualEvent(PybEvents.Loggable, PybEvents.StatefulEvent):
+        def format(self) -> LoggerEvent:
+            return LoggerEvent(self, self.task.state.name, self.task.state.name.value, self.task.time_elapsed())
 
     def __init__(self):
         super().__init__()
@@ -31,9 +36,10 @@ class ManualEventLogger(GUIEventLogger):
         manual_layout.addLayout(input_layout)
 
     def send_event(self) -> None:
-        temp_enum = Enum('TempEnum', {'MANUAL': int(self.code_input.text())})
-        self.cw.task.events.append(
-            InputEvent(self.cw.task, temp_enum.MANUAL, {"desc": self.manual_input.text()}))
+        self.cw.workstation.queue.put_nowait(self.ManualEvent(self.cw.task))
+
+    async def log_event(self, events: LoggerEvent) -> None:
+        pass
 
     def get_widget(self) -> QWidget:
         return self.widget

@@ -61,6 +61,7 @@ class Task:
         self.entry_time = self.start_time = self.cur_time = self.time_into_trial = self.time_paused = 0
         self.paused = self.started = self.complete = False
         self.timeouts = {}
+        self.state_timeouts = {}
         self.ws = None
         self.metadata = None
         self.components = {}
@@ -81,6 +82,8 @@ class Task:
         for key, value in self.get_constants().items():
             setattr(self, key, value)
 
+        comp_index = 0
+
         # If this task is being created as part of a Task sequence
         if isinstance(args[0], Task):
             # Assign variables from base Task
@@ -97,7 +100,8 @@ class Task:
                         else:
                             setattr(self, component.id.split('-')[0],
                                     [getattr(self, component.id.split('-')[0]), component])
-                    self.components[component.id] = component
+                    self.components[component.id] = (component, comp_index)
+                    comp_index += 1
             # Load protocol is provided
             protocol = args[2]
         else:  # If this is a standard Task
@@ -147,7 +151,8 @@ class Task:
                                         component_list = getattr(self, cid)
                                         component_list[i] = component
                                         setattr(self, cid, component_list)
-                                    self.components[component.id] = component
+                                    self.components[component.id] = (component, comp_index)
+                                    comp_index += 1
                                 else:
                                     raise pyberror.SourceUnavailableError
                             else:
@@ -176,7 +181,8 @@ class Task:
                             component_list = getattr(self, name)
                             component_list[i] = component
                             setattr(self, name, component_list)
-                        self.components[component.id] = component
+                        self.components[component.id] = (component, comp_index)
+                        comp_index += 1
 
         # If a Protocol is provided, replace all indicated variables with the values from the Protocol
         if isinstance(protocol, str) and len(protocol) > 0:
@@ -204,11 +210,11 @@ class Task:
 
     def change_state(self, new_state: Enum, metadata: Any = None) -> None:
         self.entry_time = self.cur_time
-        self.ws.queue.put_nowait(PybEvents.StateExitEvent(self.metadata["chamber"], self.state, metadata))
+        self.log_event(PybEvents.StateExitEvent(self.metadata["chamber"], self.state, metadata))
         if not self.is_complete_():
-            self.ws.queue.put_nowait(PybEvents.StateEnterEvent(self.metadata["chamber"], new_state, metadata))
+            self.log_event(PybEvents.StateEnterEvent(self.metadata["chamber"], new_state, metadata))
         else:
-            self.ws.queue.put_nowait(PybEvents.TaskCompleteEvent(self.metadata["chamber"]))
+            self.log_event(PybEvents.TaskCompleteEvent(self.metadata["chamber"]))
 
     def start__(self) -> None:
         self.complete = False
@@ -251,6 +257,10 @@ class Task:
         self.cur_time = time.perf_counter()
         if isinstance(event, PybEvents.StateEnterEvent):
             self.state = event.state
+        elif isinstance(event, PybEvents.StateExitEvent):
+            for tm, close in self.state_timeouts[self.state]:
+                if close:
+                    tm.stop()
         all_handled = self.all_states(event)
         if not all_handled and hasattr(self, self.state.name):
             state_method = getattr(self, self.state.name)
@@ -277,23 +287,26 @@ class Task:
     def get_components() -> Dict[str, List[Type[Component]]]:
         return {}
 
-    @abstractmethod
     def is_complete(self) -> bool:
-        raise NotImplementedError
+        raise False
 
     def is_complete_(self) -> bool:
         return self.complete or self.is_complete()
 
     def task_complete(self):
-        self.ws.queue.put_nowait(PybEvents.TaskCompleteEvent(self.metadata["chamber"]))
+        self.log_event(PybEvents.TaskCompleteEvent(self.metadata["chamber"]))
 
     def _send_timeout(self, name: str, metadata: Dict):
-        self.ws.queue.put_nowait(PybEvents.TimeoutEvent(self.metadata["chamber"], name, metadata))
+        self.log_event(PybEvents.TimeoutEvent(self.metadata["chamber"], name, metadata))
         del self.timeouts[name]
 
-    def set_timeout(self, name: str, timeout: float, metadata: Dict = None):
+    def set_timeout(self, name: str, timeout: float, end_with_state=True, metadata: Dict = None):
         if name not in self.timeouts:
-            self.timeouts[name] = Timeout(lambda: self._send_timeout(name, metadata))
+            tm = Timeout(lambda: self._send_timeout(name, metadata))
+            self.timeouts[name] = tm
+            if self.state not in self.state_timeouts:
+                self.state_timeouts[self.state] = {}
+            self.state_timeouts[self.state][name] = (timeout, end_with_state)
             self.timeouts[name].start(timeout)
         else:
             self.timeouts[name].cancel()
@@ -314,3 +327,6 @@ class Task:
     def extend_timeout(self, name: str, timeout: float):
         if name in self.timeouts:
             self.timeouts[name].extend(timeout)
+
+    def log_event(self, event: PybEvents.TaskEvent):
+        self.ws.queue.put_nowait(event)

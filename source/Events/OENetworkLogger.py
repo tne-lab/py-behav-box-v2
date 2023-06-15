@@ -3,7 +3,7 @@ from __future__ import annotations
 import threading
 from typing import TYPE_CHECKING
 
-from Utilities.dictionary_to_save_string import dictionary_to_save_string
+from Events import PybEvents
 
 if TYPE_CHECKING:
     from Events.LoggerEvent import LoggerEvent
@@ -14,11 +14,6 @@ import os
 import time
 
 from Events.GUIEventLogger import GUIEventLogger
-from Events.InputEvent import InputEvent
-from Events.StateChangeEvent import StateChangeEvent
-from Events.InitialStateEvent import InitialStateEvent
-from Events.FinalStateEvent import FinalStateEvent
-from Events.OEEvent import OEEvent
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 
@@ -101,7 +96,7 @@ class OENetworkLogger(GUIEventLogger):
             self.acq_button.icon = 'Workstation/icons/stop_play.svg'
             self.acq_button.hover_icon = 'Workstation/icons/stop_play_hover.svg'
             self.acq_button.setIcon(QIcon(self.acq_button.icon))
-            self.log_events([OEEvent(self.cw.task_thread.task, "startAcquisition")])
+            self.cw.workstation.queue.put_nowait(PybEvents.OEEvent(self.cw.task, "startAcquisition"))
             self.acq = True
         elif self.acq:
             self.acq_button.icon = 'Workstation/icons/play.svg'
@@ -112,7 +107,7 @@ class OENetworkLogger(GUIEventLogger):
                 self.rec_button.hover_icon = 'Workstation/icons/record_hover.svg'
                 self.rec_button.setIcon(QIcon(self.rec_button.icon))
                 self.rec = False
-            self.log_events([OEEvent(self.cw.task_thread.task, "stopAcquisition")])
+            self.cw.workstation.queue.put_nowait(PybEvents.OEEvent(self.cw.task, "stopAcquisition"))
             self.acq = False
 
     def record(self) -> None:
@@ -123,14 +118,14 @@ class OENetworkLogger(GUIEventLogger):
             self.rec_button.icon = 'Workstation/icons/stop_record.svg'
             self.rec_button.hover_icon = 'Workstation/icons/stop_record_hover.svg'
             self.rec_button.setIcon(QIcon(self.rec_button.icon))
-            self.log_events([OEEvent(self.cw.task_thread.task, "startRecord")])
+            self.cw.workstation.queue.put_nowait(PybEvents.OEEvent(self.cw.task, "startRecord"))
             self.acq = True
             self.rec = True
         elif self.rec:
             self.rec_button.icon = 'Workstation/icons/record.svg'
             self.rec_button.hover_icon = 'Workstation/icons/record_hover.svg'
             self.rec_button.setIcon(QIcon(self.rec_button.icon))
-            self.log_events([OEEvent(self.cw.task_thread.task, "stopRecord")])
+            self.cw.workstation.queue.put_nowait(PybEvents.OEEvent(self.cw.task, "stopRecord"))
             self.rec = False
 
     def get_file_path(self) -> None:
@@ -181,56 +176,23 @@ class OENetworkLogger(GUIEventLogger):
         except zmq.ZMQError:
             pass
 
-    def log_events(self, events: list[LoggerEvent]) -> None:
-        for e in events:
-            if isinstance(e, OEEvent):
-                if e.event_type == 'startAcquisition':
-                    self.send_string("startAcquisition")
-                elif e.event_type == 'stopAcquisition':
-                    self.send_string("stopAcquisition")
-                elif e.event_type == 'startRecord':
-                    self.send_string("startRecord RecDir={} prependText={} appendText={}".format(self.rec_dir.text(),
-                                                                                                 self.pre.text() + e.metadata["pre"] if e.metadata is not None and "pre" in e.metadata else self.pre.text(),
-                                                                                                 self.app.text()))
-                elif e.event_type == 'stopRecord':
-                    self.send_string("stopRecord")
-            elif isinstance(e, InitialStateEvent):
-                self.event_count += 1
-                if e.metadata is not None and 'ttl' in e.metadata and e.metadata['ttl']:
-                    self.send_ttl_event(e.initial_state.value, 'on')
-                else:
-                    self.send_string("{},{},Entry,{},{},{}".format(self.event_count, e.entry_time,
-                                                                   e.initial_state.value, e.initial_state.name,
-                                                                   dictionary_to_save_string(e.metadata)))
-            elif isinstance(e, FinalStateEvent):
-                self.event_count += 1
-                if e.metadata is not None and 'ttl' in e.metadata and e.metadata['ttl']:
-                    self.send_ttl_event(e.final_state.value, 'off')
-                else:
-                    self.send_string("{},{},Exit,{},{},{}".format(self.event_count, e.entry_time,
-                                                                  e.final_state.value, e.final_state.name,
-                                                                  dictionary_to_save_string(e.metadata)))
-            elif isinstance(e, StateChangeEvent):
-                self.event_count += 1
-                if e.metadata is not None and 'ttl' in e.metadata and e.metadata['ttl']:
-                    self.send_ttl_event(e.initial_state.value, 'off')
-                    self.event_count += 1
-                    self.send_ttl_event(e.new_state.value, 'on')
-                else:
-                    self.send_string("{},{},Exit,{},{},{}".format(self.event_count, e.entry_time,
-                                                                  e.initial_state.value, e.initial_state.name,
-                                                                  dictionary_to_save_string(e.metadata)))
-                    self.event_count += 1
-                    self.send_string("{},{},Entry,{},{},{}".format(self.event_count, e.entry_time,
-                                                                   e.new_state.value, e.new_state.name, str(None)))
-            elif isinstance(e, InputEvent):
-                self.event_count += 1
-                if e.metadata is not None and 'ttl' in e.metadata and e.metadata['ttl']:
-                    self.send_ttl_event(e.input_event.value, e.metadata['ttl'])
-                else:
-                    self.send_string("{},{},Input,{},{},{}".format(self.event_count, e.entry_time,
-                                                                   e.input_event.value, e.input_event.name,
-                                                                   dictionary_to_save_string(e.metadata)))
+    async def log_event(self, le: LoggerEvent) -> None:
+        if isinstance(le.event, PybEvents.OEEvent):
+            if le.event.event_type == 'startAcquisition':
+                self.send_string("startAcquisition")
+            elif le.event.event_type == 'stopAcquisition':
+                self.send_string("stopAcquisition")
+            elif le.event.event_type == 'startRecord':
+                self.send_string("startRecord RecDir={} prependText={} appendText={}".format(self.rec_dir.text(),
+                                                                                             self.pre.text() +
+                                                                                             le.event.metadata[
+                                                                                                 "pre"] if le.event.metadata is not None and "pre" in le.event.metadata else self.pre.text(),
+                                                                                             self.app.text()))
+            elif le.event.event_type == 'stopRecord':
+                self.send_string("stopRecord")
+        else:
+            self.event_count += 1
+            self.send_string(self.format_event(le, type(le.event).__name__))
 
     def close(self) -> None:
         self.socket.close()

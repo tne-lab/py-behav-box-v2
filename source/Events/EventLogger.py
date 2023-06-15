@@ -67,5 +67,5 @@ class EventLogger:
 
     def format_event(self, le: LoggerEvent, event_type: str):
         return "{},{},{},{},{},\"{}\"\n".format(self.event_count, le.entry_time, event_type,
-                                            le.eid, le.name,
-                                            str(le.event.metadata))
+                                                str(le.eid), le.name,
+                                                str(le.event.metadata))
