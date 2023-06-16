@@ -3,14 +3,17 @@ from __future__ import annotations
 import asyncio
 import queue
 import time
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Type
 
 from Events import PybEvents
 from Events.LoggerEvent import LoggerEvent
+from GUIs.SequenceGUI import SequenceGUI
 from Utilities.create_task import create_task
+from Utilities.handle_task_result import handle_task_result
 
 if TYPE_CHECKING:
     from Events.EventLogger import EventLogger
+    from Tasks.Task import Task
 
 import importlib
 from pkgutil import iter_modules
@@ -33,7 +36,6 @@ import os
 import ast
 import traceback
 from screeninfo import get_monitors
-from line_profiler import LineProfiler
 
 
 class Workstation:
@@ -59,8 +61,6 @@ class Workstation:
         self.gui_updates = []
         self.gui_queue = queue.Queue()
         self.refresh_gui = True
-        # self.lp = LineProfiler()
-        # self.gui_wrapper = self.lp(self.update_gui)
 
         # Core application details
         QCoreApplication.setOrganizationName("TNEL")
@@ -81,6 +81,20 @@ class Workstation:
         os.environ['SDL_VIDEO_WINDOW_POS'] = '%i,%i' % offset  # Position the pygame window
         pygame.init()
         pygame.display.set_caption("Pybehav")
+
+        # Store the GUI refresh state
+        if settings.contains("refresh_gui"):
+            self.refresh_gui = bool(settings.value("refresh_gui"))
+        else:
+            self.refresh_gui = True
+            settings.setValue("refresh_gui", self.refresh_gui)
+
+        # Store the number of available chambers
+        if settings.contains("n_chamber"):
+            self.n_chamber = int(settings.value("n_chamber"))
+        else:
+            self.n_chamber = 1
+            settings.setValue("n_chamber", self.n_chamber)
 
         # Compute the arrangement of chambers in the pygame window
         if settings.contains("pygame/n_row"):
@@ -114,21 +128,10 @@ class Workstation:
         else:
             self.sources = {"es": EmptySource()}
             settings.setValue("sources", '{"es": EmptySource()}')
-        # Store the number of available chambers
-        if settings.contains("n_chamber"):
-            self.n_chamber = int(settings.value("n_chamber"))
-        else:
-            self.n_chamber = 1
-            settings.setValue("n_chamber", self.n_chamber)
-        # Store the GUI refresh state
-        if settings.contains("refresh_gui"):
-            self.refresh_gui = bool(settings.value("refresh_gui"))
-        else:
-            self.refresh_gui = True
-            settings.setValue("refresh_gui", self.refresh_gui)
 
         self.wsg = WorkstationGUI(self)
         self.gui_task = self.loop.run_in_executor(None, self.update_gui)
+        self.gui_task.add_done_callback(handle_task_result)
         self.gui_event_task = self.loop.run_in_executor(None, self.gui_event_loop)
         self.main_task = create_task(self.run())
         self.heartbeat_task = create_task(self.heartbeat())
@@ -144,28 +147,33 @@ class Workstation:
             if isinstance(event, PybEvents.ExitEvent):
                 return
             elif isinstance(event, PybEvents.StartEvent):
-                for el in self.task_event_loggers[event.task.metadata["chamber"]]:  # Start all EventLoggers
-                    el.start_()
+                if event.task is self.tasks[event.task.metadata["chamber"]]:
+                    for el in self.task_event_loggers[event.task.metadata["chamber"]]:  # Start all EventLoggers
+                        el.start_()
                 event.task.start__()
                 new_event = PybEvents.StateEnterEvent(event.task, event.task.state, event.metadata)
-                event.task.main_loop(new_event)
+                self.tasks[event.task.metadata["chamber"]].main_loop(new_event)
                 self.log_event(new_event.format())
             elif isinstance(event, PybEvents.TaskCompleteEvent):
-                self.wsg.chambers[event.task.metadata["chamber"]].stop()
-                event.task.complete = True
+                if event.task is not self.tasks[event.task.metadata["chamber"]]:  # if it's a child task
+                    event.task.stop__()
+                    self.tasks[event.task.metadata["chamber"]].main_loop(event)
+                else:
+                    self.wsg.chambers[event.task.metadata["chamber"]].stop()
+                    event.task.complete = True
             elif isinstance(event, PybEvents.StopEvent):
                 new_event = PybEvents.StateExitEvent(event.task, event.task.state, event.metadata)
-                event.task.main_loop(new_event)
+                self.tasks[event.task.metadata["chamber"]].main_loop(event)
                 self.log_event(new_event.format())
                 event.task.stop__()
                 self.log_event(event.format())
             elif isinstance(event, PybEvents.PauseEvent):
                 event.task.pause__()
-                event.task.main_loop(event)
+                self.tasks[event.task.metadata["chamber"]].main_loop(event)
                 self.log_event(event.format())
             elif isinstance(event, PybEvents.ResumeEvent):
                 event.task.resume__()
-                event.task.main_loop(event)
+                self.tasks[event.task.metadata["chamber"]].main_loop(event)
             elif isinstance(event, PybEvents.InitEvent):
                 event.task.init()
             elif isinstance(event, PybEvents.ClearEvent):
@@ -192,7 +200,7 @@ class Workstation:
                         event.metadata = {}
                     event.metadata["value"] = comp.state
                     new_event = PybEvents.ComponentChangedEvent(event.task, comp, event.metadata)
-                    event.task.main_loop(new_event)
+                    self.tasks[event.task.metadata["chamber"]].main_loop(new_event)
                     self.log_event(new_event.format())
                     if event.task.is_complete_():
                         self.queue.put_nowait(PybEvents.TaskCompleteEvent(event.task))
@@ -202,7 +210,7 @@ class Workstation:
                     handled = handled or self.guis[key].handle_event(event.event)
             elif isinstance(event, PybEvents.StatefulEvent):
                 if event.task.started and not event.task.paused:
-                    event.task.main_loop(event)
+                    self.tasks[event.task.metadata["chamber"]].main_loop(event)
                     if event.task.is_complete_():
                         self.queue.put_nowait(PybEvents.TaskCompleteEvent(event.task))
             if isinstance(event, PybEvents.Loggable):
@@ -210,8 +218,6 @@ class Workstation:
                     self.log_event(event.format())
             if self.refresh_gui:
                 self.gui_queue.put_nowait(event)
-            # self.gui_wrapper(event)
-            # self.lp.print_stats()
 
     def compute_chambergui(self) -> None:
         desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
@@ -292,6 +298,31 @@ class Workstation:
             self.ed.show()
             raise pyberror.AddTaskError
 
+    async def switch_task(self, task_base: Task, task_name: Type[Task], protocol: str = None) -> Task:
+        """
+        Switch the active Task in a sequence.
+        Parameters
+        ----------
+        task_base : Task
+            The base Task of the sequence
+        task_name : Class
+            The next Task in the sequence
+        protocol : dict
+            Dictionary representing the protocol for the new Task
+        """
+        # Create the new Task as part of a sequence
+        new_task = task_name()
+        await new_task.initialize(task_base, task_base.components, protocol)
+        gui = getattr(importlib.import_module("Local.GUIs." + task_name.__name__ + "GUI"), task_name.__name__ + "GUI")
+        # Position the GUI in pygame
+        col = task_base.metadata['chamber'] % self.n_col
+        row = math.floor(task_base.metadata['chamber'] / self.n_col)
+        # Create the GUI
+        self.guis[task_base.metadata['chamber']].sub_gui = gui(
+            self.task_gui.subsurface(col * self.w, row * self.h, self.w, self.h),
+            new_task)
+        return new_task
+
     def remove_task(self, chamber: int, del_loggers: bool = True) -> asyncio.Event:
         """
         Remove the Task from the specified chamber.
@@ -326,7 +357,11 @@ class Workstation:
                     pygame.draw.rect(self.task_gui, Colors.black, rect)
                     self.gui_updates.append(rect)
                 else:
-                    for element in self.guis[event.task.metadata["chamber"]].get_elements():
+                    if isinstance(self.guis[event.task.metadata["chamber"]], SequenceGUI):
+                        elements = self.guis[event.task.metadata["chamber"]].get_all_elements()
+                    else:
+                        elements = self.guis[event.task.metadata["chamber"]].get_elemenets()
+                    for element in elements:
                         if element.has_updated():
                             element.draw()
                             self.gui_updates.append(element.rect.move(col * self.w, row * self.h))
@@ -334,7 +369,11 @@ class Workstation:
                 for key in self.guis.keys():
                     col = key % self.n_col
                     row = math.floor(key / self.n_col)
-                    for element in self.guis[key].get_elements():
+                    if isinstance(self.guis[key], SequenceGUI):
+                        elements = self.guis[key].get_all_elements()
+                    else:
+                        elements = self.guis[key].get_elemenets()
+                    for element in elements:
                         if element.has_updated():
                             element.draw()
                             self.gui_updates.append(element.rect.move(col * self.w, row * self.h))

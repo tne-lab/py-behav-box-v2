@@ -7,7 +7,6 @@ import win32gui
 from Components.Component import Component
 from Sources.Source import Source
 from Utilities.create_task import create_task
-from Utilities.handle_task_result import handle_task_result
 
 IsWhiskerRunning = False
 

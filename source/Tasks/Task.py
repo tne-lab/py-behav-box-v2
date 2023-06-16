@@ -87,19 +87,20 @@ class Task:
         # If this task is being created as part of a Task sequence
         if isinstance(args[0], Task):
             # Assign variables from base Task
-            self.ws = args[0]
+            self.ws = args[0].ws
             self.metadata = args[0].metadata
-            for component in args[1]:
-                if component.id.split('-')[0] in component_definition:
-                    if not hasattr(self, component.id.split('-')[0]):
-                        setattr(self, component.id.split('-')[0], component)
+            for ct in args[1].values():
+                component = ct[0]
+                cid = component.id.split('-')[0]
+                if cid in component_definition:
+                    if not hasattr(self, cid):
+                        setattr(self, cid, component)
                     else:  # If the Component is part of an already registered list
                         # Update the list with the Component at the specified index
-                        if isinstance(getattr(self, component.id.split('-')[0]), list):
-                            getattr(self, component.id.split('-')[0]).append(component)
+                        if isinstance(getattr(self, cid), list):
+                            getattr(self, cid).append(component)
                         else:
-                            setattr(self, component.id.split('-')[0],
-                                    [getattr(self, component.id.split('-')[0]), component])
+                            setattr(self, cid, [getattr(self, cid), component])
                     self.components[component.id] = (component, comp_index)
                     comp_index += 1
             # Load protocol is provided
