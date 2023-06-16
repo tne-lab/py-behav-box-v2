@@ -319,13 +319,15 @@ class Workstation:
                     for element in self.guis[event.task.metadata["chamber"]].get_elements():
                         if element.has_updated():
                             element.draw()
-                            self.gui_updates.append(element.rect)
+                            self.gui_updates.append(element.rect.move(col * self.w, row * self.h))
             elif isinstance(event, PybEvents.HeartbeatEvent):
                 for key in self.guis.keys():
+                    col = key % self.n_col
+                    row = math.floor(key / self.n_col)
                     for element in self.guis[key].get_elements():
                         if element.has_updated():
                             element.draw()
-                            self.gui_updates.append(element.rect)
+                            self.gui_updates.append(element.rect.move(col * self.w, row * self.h))
             if time.perf_counter() - self.last_frame > 1 / self.fr:
                 if len(self.gui_updates) > 0:
                     pygame.display.update(self.gui_updates)

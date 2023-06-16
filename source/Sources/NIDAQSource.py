@@ -44,10 +44,12 @@ class NIProcess(Process):
             elif command['command'] == 'CloseComponent':
                 if command['type'] == 'AO':
                     if self.ao_task is not None:
+                        self.ao_task.stop()
                         self.ao_task.close()
                         self.ao_task = None
                         self.ao_stream = None
                 else:
+                    self.tasks[command['id']].stop()
                     self.tasks[command['id']].close()
             elif command['command'] == 'Register':
                 if command['type'] == 'DO':
