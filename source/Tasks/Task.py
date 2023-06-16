@@ -258,9 +258,10 @@ class Task:
         if isinstance(event, PybEvents.StateEnterEvent):
             self.state = event.state
         elif isinstance(event, PybEvents.StateExitEvent):
-            for tm in self.state_timeouts[self.state].values():
-                if tm[1]:
-                    tm[0].stop()
+            if self.state in self.state_timeouts:
+                for tm in self.state_timeouts[self.state].values():
+                    if tm[1]:
+                        tm[0].stop()
         all_handled = self.all_states(event)
         if not all_handled and hasattr(self, self.state.name):
             state_method = getattr(self, self.state.name)

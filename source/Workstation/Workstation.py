@@ -175,6 +175,8 @@ class Workstation:
                     for logger in self.task_event_loggers[event.task.metadata["chamber"]]:
                         logger.close_()
                     del self.task_event_loggers[event.task.metadata["chamber"]]
+                for comp in self.tasks[event.task.metadata["chamber"]].components.values():
+                    comp[0].close()
                 del self.tasks[event.task.metadata["chamber"]]
                 del self.guis[event.task.metadata["chamber"]]
                 event.done.set()
