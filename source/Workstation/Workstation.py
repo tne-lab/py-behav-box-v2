@@ -58,6 +58,7 @@ class Workstation:
         self.task_gui = None
         self.gui_updates = []
         self.gui_queue = queue.Queue()
+        self.refresh_gui = True
         # self.lp = LineProfiler()
         # self.gui_wrapper = self.lp(self.update_gui)
 
@@ -119,6 +120,12 @@ class Workstation:
         else:
             self.n_chamber = 1
             settings.setValue("n_chamber", self.n_chamber)
+        # Store the GUI refresh state
+        if settings.contains("refresh_gui"):
+            self.refresh_gui = bool(settings.value("refresh_gui"))
+        else:
+            self.refresh_gui = True
+            settings.setValue("refresh_gui", self.refresh_gui)
 
         self.wsg = WorkstationGUI(self)
         self.gui_task = self.loop.run_in_executor(None, self.update_gui)
@@ -199,7 +206,8 @@ class Workstation:
             if isinstance(event, PybEvents.Loggable):
                 if event.task.started and not event.task.paused:
                     self.log_event(event.format())
-            self.gui_queue.put_nowait(event)
+            if self.refresh_gui:
+                self.gui_queue.put_nowait(event)
             # self.gui_wrapper(event)
             # self.lp.print_stats()
 

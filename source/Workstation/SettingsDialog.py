@@ -39,6 +39,14 @@ class SettingsDialog(QDialog):
         self.n_chamber = QLineEdit(str(workstation.n_chamber))
         chamber_box_layout.addWidget(self.n_chamber)
         self.layout.addWidget(chamber_box)
+        refresh_box = QGroupBox('GUI Options')
+        refresh_box_layout = QHBoxLayout(self)
+        refresh_box.setLayout(refresh_box_layout)
+        self.refresh_gui = QCheckBox("Refresh")
+        self.refresh_gui.setChecked(self.workstation.refresh_gui)
+        self.refresh_gui.stateChanged.connect(self.update_refresh_check)
+        refresh_box_layout.addWidget(self.refresh_gui)
+        self.layout.addWidget(refresh_box)
         source_box = QGroupBox('Sources')
         source_box_layout = QVBoxLayout(self)
         self.source_list = QListWidget()
@@ -74,6 +82,12 @@ class SettingsDialog(QDialog):
         self.layout.addWidget(source_box)
         self.layout.addWidget(self.control_buttons)
         self.setLayout(self.layout)
+
+    def update_refresh_check(self):
+        self.workstation.refresh_gui = self.refresh_gui.isChecked()
+        desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
+        settings = QSettings(desktop + "/py-behav/pybehave.ini", QSettings.IniFormat)
+        settings.setValue("refresh_gui", self.workstation.refresh_gui)
     
     def accept(self) -> None:
         desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
