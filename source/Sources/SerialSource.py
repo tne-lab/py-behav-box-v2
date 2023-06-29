@@ -1,9 +1,11 @@
 import asyncio
+from contextlib import suppress
 
 from aioserial import aioserial
 
 from Components.Component import Component
 from Sources.Source import Source
+from Utilities.create_task import create_task
 
 
 class SerialSource(Source):
@@ -18,7 +20,7 @@ class SerialSource(Source):
         if component.address not in self.connections:
             self.connections[component.address] = aioserial.AioSerial(port=component.address,
                                                                       baudrate=component.baudrate)
-            self.com_tasks[component.address] = asyncio.create_task(self.read(component.address))
+            self.com_tasks[component.address] = create_task(self.read(component.address))
 
     async def read(self, com):
         while True:
@@ -40,9 +42,14 @@ class SerialSource(Source):
                 break
         if close_com:
             self.com_tasks[address].cancel()
-            del self.com_tasks[address]
-            self.connections[address].close()
-            del self.connections[address]
+            create_task(self.close_com(address))
+
+    async def close_com(self, address):
+        with suppress(asyncio.CancelledError):
+            await self.com_tasks[address]
+        del self.com_tasks[address]
+        self.connections[address].close()
+        del self.connections[address]
 
     def close_source(self):
         keys = list(self.components.keys())

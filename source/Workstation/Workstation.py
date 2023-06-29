@@ -360,7 +360,7 @@ class Workstation:
                     if isinstance(self.guis[event.task.metadata["chamber"]], SequenceGUI):
                         elements = self.guis[event.task.metadata["chamber"]].get_all_elements()
                     else:
-                        elements = self.guis[event.task.metadata["chamber"]].get_elemenets()
+                        elements = self.guis[event.task.metadata["chamber"]].get_elements()
                     for element in elements:
                         if element.has_updated():
                             element.draw()
@@ -372,7 +372,7 @@ class Workstation:
                     if isinstance(self.guis[key], SequenceGUI):
                         elements = self.guis[key].get_all_elements()
                     else:
-                        elements = self.guis[key].get_elemenets()
+                        elements = self.guis[key].get_elements()
                     for element in elements:
                         if element.has_updated():
                             element.draw()

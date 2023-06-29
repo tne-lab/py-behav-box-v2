@@ -1,8 +1,5 @@
 import asyncio
-import threading
 import time
-
-from Utilities.create_task import create_task
 
 
 class Timeout:
@@ -17,7 +14,7 @@ class Timeout:
     def start(self, duration):
         if not self.started:
             self.duration = duration
-            self.task = create_task(self.handler())
+            self.task = asyncio.create_task(self.handler())
             self.started = True
 
     def pause(self):
@@ -37,7 +34,7 @@ class Timeout:
     def resume(self):
         if self.started and self.start_time is None:
             self.duration = self.time_remaining()
-            self.task = create_task(self.handler())
+            self.task = asyncio.create_task(self.handler())
 
     def extend(self, duration):
         self.pause()

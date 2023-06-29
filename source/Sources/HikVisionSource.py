@@ -5,6 +5,7 @@ import hikload.hikvisionapi.utils as hikutils
 import os
 from datetime import datetime
 from Sources.Source import Source
+from Utilities.handle_task_result import handle_task_result
 
 
 class HikVisionSource(Source):
@@ -22,8 +23,8 @@ class HikVisionSource(Source):
         self.out_paths = {}
         self.tasks = {}
 
-    def register_component(self, task, component):
-        super().register_component(task, component)
+    async def register_component(self, task, component):
+        await super().register_component(task, component)
         desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
         self.out_paths[component.id] = "{}\\py-behav\\{}\\Data\\{{}}\\{{}}\\".format(desktop, type(task).__name__)
         # hikutils.deleteXML(self.server, 'System/Video/inputs/channels/' + str(component.address) + '/overlays/text')
@@ -86,7 +87,8 @@ class HikVisionSource(Source):
                 command = command[:index] + coords + command[index:]
                 hikutils.putXML(self.server, 'System/Video/inputs/channels/' + cam[0] + '/privacyMask/regions', xmldata=command)
         else:
-            asyncio.get_event_loop().run_in_executor(None, self.download, component_id)
+            task = asyncio.get_event_loop().run_in_executor(None, self.download, component_id)
+            task.add_done_callback(handle_task_result)
 
     def download(self, component_id):
         op = self.out_paths[component_id]

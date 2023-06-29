@@ -15,6 +15,8 @@ if __name__ == '__main__':
     p = psutil.Process(os.getpid())
     p.nice(psutil.REALTIME_PRIORITY_CLASS)
 
+    sys.setswitchinterval(0.0005)
+
     faulthandler.enable()
     desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
     if not os.path.exists("{}\\py-behav\\".format(desktop)):
