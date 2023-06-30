@@ -5,7 +5,7 @@ from abc import ABCMeta, abstractmethod
 import importlib
 from enum import Enum
 import runpy
-from typing import Any, Type, overload, Dict, List
+from typing import Any, Type, overload, Dict, List, TYPE_CHECKING
 
 from Components.Component import Component
 from Events import PybEvents
@@ -13,7 +13,9 @@ from Sources.Source import Source
 from Tasks.Timeout import Timeout
 from Utilities.AddressFile import AddressFile
 import Utilities.Exceptions as pyberror
-from Workstation.Workstation import Workstation
+
+if TYPE_CHECKING:
+    from Tasks.TaskProcess import TaskProcess
 
 
 class Task:
@@ -62,19 +64,19 @@ class Task:
         self.paused = self.started = self.complete = False
         self.timeouts = {}
         self.state_timeouts = {}
-        self.ws = None
+        self.tp = None
         self.metadata = None
         self.components = {}
 
     @overload
-    async def initialize(self, workstation: Workstation, metadata: Dict[str, Any], sources: Dict[str, Source]) -> None:
+    def initialize(self, tp: TaskProcess, metadata: Dict[str, Any], sources: Dict[str, Source]) -> None:
         ...
 
     @overload
-    async def initialize(self, task: Task, components: List[Component], protocol: str) -> None:
+    def initialize(self, task: Task, components: List[Component], protocol: str) -> None:
         ...
 
-    async def initialize(self, *args) -> None:
+    def initialize(self, *args) -> None:
 
         component_definition = self.get_components()
 
@@ -87,7 +89,7 @@ class Task:
         # If this task is being created as part of a Task sequence
         if isinstance(args[0], Task):
             # Assign variables from base Task
-            self.ws = args[0].ws
+            self.tp = args[0].tp
             self.metadata = args[0].metadata
             for ct in args[1].values():
                 component = ct[0]
@@ -106,7 +108,7 @@ class Task:
             # Load protocol is provided
             protocol = args[2]
         else:  # If this is a standard Task
-            self.ws = args[0]
+            self.tp = args[0]
             self.metadata = args[1]
             sources = args[2]
             protocol = self.metadata["protocol"]
@@ -211,11 +213,11 @@ class Task:
 
     def change_state(self, new_state: Enum, metadata: Any = None) -> None:
         self.entry_time = self.cur_time
-        self.log_event(PybEvents.StateExitEvent(self, self.state, metadata))
+        self.log_event(PybEvents.StateExitEvent(self.metadata["chamber"], self.state, metadata))
         if not self.is_complete_():
-            self.log_event(PybEvents.StateEnterEvent(self, new_state, metadata))
+            self.log_event(PybEvents.StateEnterEvent(self.metadata["chamber"], new_state, metadata))
         else:
-            self.log_event(PybEvents.TaskCompleteEvent(self))
+            self.log_event(PybEvents.TaskCompleteEvent(self.metadata["chamber"]))
 
     def start__(self) -> None:
         self.complete = False
@@ -296,10 +298,10 @@ class Task:
         return self.complete or self.is_complete()
 
     def task_complete(self):
-        self.log_event(PybEvents.TaskCompleteEvent(self))
+        self.log_event(PybEvents.TaskCompleteEvent(self.metadata["chamber"]))
 
     def _send_timeout(self, name: str, metadata: Dict):
-        self.log_event(PybEvents.TimeoutEvent(self, name, metadata))
+        self.log_event(PybEvents.TimeoutEvent(self.metadata["chamber"], name, metadata))
         del self.timeouts[name]
 
     def set_timeout(self, name: str, timeout: float, end_with_state=True, metadata: Dict = None):
@@ -331,4 +333,4 @@ class Task:
             self.timeouts[name].extend(timeout)
 
     def log_event(self, event: PybEvents.TaskEvent):
-        self.ws.queue.put_nowait(event)
+        self.tp.inq.send(event)

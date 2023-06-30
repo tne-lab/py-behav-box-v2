@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 import asyncio
+import multiprocessing
 import queue
+import threading
 import time
 from typing import TYPE_CHECKING, List, Type
 
 from Events import PybEvents
 from Events.LoggerEvent import LoggerEvent
 from GUIs.SequenceGUI import SequenceGUI
-from Utilities.create_task import create_task
-from Utilities.handle_task_result import handle_task_result
 
 if TYPE_CHECKING:
     from Events.EventLogger import EventLogger
@@ -48,11 +48,10 @@ class Workstation:
         self.n_chamber, self.n_col, self.n_row, self.w, self.h = 0, 0, 0, 0, 0
         self.ed = None
         self.wsg = None
+        self.outq = multiprocessing.Queue()
         self.queue = asyncio.Queue()
-        self.loop = asyncio.get_event_loop()
         self.gui_task = None
         self.gui_event_task = None
-        self.main_task = None
         self.heartbeat_task = None
         self.delay_heartbeat = False
         self.fr = 10
@@ -107,7 +106,7 @@ class Workstation:
         else:
             self.compute_chambergui()
 
-    async def start_workstation(self):
+    def start_workstation(self):
         # Load information from settings or set defaults
         desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
         settings = QSettings(desktop + "/py-behav/pybehave.ini", QSettings.IniFormat)
@@ -130,94 +129,14 @@ class Workstation:
             settings.setValue("sources", '{"es": EmptySource()}')
 
         self.wsg = WorkstationGUI(self)
-        self.gui_task = self.loop.run_in_executor(None, self.update_gui)
-        self.gui_task.add_done_callback(handle_task_result)
-        self.gui_event_task = self.loop.run_in_executor(None, self.gui_event_loop)
-        self.main_task = create_task(self.run())
-        self.heartbeat_task = create_task(self.heartbeat())
+        self.gui_task = threading.Thread(target=self.update_gui)
+        self.gui_task.start()
+        self.gui_event_task = threading.Thread(target=self.gui_event_loop)
+        self.gui_event_task.start()
 
         atexit.register(lambda: self.exit_handler())
         signal.signal(signal.SIGTERM, self.exit_handler)
         signal.signal(signal.SIGINT, self.exit_handler)
-
-    async def run(self):
-        while True:
-            event = await self.queue.get()
-            self.delay_heartbeat = True
-            if isinstance(event, PybEvents.ExitEvent):
-                return
-            elif isinstance(event, PybEvents.StartEvent):
-                if event.task is self.tasks[event.task.metadata["chamber"]]:
-                    for el in self.task_event_loggers[event.task.metadata["chamber"]]:  # Start all EventLoggers
-                        el.start_()
-                event.task.start__()
-                new_event = PybEvents.StateEnterEvent(event.task, event.task.state, event.metadata)
-                self.tasks[event.task.metadata["chamber"]].main_loop(new_event)
-                self.log_event(new_event.format())
-            elif isinstance(event, PybEvents.TaskCompleteEvent):
-                if event.task is not self.tasks[event.task.metadata["chamber"]]:  # if it's a child task
-                    event.task.stop__()
-                    self.tasks[event.task.metadata["chamber"]].main_loop(event)
-                else:
-                    self.wsg.chambers[event.task.metadata["chamber"]].stop()
-                    event.task.complete = True
-            elif isinstance(event, PybEvents.StopEvent):
-                new_event = PybEvents.StateExitEvent(event.task, event.task.state, event.metadata)
-                self.tasks[event.task.metadata["chamber"]].main_loop(event)
-                self.log_event(new_event.format())
-                event.task.stop__()
-                self.log_event(event.format())
-            elif isinstance(event, PybEvents.PauseEvent):
-                event.task.pause__()
-                self.tasks[event.task.metadata["chamber"]].main_loop(event)
-                self.log_event(event.format())
-            elif isinstance(event, PybEvents.ResumeEvent):
-                event.task.resume__()
-                self.tasks[event.task.metadata["chamber"]].main_loop(event)
-            elif isinstance(event, PybEvents.InitEvent):
-                event.task.init()
-            elif isinstance(event, PybEvents.ClearEvent):
-                event.task.clear()
-                del_loggers = event.del_loggers
-                if del_loggers:
-                    for logger in self.task_event_loggers[event.task.metadata["chamber"]]:
-                        logger.close_()
-                    del self.task_event_loggers[event.task.metadata["chamber"]]
-                for comp in self.tasks[event.task.metadata["chamber"]].components.values():
-                    comp[0].close()
-                del self.tasks[event.task.metadata["chamber"]]
-                del self.guis[event.task.metadata["chamber"]]
-                event.done.set()
-            elif isinstance(event, PybEvents.HeartbeatEvent):
-                for key in self.tasks.keys():
-                    if self.tasks[key].started and not self.tasks[key].paused:
-                        self.tasks[key].main_loop(event)
-                self.delay_heartbeat = False
-            elif isinstance(event, PybEvents.ComponentUpdateEvent):
-                comp = event.task.components[event.comp_id][0]
-                if comp.update(event.value) and event.task.started and not event.task.paused:
-                    if event.metadata is None:
-                        event.metadata = {}
-                    event.metadata["value"] = comp.state
-                    new_event = PybEvents.ComponentChangedEvent(event.task, comp, event.metadata)
-                    self.tasks[event.task.metadata["chamber"]].main_loop(new_event)
-                    self.log_event(new_event.format())
-                    if event.task.is_complete_():
-                        self.queue.put_nowait(PybEvents.TaskCompleteEvent(event.task))
-            elif isinstance(event, PybEvents.PygameEvent):
-                handled = False
-                for key in self.guis.keys():
-                    handled = handled or self.guis[key].handle_event(event.event)
-            elif isinstance(event, PybEvents.StatefulEvent):
-                if event.task.started and not event.task.paused:
-                    self.tasks[event.task.metadata["chamber"]].main_loop(event)
-                    if event.task.is_complete_():
-                        self.queue.put_nowait(PybEvents.TaskCompleteEvent(event.task))
-            if isinstance(event, PybEvents.Loggable):
-                if event.task.started and not event.task.paused:
-                    self.log_event(event.format())
-            if self.refresh_gui:
-                self.gui_queue.put_nowait(event)
 
     def compute_chambergui(self) -> None:
         desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
@@ -245,7 +164,7 @@ class Workstation:
         settings.setValue("pyqt/h", int(szo[1] - 70))
         self.task_gui = pygame.display.set_mode((self.w * self.n_col, self.h * self.n_row), pygame.RESIZABLE, 32)
 
-    async def add_task(self, chamber: int, task_name: str, subject_name: str, address_file: str, protocol: str, task_event_loggers: List[EventLogger]) -> None:
+    def add_task(self, chamber: int, task_name: str, subject_name: str, address_file: str, protocol: str, task_event_loggers: List[EventLogger]) -> None:
         """
         Creates a Task and adds it to the chamber.
 
@@ -382,14 +301,6 @@ class Workstation:
                     pygame.display.update(self.gui_updates)
                     self.gui_updates = []
                 self.last_frame = time.perf_counter()
-
-    async def heartbeat(self):
-        while True:
-            await asyncio.sleep(1 / self.fr)
-            if self.delay_heartbeat:
-                self.delay_heartbeat = False
-            else:
-                self.queue.put_nowait(PybEvents.HeartbeatEvent())
 
     def log_event(self, event: LoggerEvent):
         for logger in self.task_event_loggers[event.event.task.metadata["chamber"]]:

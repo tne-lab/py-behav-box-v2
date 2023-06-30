@@ -1,5 +1,6 @@
 import asyncio
 import time
+from threading import Timer
 
 
 class Timeout:
@@ -14,7 +15,9 @@ class Timeout:
     def start(self, duration):
         if not self.started:
             self.duration = duration
-            self.task = asyncio.create_task(self.handler())
+            self.task = Timer(duration, self.handler)
+            self.task.start()
+            self.start_time = time.perf_counter()
             self.started = True
 
     def pause(self):
@@ -34,7 +37,9 @@ class Timeout:
     def resume(self):
         if self.started and self.start_time is None:
             self.duration = self.time_remaining()
-            self.task = asyncio.create_task(self.handler())
+            self.task = Timer(self.duration, self.handler)
+            self.task.start()
+            self.start_time = time.perf_counter()
 
     def extend(self, duration):
         self.pause()
@@ -47,8 +52,6 @@ class Timeout:
             return self.duration - self.elapsed_time
 
     async def handler(self):
-        self.start_time = time.perf_counter()
-        await asyncio.sleep(self.duration)
         self.elapsed_time = 0
         self.started = False
         self.start_time = None
