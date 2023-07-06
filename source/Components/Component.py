@@ -58,7 +58,8 @@ class Component:
         self.state = None
 
     def write(self, value: Any) -> None:
-        self.task.write_component(self.id, value)
+        if self.task is not None:
+            self.task.write_component(self.id, value)
 
     def update(self, value: Any) -> bool:
         if self.state != value:
@@ -82,5 +83,6 @@ class Component:
         raise NotImplementedError
 
     def close(self) -> None:
-        self.task.close_component(self.id)
+        if self.task is not None:
+            self.task.close_component(self.id)
 

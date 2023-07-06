@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import importlib
+import sys
 import threading
-from multiprocessing import Process, Queue
-from typing import TYPE_CHECKING, Any, Dict
+from multiprocessing import Process
+from typing import TYPE_CHECKING, Any, Dict, List
+
+import msgspec.msgpack
 
 from Events import PybEvents
 
@@ -34,35 +38,44 @@ class Source(Process):
     def __init__(self):
         super(Source, self).__init__()
         self.components = {}
-        self.inq = Queue()
-        self.outq = None
-        self.read_thread = None
+        self.component_chambers = {}
+        self.queue = None
+        self.decoder = None
+        self.encoder = None
 
     def initialize(self):
         pass
 
     def run(self):
-        self.read_thread = threading.Thread(target=self.read)
-        self.read_thread.start()
+        self.initialize()
+        self.decoder = msgspec.msgpack.Decoder(type=List[PybEvents.subclass_union(PybEvents.PybEvent)])
+        self.encoder = msgspec.msgpack.Encoder()
         while True:
-            event = self.inq.get()
-            if isinstance(event, PybEvents.ComponentUpdateEvent):
-                self.write_component(event.comp_id, event.value)
-            elif isinstance(event, PybEvents.ComponentRegisterEvent):
-                self.register_component(event.chamber, event.comp)
-            elif isinstance(event, PybEvents.ComponentCloseEvent):
-                self.close_component(event.comp_id)
-            elif isinstance(event, PybEvents.CloseSourceEvent):
-                self.close_source()
+            events = self.decoder.decode(self.queue.recv_bytes())
+            for event in events:
+                if isinstance(event, PybEvents.ComponentUpdateEvent):
+                    self.write_component(event.comp_id, event.value)
+                elif isinstance(event, PybEvents.ComponentRegisterEvent):
+                    self.register_component_(event)
+                elif isinstance(event, PybEvents.ComponentCloseEvent):
+                    self.close_component(event.comp_id)
+                elif isinstance(event, PybEvents.CloseSourceEvent):
+                    self.close_source()
 
-    def read(self):
+    def register_component_(self, event: PybEvents.ComponentRegisterEvent):
+        component_type = getattr(importlib.import_module("Components." + event.comp_type), event.comp_type)
+        component = component_type(None, event.cid, event.address)
+        component.initialize(event.metadata)
+        self.components[component.id] = component
+        self.component_chambers[component.id] = event.chamber
+        self.register_component(component)
+
+    def register_component(self, component: Component) -> None:
         pass
 
-    def register_component(self, chamber: int, component: Component) -> None:
-        self.components[component.id] = (component, chamber)
-
     def update_component(self, cid: str, value: Any, metadata: Dict = None) -> None:
-        self.outq.put(ComponentUpdateEvent(self.components[cid][1], cid, value, metadata))
+        metadata = metadata or {}
+        self.queue.send_bytes(self.encoder.encode(ComponentUpdateEvent(self.component_chambers[cid], cid, value, metadata=metadata)))
 
     def close_source(self) -> None:
         pass

@@ -62,7 +62,7 @@ class GUI:
                         component_type = getattr(importlib.import_module("Components." + comp.component_type),
                                                  comp.component_type)
                         if issubclass(component_type, component_definition[cid][i]):
-                            component = component_type(self, "{}-{}-{}".format(cid, str(self.chamber),
+                            component = component_type(None, "{}-{}-{}".format(cid, str(self.chamber),
                                                                                str(i)), comp.component_address)
                             if comp.metadata is not None:
                                 component.initialize(comp.metadata)
@@ -90,8 +90,7 @@ class GUI:
             for i in range(len(component_definition[name])):
                 if not hasattr(self, name) or (
                         type(getattr(self, name)) is list and getattr(self, name)[i] is None):
-                    component = component_definition[name][i](self,
-                                                              name + "-" + str(self.chamber) + "-" + str(i),
+                    component = component_definition[name][i](None, name + "-" + str(self.chamber) + "-" + str(i),
                                                               str(comp_index))
                     if not hasattr(self, name):
                         # If the Component is part of a list

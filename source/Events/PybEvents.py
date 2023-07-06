@@ -137,7 +137,9 @@ class ComponentUpdateEvent(TimedEvent):
 
 class ComponentRegisterEvent(PybEvent):
     chamber: int
-    comp: Component
+    comp_type: str
+    cid: str
+    address: typing.Union[str, typing.List[str]]
 
 
 class ComponentCloseEvent(PybEvent):

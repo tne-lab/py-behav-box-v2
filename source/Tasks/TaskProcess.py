@@ -181,7 +181,8 @@ class TaskProcess(Process):
         self.tasks[task.metadata["chamber"]].main_loop(event)
         self.log_event(new_event)
         task.stop__()
-        self.log_event(event)
+        for logger in self.task_event_loggers:
+            logger.stop()
 
     def pause_task(self, event: PybEvents.PauseEvent):
         task = self.tasks[event.chamber]

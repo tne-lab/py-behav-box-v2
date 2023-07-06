@@ -1,5 +1,6 @@
 import os
 import socket
+import threading
 import time
 import traceback
 
@@ -31,6 +32,7 @@ class WhiskerLineSource(Source):
         self.msg = ""
         self.client = None
         self.closing = False
+        self.read_thread = None
 
     def initialize(self):
         try:
@@ -46,6 +48,8 @@ class WhiskerLineSource(Source):
                 self.client.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
                 self.client.connect((self.address, self.port))
                 self.client.settimeout(1)
+                self.read_thread = threading.Thread(target=self.read)
+                self.read_thread.start()
             else:
                 self.available = False
         except:
@@ -70,8 +74,7 @@ class WhiskerLineSource(Source):
             except socket.timeout:
                 pass
 
-    def register_component(self, task, component):
-        super().register_component(task, component)
+    def register_component(self, component):
         if component.get_type() == Component.Type.DIGITAL_INPUT:
             self.client.send(
                 'LineClaim {} -ResetOff;LineSetEvent {} on {};LineSetEvent {} off {}\n'.format(component.address,

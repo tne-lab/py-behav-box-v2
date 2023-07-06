@@ -111,7 +111,6 @@ class Workstation:
         desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
         settings = QSettings(desktop + "/py-behav/pybehave.ini", QSettings.IniFormat)
         # Store information on the available sources
-        package_dir = "Sources/"
         # for (_, module_name, _) in iter_modules([package_dir]):
         #     # import the module and iterate through its attributes
         #     module = importlib.import_module(f"Sources.{module_name}")
@@ -122,10 +121,17 @@ class Workstation:
         #             globals()[attribute_name] = attribute
         if settings.contains("sources"):
             self.sources = eval(settings.value("sources"))
+            for name, code in self.sources.items():
+                segs = code.split('(', 1)
+                source_type = getattr(importlib.import_module("Sources." + segs[0]), segs[0])
+                self.sources[name] = source_type(*eval("(" + segs[1]))
         else:
             settings.setValue("sources", '{}')
-        for source in self.sources.values():
-            # source.outq = self.outq
+        source_connections = {}
+        for name, source in self.sources.items():
+            tpq, sourceq = multiprocessing.Pipe()
+            source.queue = sourceq
+            source_connections[name] = tpq
             source.start()
 
         app = QApplication(sys.argv)
@@ -133,7 +139,7 @@ class Workstation:
         self.gui_queue, gui_out = multiprocessing.Pipe(False)
         self.qui_events_queue, gui_events_out = multiprocessing.Pipe(False)
         self.mainq, tpq = multiprocessing.Pipe()
-        self.tp = TaskProcess(tpq, gui_out, {})
+        self.tp = TaskProcess(tpq, gui_out, source_connections)
         self.tp.start()
         self.gui_task = threading.Thread(target=self.update_gui)
         self.gui_task.start()

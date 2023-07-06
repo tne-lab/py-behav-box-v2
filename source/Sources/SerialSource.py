@@ -1,11 +1,9 @@
-import asyncio
-from contextlib import suppress
+import threading
 
-from aioserial import aioserial
+import serial
 
 from Components.Component import Component
 from Sources.Source import Source
-from Utilities.create_task import create_task
 
 
 class SerialSource(Source):
@@ -14,23 +12,28 @@ class SerialSource(Source):
         super(SerialSource, self).__init__()
         self.connections = {}
         self.com_tasks = {}
+        self.closing = {}
 
-    async def register_component(self, task, component):
-        await super().register_component(task, component)
+    def register_component(self, component):
         if component.address not in self.connections:
-            self.connections[component.address] = aioserial.AioSerial(port=component.address,
-                                                                      baudrate=component.baudrate)
-            self.com_tasks[component.address] = create_task(self.read(component.address))
+            self.connections[component.address] = serial.Serial(port=component.address, baudrate=component.baudrate, timeout=1)
+            self.closing[component.address] = False
+            self.com_tasks[component.address] = threading.Thread(target=self.read, args=[component.address])
+            self.com_tasks[component.address].start()
 
-    async def read(self, com):
-        while True:
-            data = await self.connections[com].readline_async()
+    def read(self, com):
+        while self.closing[com]:
+            data = self.connections[com].read_until(expected='\n', size=None)
             for comp in self.components.values():
                 if comp.address == com and (comp.get_type() == Component.Type.DIGITAL_INPUT or
                                             comp.get_type() == Component.Type.INPUT or
                                             comp.get_type() == Component.Type.ANALOG_INPUT or
                                             comp.get_type() == Component.Type.BOTH):
                     self.update_component(comp.id, data)
+        del self.com_tasks[com]
+        del self.closing[com]
+        self.connections[com].close()
+        del self.connections[com]
 
     def close_component(self, component_id):
         address = self.components[component_id].address
@@ -41,15 +44,7 @@ class SerialSource(Source):
                 close_com = False
                 break
         if close_com:
-            self.com_tasks[address].cancel()
-            create_task(self.close_com(address))
-
-    async def close_com(self, address):
-        with suppress(asyncio.CancelledError):
-            await self.com_tasks[address]
-        del self.com_tasks[address]
-        self.connections[address].close()
-        del self.connections[address]
+            self.closing[address] = True
 
     def close_source(self):
         keys = list(self.components.keys())

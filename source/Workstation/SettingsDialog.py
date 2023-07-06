@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import multiprocessing
 import os
 from typing import TYPE_CHECKING
 
@@ -100,7 +101,7 @@ class SettingsDialog(QDialog):
         self.remove_button.setDisabled(False)
         self.refresh_button.setDisabled(False)
 
-    async def refresh_source(self) -> None:
+    def refresh_source(self) -> None:
         st = self.source_list.currentItem().text()
         st_name = st.split(" (")[0]
         if len(self.workstation.sources[st_name].components) == 0:
@@ -115,7 +116,6 @@ class SettingsDialog(QDialog):
             attribute = getattr(source_module, s_type)
             globals()[s_type] = attribute
             self.workstation.sources[st_name] = eval(type(self.workstation.sources[st_name]).__name__ + source_string[open_ind:close_ind])
-            await self.workstation.sources[st_name].initialize()
             if self.workstation.sources[st_name].is_available():
                 self.source_list.currentItem().setIcon(self.source_list.style().standardIcon(QStyle.SP_DialogApplyButton))
             else:
@@ -195,11 +195,17 @@ class AddSourceDialog(QDialog):
         desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
         settings = QSettings(desktop + "/py-behav/pybehave.ini", QSettings.IniFormat)
         source_string = settings.value("sources")
-        source_string = source_string[:-1] + ', "{}": {}({})'.format(self.name.text(), self.source.currentText(),
-                                                                     ','.join(f'"{w}"' for w in self.params)) + "}"
+        if source_string == '{}':
+            source_string = "{" + '\'{}": "{}({})"'.format(self.name.text(), self.source.currentText(),
+                                                          ','.join(f'"{w}"' for w in self.params)) + "\'}"
+        else:
+            source_string = source_string[:-1] + ', "{}": "\'{}({})"'.format(self.name.text(), self.source.currentText(),
+                                                                           ','.join(f'"{w}"' for w in self.params)) + "\'}"
         settings.setValue("sources", source_string)
         self.sd.workstation.sources[self.name.text()] = source_type(*self.params)
-        create_task(self.sd.workstation.sources[self.name.text()].initialize())
+        tpq, sourceq = multiprocessing.Pipe()
+        self.sd.workstation.sources[self.name.text()].queue = sourceq
+        self.sd.workstation.sources[self.name.text()].start()
         ql = QListWidgetItem("{} ({})".format(self.name.text(), self.source.currentText()), self.sd.source_list)
         if self.sd.workstation.sources[self.name.text()].is_available():
             ql.setIcon(self.sd.source_list.style().standardIcon(QStyle.SP_DialogApplyButton))
