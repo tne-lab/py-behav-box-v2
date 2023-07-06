@@ -1,36 +1,55 @@
 from __future__ import annotations
-import asyncio
-from abc import abstractmethod, ABC
-from enum import Enum
-from typing import Dict, Any, TYPE_CHECKING
+from typing import Dict, Any
 
-import pygame.event
+import msgspec
+import typing
 
-from Events.LoggerEvent import LoggerEvent, StopLoggerEvent
-
-if TYPE_CHECKING:
-    from Components.Component import Component
-    from Tasks.Task import Task
+from Events.LoggerEvent import LoggerEvent
+from Components.Component import Component
 
 
-class PybEvent:
+T = typing.TypeVar("T")
+
+
+def subclass_union(cls: typing.Type[T]) -> typing.Type[T]:
+    """Returns a Union of all subclasses of `cls` (excluding `cls` itself)"""
+    classes = set()
+
+    def _add(cls):
+        for c in cls.__subclasses__():
+            _add(c)
+        classes.add(cls)
+    for c in cls.__subclasses__():
+        _add(c)
+    return typing.Union[tuple(classes)]
+
+
+class PybEvent(msgspec.Struct, kw_only=True, tag=True, omit_defaults=True, array_like=True):
+    metadata: Dict = {}
+
+
+class ErrorEvent(PybEvent):
+    error: BaseException
+
+
+class CloseSourceEvent(PybEvent):
     pass
 
 
-class ErrorEvent:
-    def __init__(self, error: BaseException, metadata: Dict=None):
-        self.error = error
-        self.metadata = metadata
-
-
 class AddTaskEvent(PybEvent):
-    def __init__(self, chamber: int, task_name: str, subject_name: str, address_file: str, protocol: str, task_event_loggers: str):
-        self.chamber = chamber
-        self.task_name = task_name
-        self.subject_name = subject_name
-        self.address_file = address_file
-        self.protocol = protocol
-        self.task_event_loggers = task_event_loggers
+    chamber: int
+    task_name: str
+    task_event_loggers: str
+
+
+class AddLoggerEvent(PybEvent):
+    chamber: int
+    logger_code: str
+
+
+class RemoveLoggerEvent(PybEvent):
+    chamber: int
+    logger_name: str
 
 
 class ExitEvent(PybEvent):
@@ -42,61 +61,65 @@ class HeartbeatEvent(PybEvent):
 
 
 class PygameEvent(PybEvent):
-    def __init__(self, event: pygame.event.Event):
-        self.event = event
+    event_type: int
+    event_dict: Dict
 
 
 class TaskEvent(PybEvent):
-    def __init__(self, chamber: int, metadata: Dict = None):
-        self.chamber = chamber
-        self.metadata = metadata
+    chamber: int
 
 
-class StatefulEvent(TaskEvent):
+class TimedEvent(TaskEvent, kw_only=True, tag=True, omit_defaults=True, array_like=True):
+    timestamp: typing.Optional[float] = None
+
+    def acknowledge(self, timestamp: float):
+        self.timestamp = timestamp
+
+
+class StatefulEvent(TimedEvent):
     pass
 
 
-class Loggable(ABC, TaskEvent):
-    @abstractmethod
-    def format(self, task: Task) -> LoggerEvent:
+class Loggable(TimedEvent):
+    def format(self) -> LoggerEvent:
         pass
 
 
-class OEEvent(Loggable):
-    def __init__(self, chamber: int, event_type: str, metadata: Dict = None):
-        super().__init__(chamber, metadata)
-        self.event_type = event_type
+class OutputFileChangedEvent(TaskEvent):
+    output_file: str
 
-    def format(self, task) -> LoggerEvent:
-        return LoggerEvent(self, self.event_type, 0, task.time_elapsed())
+
+class OEEvent(Loggable):
+    event_type: str
+
+    def format(self) -> LoggerEvent:
+        return LoggerEvent(self, self.event_type, 0, self.timestamp)
 
 
 class InfoEvent(Loggable):
-    def __init__(self, chamber: int, event: Enum, metadata: Dict = None):
-        super().__init__(chamber, metadata)
-        self.event = event
+    name: str
+    value: int
 
-    def format(self, task: Task) -> LoggerEvent:
-        return LoggerEvent(self, self.event.name, self.event.value, task.time_elapsed())
+    def format(self) -> LoggerEvent:
+        return LoggerEvent(self, self.name, self.value, self.timestamp)
 
 
 class StartEvent(TaskEvent):
     pass
 
 
-class StopEvent(Loggable):
-    def format(self, task: Task) -> StopLoggerEvent:
-        return StopLoggerEvent(self, "", 0, task.time_elapsed())
+class StopEvent(TaskEvent):
+    pass
 
 
 class PauseEvent(Loggable, StatefulEvent):
-    def format(self, task: Task) -> LoggerEvent:
-        return LoggerEvent(self, task.state.name, task.state.value, task.time_elapsed())
+    def format(self) -> LoggerEvent:
+        return LoggerEvent(self, "", 0, self.timestamp)
 
 
 class ResumeEvent(Loggable, StatefulEvent):
-    def format(self, task: Task) -> LoggerEvent:
-        return LoggerEvent(self, task.state.name, task.state.value, task.time_elapsed())
+    def format(self) -> LoggerEvent:
+        return LoggerEvent(self, "", 0, self.timestamp)
 
 
 class InitEvent(TaskEvent):
@@ -104,17 +127,21 @@ class InitEvent(TaskEvent):
 
 
 class ClearEvent(TaskEvent):
-    def __init__(self, chamber: int, del_loggers: bool, done: asyncio.Event):
-        super().__init__(chamber)
-        self.del_loggers = del_loggers
-        self.done = done
+    del_loggers: bool
 
 
-class ComponentUpdateEvent(TaskEvent):
-    def __init__(self, chamber: int, comp_id: str, value: Any, metadata: Dict = None):
-        super().__init__(chamber, metadata)
-        self.comp_id = comp_id
-        self.value = value
+class ComponentUpdateEvent(TimedEvent):
+    comp_id: str
+    value: Any
+
+
+class ComponentRegisterEvent(PybEvent):
+    chamber: int
+    comp: Component
+
+
+class ComponentCloseEvent(PybEvent):
+    comp_id: str
 
 
 class TaskCompleteEvent(TaskEvent):
@@ -122,42 +149,39 @@ class TaskCompleteEvent(TaskEvent):
 
 
 class ComponentChangedEvent(Loggable, StatefulEvent):
-    def __init__(self, chamber: int, comp: Component, metadata: Dict):
-        super().__init__(chamber, metadata)
-        self.comp = comp
+    comp: Component
+    index: int
 
-    def format(self, task: Task) -> LoggerEvent:
-        return LoggerEvent(self, self.comp.id, task.components[self.comp.id][1], task.time_elapsed())
+    def format(self) -> LoggerEvent:
+        return LoggerEvent(self, self.comp.id, self.index, self.timestamp)
 
 
-class TimeoutEvent(StatefulEvent):
-    def __init__(self, chamber: int, name: str, metadata: Dict):
-        super().__init__(chamber, metadata)
-        self.name = name
+class TimeoutEvent(Loggable, StatefulEvent):
+    name: str
+
+    def format(self) -> LoggerEvent:
+        return LoggerEvent(self, self.name, 0, self.timestamp)
 
 
 class GUIEvent(Loggable, StatefulEvent):
-    def __init__(self, chamber: int, event: Enum, metadata: Dict):
-        super().__init__(chamber, metadata)
-        self.event = event
+    name: str
+    value: int
 
-    def format(self, task: Task) -> LoggerEvent:
-        return LoggerEvent(self, self.event.name, self.event.value, task.time_elapsed())
+    def format(self) -> LoggerEvent:
+        return LoggerEvent(self, self.name, self.value, self.timestamp)
 
 
 class StateEnterEvent(Loggable, StatefulEvent):
-    def __init__(self, chamber: int, state: Enum, metadata: Dict = None):
-        super().__init__(chamber, metadata)
-        self.state = state
+    name: str
+    value: int
 
-    def format(self, task: Task) -> LoggerEvent:
-        return LoggerEvent(self, self.state.name, self.state.value, task.time_elapsed())
+    def format(self) -> LoggerEvent:
+        return LoggerEvent(self, self.name, self.value, self.timestamp)
 
 
 class StateExitEvent(Loggable, StatefulEvent):
-    def __init__(self, chamber: int, state: Enum, metadata: Dict):
-        super().__init__(chamber, metadata)
-        self.state = state
+    name: str
+    value: int
 
-    def format(self, task: Task) -> LoggerEvent:
-        return LoggerEvent(self, self.state.name, self.state.value, task.time_elapsed())
+    def format(self) -> LoggerEvent:
+        return LoggerEvent(self, self.name, self.value, self.timestamp)

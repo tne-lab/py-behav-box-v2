@@ -1,10 +1,7 @@
 from __future__ import annotations
 
-import asyncio
+import collections
 from typing import TYPE_CHECKING
-
-from Utilities.create_task import create_task
-from Events.LoggerEvent import StopLoggerEvent
 
 if TYPE_CHECKING:
     from Events.LoggerEvent import LoggerEvent
@@ -28,20 +25,10 @@ class EventLogger:
         Handle each event in the input Event list
     """
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, name: str):
+        self.name = name
         self.task = None
         self.event_count = 0
-        self.queue = asyncio.Queue()
-        self.event_loop = create_task(self.run())
-
-    async def run(self):
-        while True:
-            le = await self.queue.get()
-            if isinstance(le, StopLoggerEvent):
-                self.stop()
-            else:
-                await self.log_event(le)
 
     def start_(self):
         self.event_count = 0
@@ -55,14 +42,13 @@ class EventLogger:
 
     def close_(self):
         self.stop()
-        self.event_loop.cancel()
         self.close()
 
     def close(self) -> None:
         pass
 
     @abstractmethod
-    async def log_event(self, events: LoggerEvent) -> None:
+    def log_events(self, events: collections.deque[LoggerEvent]) -> None:
         raise NotImplementedError
 
     def set_task(self, task: Task) -> None:

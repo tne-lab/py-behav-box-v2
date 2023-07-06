@@ -1,125 +1,234 @@
+import collections
 import importlib
-import queue
+import multiprocessing
+import os
 import re
-from multiprocessing import Process, Queue
-from typing import Dict, Tuple
+import traceback
+from multiprocessing import Process, Pipe
+from multiprocessing.dummy.connection import Connection
+from typing import Dict
+
+import msgspec.msgpack
+import psutil
 
 from Events import PybEvents
-from Events.LoggerEvent import LoggerEvent
-from Utilities.PipeQueue import PipeQueue
+from Events.FileEventLogger import FileEventLogger
+from Tasks.TimeoutManager import TimeoutManager
 
 
 class TaskProcess(Process):
 
-    def __init__(self, inq: Queue, outq: PipeQueue, sourceq: Dict[str, Tuple[PipeQueue, PipeQueue]]):
+    def __init__(self, mainq: Connection, guiq: Connection, sourceq: Dict[str, Connection]):
         super().__init__()
-        self.inq = inq
-        self.outq = outq
-        self.soureq = sourceq
+        self.mainq = mainq
+        self.guiq = guiq
+        self.sourceq = sourceq
         self.tasks = {}
         self.task_event_loggers = {}
+        self.tm = None
+        self.tmq_in = None
+        self.tmq_out = None
+        self.encoder = None
+        self.decoder = None
+        self.gui_out = []
+        self.tp_q = None
+        self.logger_q = None
+        self.event_responses = {}
+        self.source_buffers = {}
 
     def run(self):
+        p = psutil.Process(os.getpid())
+        p.nice(psutil.REALTIME_PRIORITY_CLASS)
+        self.tm = TimeoutManager()
+        self.tm.start()
+        self.tp_q = collections.deque()
+        self.logger_q = collections.deque()
+        self.tmq_in, self.tmq_out = Pipe(False)
+        connections = [self.mainq, self.tmq_in, *self.sourceq.values()]
+        self.encoder = msgspec.msgpack.Encoder()
+        self.decoder = msgspec.msgpack.Decoder(type=PybEvents.subclass_union(PybEvents.PybEvent))
+
+        for source in self.sourceq:
+            self.source_buffers[source] = []
+
+        self.event_responses = {PybEvents.AddTaskEvent: self.add_task,
+                                PybEvents.AddLoggerEvent: self.add_logger,
+                                PybEvents.RemoveLoggerEvent: self.remove_logger,
+                                PybEvents.OutputFileChangedEvent: self.output_file_changed,
+                                PybEvents.StartEvent: self.start_task,
+                                PybEvents.TaskCompleteEvent: self.task_complete,
+                                PybEvents.StopEvent: self.stop_task,
+                                PybEvents.PauseEvent: self.pause_task,
+                                PybEvents.ResumeEvent: self.resume_task,
+                                PybEvents.InitEvent: self.init_task,
+                                PybEvents.ClearEvent: self.clear_task,
+                                PybEvents.ComponentUpdateEvent: self.update_component}
+
         while True:
-            try :
-                event = self.inq.get(timeout=0.1)
-                if isinstance(event, PybEvents.AddTaskEvent):
-                    metadata = {"chamber": event.chamber, "subject": event.subject_name, "protocol": event.protocol,
-                                "address_file": event.address_file}
-                    try:
-                        task_module = importlib.import_module("Local.Tasks." + event.task_name)
-                        task = getattr(task_module, event.task_name)
-                        self.tasks[event.chamber] = task()
-                        self.tasks[event.chamber].initialize(self, metadata, self.sources)  # Create the task
-
-                        self.task_event_loggers[event.chamber] = []
-                        types = list(
-                            map(lambda x: x.split("))")[-1], event.task_event_loggers[1].split("((")))  # Get the type of each logger
-                        params = list(
-                            map(lambda x: x.split("((")[-1], event.task_event_loggers[1].split("))")))  # Get the parameters for each logger
-                        for i in range(len(types) - 1):
-                            logger_type = getattr(importlib.import_module("Events." + types[i]),
-                                                  types[i])  # Import the logger
-                            param_vals = re.findall("\|\|(.+?)\|\|", params[i])  # Extract the parameters
-                            self.task_event_loggers[event.chamber].append(logger_type(*param_vals))  # Instantiate the logger
-
-                        for logger in self.task_event_loggers[event.chamber]:
-                            logger.set_task(self.tasks[event.chamber])
-                        self.inq.put(PybEvents.InitEvent(event.chamber))
-                    except BaseException as e:
-                        print(type(e).__name__)
-                        self.outq.put(PybEvents.ErrorEvent(e))
-                elif isinstance(event, PybEvents.ExitEvent):
-                    return
-                elif isinstance(event, PybEvents.TaskEvent):
-                    task = self.tasks[event.chamber]
-                    if isinstance(event, PybEvents.StartEvent):
-                        # TASK SEQUENCE FUNCTIONALITY IS BROKEN
-                        if task is self.tasks[task.metadata["chamber"]]:
-                            for el in self.task_event_loggers[task.metadata["chamber"]]:  # Start all EventLoggers
-                                el.start_()
-                        task.start__()
-                        new_event = PybEvents.StateEnterEvent(task.metadata["chamber"], task.state, event.metadata)
-                        self.tasks[task.metadata["chamber"]].main_loop(new_event)
-                        self.log_event(new_event.format(task))
-                    elif isinstance(event, PybEvents.TaskCompleteEvent):
-                        if task is not self.tasks[task.metadata["chamber"]]:  # if it's a child task
-                            task.stop__()
-                            self.tasks[task.metadata["chamber"]].main_loop(event)
-                        else:
-                            self.wsg.chambers[task.metadata["chamber"]].stop()
-                            task.complete = True
-                    elif isinstance(event, PybEvents.StopEvent):
-                        new_event = PybEvents.StateExitEvent(task, task.state, event.metadata)
-                        self.tasks[task.metadata["chamber"]].main_loop(event)
-                        self.log_event(new_event.format(task))
-                        task.stop__()
-                        self.log_event(event.format(task))
-                    elif isinstance(event, PybEvents.PauseEvent):
-                        task.pause__()
-                        self.tasks[task.metadata["chamber"]].main_loop(event)
-                        self.log_event(event.format(task))
-                    elif isinstance(event, PybEvents.ResumeEvent):
-                        task.resume__()
-                        self.tasks[task.metadata["chamber"]].main_loop(event)
-                    elif isinstance(event, PybEvents.InitEvent):
-                        task.init()
-                    elif isinstance(event, PybEvents.ClearEvent):
-                        task.clear()
-                        del_loggers = event.del_loggers
-                        if del_loggers:
-                            for logger in self.task_event_loggers[task.metadata["chamber"]]:
-                                logger.close_()
-                            del self.task_event_loggers[task.metadata["chamber"]]
-                        for comp in self.tasks[task.metadata["chamber"]].components.values():
-                            comp[0].close()
-                        del self.tasks[task.metadata["chamber"]]
-                        event.done.set()
-                    elif isinstance(event, PybEvents.ComponentUpdateEvent):
-                        comp = task.components[event.comp_id][0]
-                        if comp.update(event.value) and task.started and not task.paused:
-                            if event.metadata is None:
-                                event.metadata = {}
-                            event.metadata["value"] = comp.state
-                            new_event = PybEvents.ComponentChangedEvent(task, comp, event.metadata)
-                            self.tasks[task.metadata["chamber"]].main_loop(new_event)
-                            self.log_event(new_event.format(task))
-                            if task.is_complete_():
-                                self.inq.put(PybEvents.TaskCompleteEvent(task.metadata["chamber"]))
-                    elif isinstance(event, PybEvents.StatefulEvent):
-                        if task.started and not task.paused:
-                            self.tasks[task.metadata["chamber"]].main_loop(event)
-                            if task.is_complete_():
-                                self.inq.put(PybEvents.TaskCompleteEvent(task))
-                    if isinstance(event, PybEvents.Loggable):
-                        if task.started and not task.paused:
-                            self.log_event(event.format(task))
-            except queue.Empty:
+            ready = multiprocessing.connection.wait(connections, timeout=0.1)
+            if len(ready) == 0:
                 event = PybEvents.HeartbeatEvent()
                 for key in self.tasks.keys():
                     if self.tasks[key].started and not self.tasks[key].paused:
                         self.tasks[key].main_loop(event)
+                self.log_gui_event(event)
+            else:
+                for r in ready:
+                    event = self.decoder.decode(r.recv_bytes())
+                    # t = time.perf_counter()
+                    self.handle_event(event)
+                    # print(time.perf_counter() - t)
+                    while len(self.tp_q) > 0:
+                        self.handle_event(self.tp_q.popleft())
+            for source in self.source_buffers:
+                if len(self.source_buffers[source]) > 0:
+                    self.sourceq[source].send_bytes(self.encoder.encode(self.source_buffers[source]))
+                    self.source_buffers[source] = []
+            if isinstance(event, PybEvents.TaskEvent) and len(self.logger_q) > 0:
+                for logger in self.task_event_loggers[event.chamber].values():
+                    logger.log_events(self.logger_q)
+                self.logger_q.clear()
+            if len(self.gui_out) > 0:
+                self.guiq.send_bytes(self.encoder.encode(self.gui_out))
+                self.gui_out.clear()
 
-    def log_event(self, event: LoggerEvent):
-        for logger in self.task_event_loggers[event.event.chamber]:
-            logger.queue.put_nowait(event)
+    def handle_event(self, event):
+        event_type = type(event)
+        self.log_gui_event(event)
+        if event_type is PybEvents.ExitEvent:
+            return
+        elif event_type in self.event_responses:
+            self.event_responses[type(event)](event)
+        elif isinstance(event, PybEvents.StatefulEvent):
+            task = self.tasks[event.chamber]
+            if task.started and not task.paused:
+                self.tasks[task.metadata["chamber"]].main_loop(event)
+                if task.is_complete_():
+                    self.tp_q.append(PybEvents.TaskCompleteEvent(task.metadata["chamber"]))
+        if isinstance(event, PybEvents.Loggable):
+            task = self.tasks[event.chamber]
+            if task.started and not task.paused:
+                self.log_event(event)
+
+    def add_task(self, event: PybEvents.AddTaskEvent):
+        try:
+            task_module = importlib.import_module("Local.Tasks." + event.task_name)
+            task = getattr(task_module, event.task_name)
+            self.tasks[event.chamber] = task()
+            self.tasks[event.chamber].initialize(self, event.metadata)  # Create the task
+
+            self.task_event_loggers[event.chamber] = {}
+            types = list(
+                map(lambda x: x.split("))")[-1],
+                    event.task_event_loggers.split("((")))  # Get the type of each logger
+            params = list(
+                map(lambda x: x.split("((")[-1],
+                    event.task_event_loggers.split("))")))  # Get the parameters for each logger
+            for i in range(len(types) - 1):
+                logger_type = getattr(importlib.import_module("Events." + types[i]), types[i])  # Import the logger
+                param_vals = re.findall("\|\|(.+?)\|\|", params[i])  # Extract the parameters
+                self.task_event_loggers[event.chamber][param_vals[0]] = logger_type(*param_vals)  # Instantiate the logger
+            for logger in self.task_event_loggers[event.chamber].values():
+                logger.set_task(self.tasks[event.chamber])
+            self.tp_q.append(PybEvents.InitEvent(event.chamber))
+        except BaseException as e:
+            print(traceback.format_exc())
+            self.mainq.send_bytes(self.encoder.encode(PybEvents.ErrorEvent(e)))
+
+    def add_logger(self, event: PybEvents.AddLoggerEvent):
+        segs = event.logger_code.split('((')
+        logger_type = getattr(importlib.import_module("Events." + segs[0]), segs[0])  # Import the logger
+        param_vals = re.findall("\|\|(.+?)\|\|", segs[1].split('))')[0])
+        self.task_event_loggers[event.chamber][param_vals[0]] = logger_type(*param_vals)
+        self.task_event_loggers[event.chamber][param_vals[0]].set_task(self.tasks[event.chamber])
+
+    def remove_logger(self, event: PybEvents.RemoveLoggerEvent):
+        self.task_event_loggers[event.chamber][event.logger_name].close_()
+        del self.task_event_loggers[event.chamber][event.logger_name]
+
+    def output_file_changed(self, event: PybEvents.OutputFileChangedEvent):
+        for el in self.task_event_loggers[event.chamber].values():  # Allow all EventLoggers to handle the change
+            if isinstance(el, FileEventLogger):  # Handle the change for FileEventLoggers
+                el.output_folder = event.output_file
+
+    def start_task(self, event: PybEvents.StartEvent):
+        task = self.tasks[event.chamber]
+        # TASK SEQUENCE FUNCTIONALITY IS BROKEN
+        if task is self.tasks[task.metadata["chamber"]]:
+            for el in self.task_event_loggers[task.metadata["chamber"]].values():  # Start all EventLoggers
+                el.start_()
+        task.start__()
+        new_event = PybEvents.StateEnterEvent(task.metadata["chamber"], task.state.name, task.state.value,
+                                              metadata=event.metadata)
+        self.tasks[task.metadata["chamber"]].main_loop(new_event)
+        self.log_event(new_event)
+        self.log_gui_event(new_event)
+
+    def task_complete(self, event: PybEvents.TaskCompleteEvent):
+        task = self.tasks[event.chamber]
+        if task is not self.tasks[task.metadata["chamber"]]:  # if it's a child task
+            task.stop__()
+            self.tasks[task.metadata["chamber"]].main_loop(event)
+        else:
+            e = PybEvents.StopEvent(event.chamber)
+            self.mainq.send_bytes(self.encoder.encode(e))
+            self.tp_q.append(e)
+            task.complete = True
+
+    def stop_task(self, event: PybEvents.StopEvent):
+        task = self.tasks[event.chamber]
+        new_event = PybEvents.StateExitEvent(event.chamber, task.state.name, task.state.value, metadata=event.metadata)
+        self.tasks[task.metadata["chamber"]].main_loop(event)
+        self.log_event(new_event)
+        task.stop__()
+        self.log_event(event)
+
+    def pause_task(self, event: PybEvents.PauseEvent):
+        task = self.tasks[event.chamber]
+        task.pause__()
+        self.tasks[task.metadata["chamber"]].main_loop(event)
+        self.log_event(event)
+
+    def resume_task(self, event: PybEvents.ResumeEvent):
+        task = self.tasks[event.chamber]
+        task.resume__()
+        self.tasks[task.metadata["chamber"]].main_loop(event)
+
+    def init_task(self, event: PybEvents.InitEvent):
+        self.tasks[event.chamber].init()
+
+    def clear_task(self, event: PybEvents.ClearEvent):
+        task = self.tasks[event.chamber]
+        task.clear()
+        del_loggers = event.del_loggers
+        if del_loggers:
+            for logger in self.task_event_loggers[task.metadata["chamber"]].values():
+                logger.close_()
+            del self.task_event_loggers[task.metadata["chamber"]]
+        for comp in self.tasks[task.metadata["chamber"]].components.values():
+            comp[0].close()
+        del self.tasks[task.metadata["chamber"]]
+
+    def update_component(self, event: PybEvents.ComponentUpdateEvent):
+        task = self.tasks[event.chamber]
+        comp = task.components[event.comp_id][0]
+        if comp.update(event.value) and task.started and not task.paused:
+            event.value = comp.state
+            metadata = event.metadata.copy()
+            metadata["value"] = comp.state
+            new_event = PybEvents.ComponentChangedEvent(task.metadata["chamber"], comp, task.components[comp.id][1],
+                                                        metadata=metadata)
+            self.tasks[task.metadata["chamber"]].main_loop(new_event)
+            self.log_event(new_event)
+            if task.is_complete_():
+                self.tp_q.append(PybEvents.TaskCompleteEvent(task.metadata["chamber"]))
+
+    def log_gui_event(self, event: PybEvents.PybEvent):
+        if isinstance(event, PybEvents.TimedEvent) and event.timestamp is None:
+            event.acknowledge(self.tasks[event.chamber].time_elapsed())
+        self.gui_out.append(event)
+
+    def log_event(self, event: PybEvents.Loggable):
+        if isinstance(event, PybEvents.TimedEvent) and event.timestamp is None:
+            event.acknowledge(self.tasks[event.chamber].time_elapsed())
+        self.logger_q.append(event.format())

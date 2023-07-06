@@ -1,18 +1,17 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, Tuple, List
+from typing import TYPE_CHECKING, List
 
+from Events.Widget import Widget
 from Utilities.Exceptions import AddTaskError
 
 if TYPE_CHECKING:
-    from Events.EventLogger import EventLogger
     from Workstation.Workstation import Workstation
 
 from PyQt5.QtWidgets import *
 from PyQt5 import QtCore
 from PyQt5.QtCore import *
-from Events.CSVEventLogger import CSVEventLogger
 from Workstation.AddTaskDialog import AddTaskDialog
 from Workstation.SettingsDialog import SettingsDialog
 from Workstation.ChamberWidget import ChamberWidget
@@ -80,7 +79,7 @@ class WorkstationGUI(QWidget):
         self.td = AddTaskDialog(self)
         self.td.show()
 
-    async def add_task(self, chamber_index: str, task_index: int, subject: str = "default", afp: str = "", pfp: str = "", prompt: str = "", event_loggers: Tuple[List[EventLogger], List[List[str]]] = None) -> None:
+    def add_task(self, chamber_index: str, task_index: int, subject: str = "default", afp: str = "", pfp: str = "", prompt: str = "", event_loggers: str = "", widgets: List[Widget] = None, widget_params: List[List[str]] = None) -> None:
         """
         Adds a ChamberWidget to the GUI corresponding to a new task
 
@@ -102,10 +101,8 @@ class WorkstationGUI(QWidget):
             The EventLoggers used by this task
         """
         if int(chamber_index) - 1 not in self.chambers:
-            if event_loggers is None:
-                event_loggers = ([CSVEventLogger()], [[]])
             try:
-                self.chambers[int(chamber_index) - 1] = await ChamberWidget.create_widget(self, chamber_index, task_index, subject, afp, pfp, prompt, event_loggers)
+                self.chambers[int(chamber_index) - 1] = ChamberWidget.create_widget(self, chamber_index, task_index, subject, afp, pfp, prompt, event_loggers, widgets, widget_params)
                 self.chamber_container.insertWidget(self.n_active, self.chambers[int(chamber_index) - 1])
             except AddTaskError:
                 self.remove_task(int(chamber_index) - 1)

@@ -1,4 +1,6 @@
 from __future__ import annotations
+
+import collections
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -24,7 +26,8 @@ class CSVEventLogger(FileEventLogger):
         self.log_file.write("AddressFile,{}".format(self.task.metadata["address_file"])+"\n\n")
         self.log_file.write("Trial,Time,Type,Code,State,Metadata\n")
 
-    async def log_event(self, le: LoggerEvent) -> None:
-        self.event_count += 1
-        self.log_file.write(self.format_event(le, type(le.event).__name__))
-        await super().log_event(le)
+    def log_events(self, le: collections.deque[LoggerEvent]) -> None:
+        for event in le:
+            self.event_count += 1
+            self.log_file.write(self.format_event(event, type(event.event).__name__))
+        super().log_events(le)

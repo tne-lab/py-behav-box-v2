@@ -1,18 +1,22 @@
+from PyQt5.QtWidgets import QGroupBox, QHBoxLayout, QVBoxLayout, QLineEdit, QPushButton, QWidget
+
 from Events import PybEvents
-from Events.GUIEventLogger import GUIEventLogger
-from PyQt5.QtWidgets import *
 
 from Events.LoggerEvent import LoggerEvent
+from Events.Widget import Widget
 
 
-class ManualEventLogger(GUIEventLogger):
+class ManualWidget(Widget):
 
     class ManualEvent(PybEvents.Loggable, PybEvents.StatefulEvent):
-        def format(self) -> LoggerEvent:
-            return LoggerEvent(self, self.task.state.name, self.task.state.name.value, self.task.time_elapsed())
+        name: str
+        value: int
 
-    def __init__(self):
-        super().__init__()
+        def format(self, timestamp: float) -> LoggerEvent:
+            return LoggerEvent(self, self.name, self.value, timestamp)
+
+    def __init__(self, name: str):
+        super().__init__(name)
         self.widget = QGroupBox('Manual Event')
         manual_layout = QHBoxLayout(self.widget)
         input_layout = QVBoxLayout(self.widget)
@@ -36,10 +40,7 @@ class ManualEventLogger(GUIEventLogger):
         manual_layout.addLayout(input_layout)
 
     def send_event(self) -> None:
-        self.cw.workstation.queue.put_nowait(self.ManualEvent(self.cw.task))
-
-    async def log_event(self, events: LoggerEvent) -> None:
-        pass
+        self.cw.workstation.mainq.send_bytes(self.cw.workstation.encoder.encode(self.ManualEvent(int(self.cw.chamber_id.text()) - 1), self.manual_input.text(), int(self.code_input.text())))
 
     def get_widget(self) -> QWidget:
         return self.widget

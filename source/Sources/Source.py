@@ -1,15 +1,19 @@
 from __future__ import annotations
+
+import threading
+from multiprocessing import Process, Queue
 from typing import TYPE_CHECKING, Any, Dict
+
+from Events import PybEvents
 
 if TYPE_CHECKING:
     from Components.Component import Component
-    from Tasks.Task import Task
 
 from abc import ABCMeta, abstractmethod
 from Events.PybEvents import ComponentUpdateEvent
 
 
-class Source:
+class Source(Process):
     __metaclass__ = ABCMeta
     """
     Abstract class defining the base requirements for an input/output source. Sources provide data to and receive data
@@ -28,18 +32,37 @@ class Source:
     """
 
     def __init__(self):
+        super(Source, self).__init__()
         self.components = {}
-        self.tasks = {}
+        self.inq = Queue()
+        self.outq = None
+        self.read_thread = None
 
-    async def initialize(self):
+    def initialize(self):
         pass
 
-    async def register_component(self, task: Task, component: Component) -> None:
-        self.tasks[component.id] = task
-        self.components[component.id] = component
+    def run(self):
+        self.read_thread = threading.Thread(target=self.read)
+        self.read_thread.start()
+        while True:
+            event = self.inq.get()
+            if isinstance(event, PybEvents.ComponentUpdateEvent):
+                self.write_component(event.comp_id, event.value)
+            elif isinstance(event, PybEvents.ComponentRegisterEvent):
+                self.register_component(event.chamber, event.comp)
+            elif isinstance(event, PybEvents.ComponentCloseEvent):
+                self.close_component(event.comp_id)
+            elif isinstance(event, PybEvents.CloseSourceEvent):
+                self.close_source()
+
+    def read(self):
+        pass
+
+    def register_component(self, chamber: int, component: Component) -> None:
+        self.components[component.id] = (component, chamber)
 
     def update_component(self, cid: str, value: Any, metadata: Dict = None) -> None:
-        self.tasks[cid].ws.queue.put_nowait(ComponentUpdateEvent(self.tasks[cid], cid, value, metadata))
+        self.outq.put(ComponentUpdateEvent(self.components[cid][1], cid, value, metadata))
 
     def close_source(self) -> None:
         pass

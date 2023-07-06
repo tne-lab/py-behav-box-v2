@@ -35,5 +35,5 @@ class CircleLightElement(Element):
         else:
             draw_light(self.screen, self.off_color, (0, 0, 0), self.rect, cx, cy, self.radius)
 
-    def mouse_up(self, event: pygame.event.Event) -> None:
+    def mouse_up_(self, event: pygame.event.Event) -> None:
         self.comp.toggle(not self.on)

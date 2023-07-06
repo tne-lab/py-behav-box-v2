@@ -1,17 +1,15 @@
 from __future__ import annotations
 
-import asyncio
-from typing import TYPE_CHECKING, Tuple, List
+from typing import TYPE_CHECKING, List
 
 from PyQt5.QtCore import QRegExp
 
 from Events import PybEvents
+from Events.Widget import Widget
 from Utilities.Exceptions import AddTaskError
-from Utilities.create_task import create_task
 
 if TYPE_CHECKING:
     from Workstation.WorkstationGUI import WorkstationGUI
-    from Events.EventLogger import EventLogger
 
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
@@ -22,9 +20,6 @@ from datetime import datetime
 
 from Workstation.IconButton import IconButton
 from Workstation.ConfigurationDialog import ConfigurationDialog
-from Events.TextEventLogger import TextEventLogger
-from Events.FileEventLogger import FileEventLogger
-from Events.GUIEventLogger import GUIEventLogger
 
 
 class ChamberWidget(QGroupBox):
@@ -33,12 +28,12 @@ class ChamberWidget(QGroupBox):
         self.fd = self.ld = self.pd = self.workstation = self.wsg = self.chamber = self.chamber_id = None
         self.subject = self.task_name = self.address_file_path = self.address_file_browse = None
         self.protocol_path = self.protocol_file_browse = self.output_file_path = self.play_button = None
-        self.stop_button = self.prompt = self.event_loggers = self.logger_params = self.task = None
+        self.stop_button = self.prompt = self.event_loggers = self.widgets = self.widget_params = None
+        self.started = self.paused = False
 
     @classmethod
-    async def create_widget(cls, wsg: WorkstationGUI, chamber_index: str, task_index: int, sn: str = "default", afp: str = "",
-                 pfp: str = "", prompt: str = "", event_loggers: Tuple[List[EventLogger], List[List[str]]] = ([], []),
-                 parent=None):
+    def create_widget(cls, wsg: WorkstationGUI, chamber_index: str, task_index: int, sn: str = "default", afp: str = "",
+                 pfp: str = "", prompt: str = "", event_loggers: str = "", widgets: List[Widget] = None, widget_params: List[List[str]] = None, parent=None):
         self = ChamberWidget(parent)
         self.fd = None
         self.ld = None
@@ -135,7 +130,7 @@ class ChamberWidget(QGroupBox):
         self.stop_button = IconButton('Workstation/icons/stop.svg', 'Workstation/icons/stop_hover.svg',
                                       'Workstation/icons/stop_disabled.svg')
         self.stop_button.setFixedWidth(30)
-        self.stop_button.clicked.connect(self.stop)
+        self.stop_button.clicked.connect(lambda: self.stop(True))
         session_layout.addWidget(self.stop_button)
         self.stop_button.setDisabled(True)
         self.stop_button.setEnabled(False)
@@ -146,34 +141,31 @@ class ChamberWidget(QGroupBox):
         # Message to display before starting task
         self.prompt = prompt
 
-        # Widget corresponding to event loggers
-        self.event_loggers = [TextEventLogger(), *event_loggers[0]]
-        for el in self.event_loggers:
-            if isinstance(el, GUIEventLogger):
-                el.set_chamber(self)
-                self.chamber.addWidget(el.get_widget())
+        # Connect to widgets and loggers
+        self.event_loggers = event_loggers
+        self.widgets = widgets
+        self.widget_params = widget_params
+        for widget in widgets:
+            widget.set_chamber(self)
+            self.chamber.addWidget(widget.get_widget())
 
         self.setLayout(self.chamber)
-        self.logger_params = event_loggers[1]
-        await self.workstation.add_task(int(chamber_index) - 1, self.task_name.currentText(), self.subject.text(),
-                                        self.address_file_path.text(),
-                                        self.protocol_path.text(), self.event_loggers)
-        self.task = self.workstation.tasks[int(chamber_index) - 1]
+        self.workstation.add_task(int(chamber_index) - 1, self.task_name.currentText(), self.subject.text(),
+                                  self.address_file_path.text(),
+                                  self.protocol_path.text(), self.event_loggers)
         self.output_file_changed()
 
         return self
 
-    async def refresh(self) -> None:
+    def refresh(self) -> None:
         """
         Updates the representation of the Task with the Workstation based on any changes made in the GUI.
         """
-        done = self.workstation.remove_task(int(self.chamber_id.text()) - 1, False)
-        await done.wait()
+        self.workstation.remove_task(int(self.chamber_id.text()) - 1, False)
         try:
-            await self.workstation.add_task(int(self.chamber_id.text()) - 1, self.task_name.currentText(),
-                                            self.subject.text(), self.address_file_path.text(),
-                                            self.protocol_path.text(), self.event_loggers)
-            self.task = self.workstation.tasks[int(self.chamber_id.text()) - 1]
+            self.workstation.add_task(int(self.chamber_id.text()) - 1, self.task_name.currentText(),
+                                      self.subject.text(), self.address_file_path.text(),
+                                      self.protocol_path.text(), self.event_loggers)
             self.output_file_changed()
         except AddTaskError:
             self.wsg.remove_task(int(self.chamber_id.text()))
@@ -202,14 +194,14 @@ class ChamberWidget(QGroupBox):
     def open_file(self, le: QLineEdit) -> None:
         if len(self.fd.selectedFiles()[0]) > 0:  # If a file was selected
             le.setText(self.fd.selectedFiles()[0])
-            create_task(self.refresh())  # Update the Task representation with the new file
+            self.refresh()  # Update the Task representation with the new file
         super(QFileDialog, self.fd).accept()
 
     def play_pause(self) -> None:
         """
         On click function for the play/pause button. Behavior is different if task has yet to be started, is currently running, or is paused.
         """
-        if not self.task.started:  # If the task has yet to be started
+        if not self.started:  # If the task has yet to be started
             if len(self.subject.text()) == 0:
                 self.pd = QMessageBox()
                 self.pd.setIcon(QMessageBox.Critical)
@@ -228,20 +220,23 @@ class ChamberWidget(QGroupBox):
                 self.pd.show()
             else:
                 self.play_helper()
-        elif self.task.paused:  # If the task is currently paused
+        elif self.paused:  # If the task is currently paused
+            self.paused = False
             # Change the pause to a play button
             self.play_button.icon = 'Workstation/icons/pause.svg'
             self.play_button.hover_icon = 'Workstation/icons/pause_hover.svg'
             self.play_button.setIcon(QIcon(self.play_button.icon))
-            self.workstation.queue.put_nowait(PybEvents.ResumeEvent(self.task))  # Resume the task
+            self.workstation.mainq.send_bytes(self.workstation.encode(PybEvents.ResumeEvent(int(self.chamber_id.text()) - 1)))  # Resume the task
         else:  # The task is currently playing
+            self.paused = True
             # Change the play to a pause button
             self.play_button.icon = 'Workstation/icons/play.svg'
             self.play_button.hover_icon = 'Workstation/icons/play_hover.svg'
             self.play_button.setIcon(QIcon(self.play_button.icon))
-            self.workstation.queue.put_nowait(PybEvents.PauseEvent(self.task))  # Pause the task
+            self.workstation.mainq.send_bytes(self.workstation.encoder.encode(PybEvents.PauseEvent(int(self.chamber_id.text()) - 1)))  # Pause the task
 
     def play_helper(self) -> None:
+        self.started = True
         # Change the play to a pause button
         self.play_button.icon = 'Workstation/icons/pause.svg'
         self.play_button.hover_icon = 'Workstation/icons/pause_hover.svg'
@@ -254,16 +249,19 @@ class ChamberWidget(QGroupBox):
         self.address_file_browse.setEnabled(False)
         self.protocol_file_browse.setEnabled(False)
         self.output_file_path.setEnabled(False)
-        self.workstation.queue.put_nowait(PybEvents.StartEvent(self.task))
+        self.workstation.mainq.send_bytes(self.workstation.encoder.encode(PybEvents.StartEvent(int(self.chamber_id.text()) - 1)))
         if self.pd is not None:
             super(QMessageBox, self.pd).accept()
             self.pd = None
 
-    def stop(self) -> None:
+    def stop(self, from_click=True) -> None:
         """
         On click function for the stop button.
         """
-        self.workstation.queue.put_nowait(PybEvents.StopEvent(self.task))
+        self.started = False
+        self.paused = False
+        if from_click:
+            self.workstation.mainq.send_bytes(self.workstation.encoder.encode(PybEvents.StopEvent(int(self.chamber_id.text()) - 1)))
         # Change the pause to a play button
         self.play_button.icon = 'Workstation/icons/play.svg'
         self.play_button.hover_icon = 'Workstation/icons/play_hover.svg'
@@ -293,11 +291,7 @@ class ChamberWidget(QGroupBox):
         """
         File for handling changes to the desired output directory
         """
-        for el in self.event_loggers:  # Allow all EventLoggers to handle the change
-            if isinstance(el, FileEventLogger):  # Handle the change for FileEventLoggers
-                el.output_folder = self.output_file_path.text()
-            if isinstance(el, GUIEventLogger):  # Handle the change for GUIEventLoggers
-                el.set_chamber(self)
+        self.workstation.mainq.send_bytes(self.workstation.encoder.encode(PybEvents.OutputFileChangedEvent(int(self.chamber_id.text()) - 1, self.output_file_path.text())))
 
     def contextMenuEvent(self, _):
         """
@@ -307,7 +301,7 @@ class ChamberWidget(QGroupBox):
         ----------
         event
         """
-        if not self.task.started:  # If the task is not currently running
+        if not self.started:  # If the task is not currently running
             menu = QMenu(self)
             save_config = menu.addAction("Save Configuration")  # Saves the current configuration of the chamber
             save_config.triggered.connect(self.save_configuration)
@@ -344,12 +338,12 @@ class ChamberWidget(QGroupBox):
                 w.writerow(["Address File", self.address_file_path.text()])  # The Address File used
                 w.writerow(["Protocol", self.protocol_path.text()])  # The Protocol used
                 w.writerow(["Prompt", self.prompt])  # The prompt to show before the task starts
-                el_text = ""
-                for i in range(1,
-                               len(self.event_loggers)):  # Save the necessary information for each associated EventLogger
-                    el_text += type(self.event_loggers[i]).__name__ + "((" + ''.join(
-                        f"||{w}||" for w in self.logger_params[i - 1]) + "))"
-                w.writerow(["EventLoggers", el_text])
+                w.writerow(["EventLoggers", self.event_loggers])
+                widget_text = ""
+                for i in range(len(self.widgets)):  # Save the necessary information for each associated EventLogger
+                    widget_text += type(self.widgets[i]).__name__ + "((" + ''.join(
+                        f"||{w}||" for w in self.widget_params[i]) + "))"
+                w.writerow(["Widgets", widget_text])
         super(QFileDialog, self.fd).accept()
 
     def edit_configuration(self) -> None:

@@ -44,5 +44,5 @@ class FoodLightElement(Element):
     def has_updated(self) -> bool:
         return self.on != self.comp.get_state()
 
-    def mouse_up(self, event: pygame.event.Event) -> None:
+    def mouse_up_(self, event: pygame.event.Event) -> None:
         self.comp.toggle(not self.on)

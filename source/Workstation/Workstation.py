@@ -1,33 +1,30 @@
 from __future__ import annotations
 
-import asyncio
 import multiprocessing
-import queue
+import sys
 import threading
 import time
-from typing import TYPE_CHECKING, List, Type
+from multiprocessing.dummy.connection import Connection
+from typing import TYPE_CHECKING, Type, List
+
+import msgspec
 
 from Events import PybEvents
-from Events.LoggerEvent import LoggerEvent
+from Events.EventWidget import EventWidget
 from GUIs.SequenceGUI import SequenceGUI
+from Tasks.TaskProcess import TaskProcess
+from Workstation.WorkstationGUI import WorkstationGUI
 
 if TYPE_CHECKING:
-    from Events.EventLogger import EventLogger
     from Tasks.Task import Task
 
 import importlib
-from pkgutil import iter_modules
-from inspect import isclass
-import signal
 
 import math
-import atexit
 
 from GUIs import Colors
 import pygame
 
-from Sources.EmptySource import EmptySource
-from Workstation.WorkstationGUI import WorkstationGUI
 import Utilities.Exceptions as pyberror
 
 from PyQt5.QtWidgets import *
@@ -48,8 +45,7 @@ class Workstation:
         self.n_chamber, self.n_col, self.n_row, self.w, self.h = 0, 0, 0, 0, 0
         self.ed = None
         self.wsg = None
-        self.outq = multiprocessing.Queue()
-        self.queue = asyncio.Queue()
+        self.mainq = None
         self.gui_task = None
         self.gui_event_task = None
         self.heartbeat_task = None
@@ -58,8 +54,12 @@ class Workstation:
         self.last_frame = 0
         self.task_gui = None
         self.gui_updates = []
-        self.gui_queue = queue.Queue()
+        self.gui_queue = None
+        self.qui_events_queue = None
         self.refresh_gui = True
+        self.tp = None
+        self.encoder = msgspec.msgpack.Encoder()
+        self.decoder = msgspec.msgpack.Decoder(type=List[PybEvents.subclass_union(PybEvents.PybEvent)])
 
         # Core application details
         QCoreApplication.setOrganizationName("TNEL")
@@ -112,31 +112,38 @@ class Workstation:
         settings = QSettings(desktop + "/py-behav/pybehave.ini", QSettings.IniFormat)
         # Store information on the available sources
         package_dir = "Sources/"
-        for (_, module_name, _) in iter_modules([package_dir]):
-            # import the module and iterate through its attributes
-            module = importlib.import_module(f"Sources.{module_name}")
-            for attribute_name in dir(module):
-                attribute = getattr(module, attribute_name)
-                if isclass(attribute):
-                    # Add the class to this package's variables
-                    globals()[attribute_name] = attribute
+        # for (_, module_name, _) in iter_modules([package_dir]):
+        #     # import the module and iterate through its attributes
+        #     module = importlib.import_module(f"Sources.{module_name}")
+        #     for attribute_name in dir(module):
+        #         attribute = getattr(module, attribute_name)
+        #         if isclass(attribute):
+        #             # Add the class to this package's variables
+        #             globals()[attribute_name] = attribute
         if settings.contains("sources"):
             self.sources = eval(settings.value("sources"))
-            for source in self.sources.values():
-                await source.initialize()
         else:
-            self.sources = {"es": EmptySource()}
-            settings.setValue("sources", '{"es": EmptySource()}')
+            settings.setValue("sources", '{}')
+        for source in self.sources.values():
+            # source.outq = self.outq
+            source.start()
 
+        app = QApplication(sys.argv)
         self.wsg = WorkstationGUI(self)
+        self.gui_queue, gui_out = multiprocessing.Pipe(False)
+        self.qui_events_queue, gui_events_out = multiprocessing.Pipe(False)
+        self.mainq, tpq = multiprocessing.Pipe()
+        self.tp = TaskProcess(tpq, gui_out, {})
+        self.tp.start()
         self.gui_task = threading.Thread(target=self.update_gui)
         self.gui_task.start()
-        self.gui_event_task = threading.Thread(target=self.gui_event_loop)
+        self.gui_event_task = threading.Thread(target=self.gui_event_loop, args=[gui_events_out])
         self.gui_event_task.start()
 
-        atexit.register(lambda: self.exit_handler())
-        signal.signal(signal.SIGTERM, self.exit_handler)
-        signal.signal(signal.SIGINT, self.exit_handler)
+        # atexit.register(lambda: self.exit_handler())
+        # signal.signal(signal.SIGTERM, self.exit_handler)
+        # signal.signal(signal.SIGINT, self.exit_handler)
+        sys.exit(app.exec())
 
     def compute_chambergui(self) -> None:
         desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
@@ -164,7 +171,33 @@ class Workstation:
         settings.setValue("pyqt/h", int(szo[1] - 70))
         self.task_gui = pygame.display.set_mode((self.w * self.n_col, self.h * self.n_row), pygame.RESIZABLE, 32)
 
-    def add_task(self, chamber: int, task_name: str, subject_name: str, address_file: str, protocol: str, task_event_loggers: List[EventLogger]) -> None:
+    def main(self):
+        while True:
+            event = self.decoder.decode(self.mainq.recv_bytes())
+            if isinstance(event, PybEvents.StopEvent):
+                self.wsg.chambers[event.chamber].stop(from_click=False)
+            elif isinstance(event, PybEvents.ErrorEvent):
+                if "chamber" in event.metadata:
+                    self.ed = QMessageBox()
+                    self.ed.setIcon(QMessageBox.Critical)
+                    self.ed.setWindowTitle("Error adding task")
+                    if isinstance(event.error, pyberror.ComponentRegisterError):
+                        self.ed.setText("A Component failed to register\n" + traceback.format_exc())
+                    elif isinstance(event.error, pyberror.SourceUnavailableError):
+                        self.ed.setText("A requested Source is currently unavailable")
+                    elif isinstance(event.error, pyberror.MalformedProtocolError):
+                        self.ed.setText("Error raised when parsing Protocol file\n" + traceback.format_exc())
+                    elif isinstance(event.error, pyberror.MalformedAddressFileError):
+                        self.ed.setText("Error raised when parsing AddressFile\n" + traceback.format_exc())
+                    elif isinstance(event.error, pyberror.InvalidComponentTypeError):
+                        self.ed.setText("A Component in the AddressFile is an invalid type")
+                    else:
+                        self.ed.setText("Unhandled exception\n" + traceback.format_exc())
+                    self.ed.setStandardButtons(QMessageBox.Ok)
+                    self.ed.show()
+                    self.wsg.remove_task(event.metadata["chamber"])
+
+    def add_task(self, chamber: int, task_name: str, subject_name: str, address_file: str, protocol: str, task_event_loggers: str) -> None:
         """
         Creates a Task and adds it to the chamber.
 
@@ -182,40 +215,7 @@ class Workstation:
             The list of EventLoggers for the task
         """
         metadata = {"chamber": chamber, "subject": subject_name, "protocol": protocol, "address_file": address_file}
-        try:
-            task_module = importlib.import_module("Local.Tasks." + task_name)
-            task = getattr(task_module, task_name)
-            self.tasks[chamber] = task()
-            await self.tasks[chamber].initialize(self, metadata, self.sources)  # Create the task
-            self.task_event_loggers[chamber] = task_event_loggers
-            for logger in task_event_loggers:
-                logger.set_task(self.tasks[chamber])
-            gui = getattr(importlib.import_module("Local.GUIs." + task_name + "GUI"), task_name + "GUI")
-            # Position the GUI in pygame
-            col = chamber % self.n_col
-            row = math.floor(chamber / self.n_col)
-            self.guis[chamber] = gui(self.task_gui.subsurface(col * self.w, row * self.h, self.w, self.h), self.tasks[chamber])
-            self.queue.put_nowait(PybEvents.InitEvent(self.tasks[chamber]))
-        except BaseException as e:
-            print(type(e).__name__)
-            self.ed = QMessageBox()
-            self.ed.setIcon(QMessageBox.Critical)
-            self.ed.setWindowTitle("Error adding task")
-            if isinstance(e, pyberror.ComponentRegisterError):
-                self.ed.setText("A Component failed to register\n"+traceback.format_exc())
-            elif isinstance(e, pyberror.SourceUnavailableError):
-                self.ed.setText("A requested Source is currently unavailable")
-            elif isinstance(e, pyberror.MalformedProtocolError):
-                self.ed.setText("Error raised when parsing Protocol file\n"+traceback.format_exc())
-            elif isinstance(e, pyberror.MalformedAddressFileError):
-                self.ed.setText("Error raised when parsing AddressFile\n"+traceback.format_exc())
-            elif isinstance(e, pyberror.InvalidComponentTypeError):
-                self.ed.setText("A Component in the AddressFile is an invalid type")
-            else:
-                self.ed.setText("Unhandled exception\n"+traceback.format_exc())
-            self.ed.setStandardButtons(QMessageBox.Ok)
-            self.ed.show()
-            raise pyberror.AddTaskError
+        self.mainq.send_bytes(self.encoder.encode(PybEvents.AddTaskEvent(chamber, task_name, task_event_loggers, metadata=metadata)))
 
     async def switch_task(self, task_base: Task, task_name: Type[Task], protocol: str = None) -> Task:
         """
@@ -231,7 +231,7 @@ class Workstation:
         """
         # Create the new Task as part of a sequence
         new_task = task_name()
-        await new_task.initialize(task_base, task_base.components, protocol)
+        new_task.initialize(task_base, task_base.components, protocol)
         gui = getattr(importlib.import_module("Local.GUIs." + task_name.__name__ + "GUI"), task_name.__name__ + "GUI")
         # Position the GUI in pygame
         col = task_base.metadata['chamber'] % self.n_col
@@ -242,7 +242,7 @@ class Workstation:
             new_task)
         return new_task
 
-    def remove_task(self, chamber: int, del_loggers: bool = True) -> asyncio.Event:
+    def remove_task(self, chamber: int, del_loggers: bool = True) -> None:
         """
         Remove the Task from the specified chamber.
 
@@ -252,59 +252,73 @@ class Workstation:
         chamber : int
             The chamber from which a Task should be removed
         """
-        done = asyncio.Event()
-        self.queue.put_nowait(PybEvents.ClearEvent(self.tasks[chamber], del_loggers, done))
-        return done
+        self.mainq.send_bytes(self.encoder.encode(PybEvents.ClearEvent(chamber, del_loggers)))
 
-    def gui_event_loop(self) -> None:
+    def gui_event_loop(self, out: Connection) -> None:
         while True:
             event = pygame.event.wait()
-            asyncio.run_coroutine_threadsafe(self.queue.put(PybEvents.PygameEvent(event)), loop=self.loop)
+            out.send_bytes(self.encoder.encode([PybEvents.PygameEvent(event.type, event.__dict__)]))
 
     def update_gui(self) -> None:
+        conns = [self.qui_events_queue, self.gui_queue]
         while True:
-            event = self.gui_queue.get()
-            if isinstance(event, PybEvents.TaskEvent):
-                col = event.task.metadata["chamber"] % self.n_col
-                row = math.floor(event.task.metadata["chamber"] / self.n_col)
-                rect = pygame.Rect((col * self.w, row * self.h, self.w, self.h))
-                if isinstance(event, PybEvents.InitEvent) or isinstance(event, PybEvents.TaskCompleteEvent) \
-                        or isinstance(event, PybEvents.StartEvent):
-                    self.guis[event.task.metadata["chamber"]].draw()
-                    self.gui_updates.append(rect)
-                elif isinstance(event, PybEvents.ClearEvent):
-                    pygame.draw.rect(self.task_gui, Colors.black, rect)
-                    self.gui_updates.append(rect)
-                else:
-                    if isinstance(self.guis[event.task.metadata["chamber"]], SequenceGUI):
-                        elements = self.guis[event.task.metadata["chamber"]].get_all_elements()
-                    else:
-                        elements = self.guis[event.task.metadata["chamber"]].get_elements()
-                    for element in elements:
-                        if element.has_updated():
-                            element.draw()
-                            self.gui_updates.append(element.rect.move(col * self.w, row * self.h))
-            elif isinstance(event, PybEvents.HeartbeatEvent):
-                for key in self.guis.keys():
-                    col = key % self.n_col
-                    row = math.floor(key / self.n_col)
-                    if isinstance(self.guis[key], SequenceGUI):
-                        elements = self.guis[key].get_all_elements()
-                    else:
-                        elements = self.guis[key].get_elements()
-                    for element in elements:
-                        if element.has_updated():
-                            element.draw()
-                            self.gui_updates.append(element.rect.move(col * self.w, row * self.h))
-            if time.perf_counter() - self.last_frame > 1 / self.fr:
-                if len(self.gui_updates) > 0:
-                    pygame.display.update(self.gui_updates)
-                    self.gui_updates = []
-                self.last_frame = time.perf_counter()
-
-    def log_event(self, event: LoggerEvent):
-        for logger in self.task_event_loggers[event.event.task.metadata["chamber"]]:
-            logger.queue.put_nowait(event)
+            for ready in multiprocessing.connection.wait(conns):
+                events = self.decoder.decode(ready.recv_bytes())
+                for event in events:
+                    if isinstance(event, PybEvents.AddTaskEvent):
+                        gui = getattr(importlib.import_module("Local.GUIs." + event.task_name + "GUI"), event.task_name + "GUI")
+                        # Position the GUI in pygame
+                        col = event.chamber % self.n_col
+                        row = math.floor(event.chamber / self.n_col)
+                        # Create the GUI
+                        self.guis[event.chamber] = gui(event, self.task_gui.subsurface(col * self.w, row * self.h, self.w, self.h), self)
+                    elif isinstance(event, PybEvents.TaskEvent):
+                        for widget in self.wsg.chambers[event.chamber].widgets:
+                            if isinstance(widget, EventWidget):
+                                widget.handle_event(event)
+                        print(str(event))
+                        self.guis[event.chamber].handle_event(event)
+                        col = event.chamber % self.n_col
+                        row = math.floor(event.chamber / self.n_col)
+                        rect = pygame.Rect((col * self.w, row * self.h, self.w, self.h))
+                        if isinstance(event, PybEvents.InitEvent) or isinstance(event, PybEvents.StartEvent):
+                            self.guis[event.chamber].complete = False
+                            self.guis[event.chamber].draw()
+                            self.gui_updates.append(rect)
+                        elif isinstance(event, PybEvents.TaskCompleteEvent):
+                            self.guis[event.chamber].complete = True
+                            self.guis[event.chamber].draw()
+                            self.gui_updates.append(rect)
+                        elif isinstance(event, PybEvents.ClearEvent):
+                            pygame.draw.rect(self.task_gui, Colors.black, rect)
+                            self.gui_updates.append(rect)
+                        else:
+                            if isinstance(self.guis[event.chamber], SequenceGUI):
+                                elements = self.guis[event.chamber].get_all_elements()
+                            else:
+                                elements = self.guis[event.chamber].elements
+                            for element in elements:
+                                if element.has_updated():
+                                    element.draw()
+                                    self.gui_updates.append(element.rect.move(col * self.w, row * self.h))
+                    elif isinstance(event, PybEvents.HeartbeatEvent) or isinstance(event, PybEvents.PygameEvent):
+                        for key in self.guis.keys():
+                            self.guis[key].handle_event(event)
+                            col = key % self.n_col
+                            row = math.floor(key / self.n_col)
+                            if isinstance(self.guis[key], SequenceGUI):
+                                elements = self.guis[key].get_all_elements()
+                            else:
+                                elements = self.guis[key].elements
+                            for element in elements:
+                                if element.has_updated():
+                                    element.draw()
+                                    self.gui_updates.append(element.rect.move(col * self.w, row * self.h))
+                    if time.perf_counter() - self.last_frame > 1 / self.fr:
+                        if len(self.gui_updates) > 0:
+                            pygame.display.update(self.gui_updates)
+                            self.gui_updates = []
+                        self.last_frame = time.perf_counter()
 
     def exit_handler(self, *args):
         self.loop.run_until_complete(self.exit_handler_())

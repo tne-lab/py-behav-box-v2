@@ -1,12 +1,12 @@
-import asyncio
 import os
+import socket
+import time
 import traceback
 
 import win32gui
 
 from Components.Component import Component
 from Sources.Source import Source
-from Utilities.create_task import create_task
 
 IsWhiskerRunning = False
 
@@ -29,45 +29,51 @@ class WhiskerLineSource(Source):
         self.port = int(port)
         self.whisker_path = whisker_path
         self.msg = ""
-        self.writer, self.reader, self.read_task = None, None, None
+        self.client = None
+        self.closing = False
 
-    async def initialize(self):
+    def initialize(self):
         try:
             win32gui.EnumWindows(look_for_program, 'WhiskerServer')
             if not IsWhiskerRunning:
                 ws = self.whisker_path
                 os.startfile(ws)
-                await asyncio.sleep(2)
+                time.sleep(2)
                 print("WHISKER server started")
                 win32gui.EnumWindows(look_for_program, 'WhiskerServer')
             if IsWhiskerRunning:
-                self.reader, self.writer = await asyncio.open_connection(self.address, self.port)
-                self.read_task = create_task(self.read())
+                self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self.client.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+                self.client.connect((self.address, self.port))
+                self.client.settimeout(1)
             else:
                 self.available = False
         except:
             traceback.print_exc()
             self.available = False
 
-    async def read(self):
-        while True:
-            new_data = await self.reader.readline()
-            self.msg += new_data.decode('UTF-8')
-            if '\n' in self.msg:
-                msgs = self.msg.split('\n')
-                self.msg = msgs[-1]
-            else:
-                msgs = []
-            for msg in msgs[:-1]:
-                if msg.startswith('Event:'):
-                    div = msg.split(' ')[1].rindex("_")
-                    cid, direction = msg.split(' ')[1][:div], msg.split(' ')[1][div + 1:]
-                    self.update_component(cid, direction == "on")
+    def read(self):
+        while not self.closing:
+            try:
+                new_data = self.client.recv(4096)
+                self.msg += new_data.decode('UTF-8')
+                if '\n' in self.msg:
+                    msgs = self.msg.split('\n')
+                    self.msg = msgs[-1]
+                else:
+                    msgs = []
+                for msg in msgs[:-1]:
+                    if msg.startswith('Event:'):
+                        div = msg.split(' ')[1].rindex("_")
+                        cid, direction = msg.split(' ')[1][:div], msg.split(' ')[1][div + 1:]
+                        self.update_component(cid, direction == "on")
+            except socket.timeout:
+                pass
 
-    async def register_component(self, task, component):
-        await super().register_component(task, component)
+    def register_component(self, task, component):
+        super().register_component(task, component)
         if component.get_type() == Component.Type.DIGITAL_INPUT:
-            self.writer.write(
+            self.client.send(
                 'LineClaim {} -ResetOff;LineSetEvent {} on {};LineSetEvent {} off {}\n'.format(component.address,
                                                                                                component.address,
                                                                                                component.id + "_on",
@@ -82,12 +88,13 @@ class WhiskerLineSource(Source):
             msg = ""
             for a in addr:
                 msg += 'LineClaim {} -ResetOff\n'.format(a)
-            self.writer.write(msg.encode('utf-8'))
+            self.client.send(msg.encode('utf-8'))
 
     def close_source(self):
-        self.read_task.cancel()
-        self.writer.write(b'LineRelinquishAll\n')
-        self.writer.close()
+        self.closing = True
+        self.client.send(b'LineRelinquishAll\n')
+        self.read_thread.join()
+        self.client.close()
 
     def write_component(self, component_id, msg):
         if isinstance(self.components[component_id].address, list):
@@ -100,7 +107,7 @@ class WhiskerLineSource(Source):
                 out += 'LineSetState {} on\n'.format(a)
             else:
                 out += 'LineSetState {} off\n'.format(a)
-        self.writer.write(out.encode('utf-8'))
+        self.client.send(out.encode('utf-8'))
 
     def is_available(self):
         return self.available

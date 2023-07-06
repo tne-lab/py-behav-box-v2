@@ -26,6 +26,8 @@ class ButtonElement(Element):
         self.font = pygame.font.SysFont('arial', self.f_size)
         self._msg = self.font.render(self.text, True, Colors.white)
         self.draw_state = False
+        self.mouse_up = lambda _: None
+        self.mouse_down = lambda _: None
 
     def has_updated(self) -> bool:
         return self.clicked != self.draw_state
@@ -51,8 +53,10 @@ class ButtonElement(Element):
         msg_y = (self.rect.height - msg_ht) / 2
         self.screen.blit(self._msg, self.rect.move(msg_x, msg_y))
 
-    def mouse_up(self, event: pygame.event.Event) -> None:
+    def mouse_up_(self, event: pygame.event.Event) -> None:
         self.clicked = False
+        self.mouse_up(event)
 
-    def mouse_down(self, _) -> None:
+    def mouse_down_(self, event: pygame.event.Event) -> None:
         self.clicked = True
+        self.mouse_down(event)

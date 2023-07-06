@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union, List
+
 if TYPE_CHECKING:
     from GUIs.GUI import GUI
 
@@ -18,6 +19,7 @@ class InfoBoxElement(Element):
         bw = int(self.SF*2)
         self.label = label
         self.text = text
+        self.buffer_text = text
         self.f_size = int(self.SF * f_size)
         w = self.SF * w
         h = self.SF * h
@@ -29,14 +31,17 @@ class InfoBoxElement(Element):
         self.font = pygame.font.SysFont('arial', self.f_size)
         self._lbl = self.font.render(self.label, True, (0, 0, 0))
 
-    def get_text(self) -> list[str]:
-        return self.text
-
     def has_updated(self) -> bool:
-        return self.get_text() != self.text
+        return self.text != self.buffer_text
+
+    def set_text(self, new_text: Union[str, List]):
+        if isinstance(new_text, str):
+            self.text = [new_text]
+        else:
+            self.text = new_text
 
     def draw(self) -> None:
-        self.text = self.get_text()
+        self.buffer_text = self.text
         # Draw Box
         pygame.draw.rect(self.screen, (0, 0, 0), self.border)
         pygame.draw.rect(self.screen, (255, 255, 255), self.rect)
@@ -61,9 +66,9 @@ class InfoBoxElement(Element):
         self.screen.blit(self._lbl, self.rect.move(lbl_x,  lbl_y+1))
 
         # WRITE TEXT
-        lines_in_txt = len(self.text)
+        lines_in_txt = len(self.buffer_text)
         if lines_in_txt > 0:  # NOT EMPTY BOX, No info_boxes
-            msg_in_font = self.font.render(self.text[0], True, (0, 0, 0))
+            msg_in_font = self.font.render(self.buffer_text[0], True, (0, 0, 0))
             msg_ht = msg_in_font.get_height()
             msg_wd = msg_in_font.get_width()
 
