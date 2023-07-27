@@ -96,7 +96,7 @@ class AddTaskDialog(QDialog):
                             widgets.append(logger_type(*param_vals))  # Instantiate the widget
                             widget_params.append(param_vals)
 
-                self.wsg.add_task(chamber, task, subject, afp, pfp, prompt, event_loggers)
+                self.wsg.add_task(chamber, task, subject, afp, pfp, prompt, event_loggers, widgets, widget_params)
         else:
             self.wsg.add_task(self.chamber.currentText(), self.task.currentIndex(), event_loggers="CSVEventLogger((||file_log||))", widgets=[TerminalWidget("gui_log")], widget_params=[["gui_log"]])
         super(AddTaskDialog, self).accept()

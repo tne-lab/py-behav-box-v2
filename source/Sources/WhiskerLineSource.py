@@ -74,7 +74,7 @@ class WhiskerLineSource(Source):
             except socket.timeout:
                 pass
 
-    def register_component(self, component):
+    def register_component(self, component, metadata):
         if component.get_type() == Component.Type.DIGITAL_INPUT:
             self.client.send(
                 'LineClaim {} -ResetOff;LineSetEvent {} on {};LineSetEvent {} off {}\n'.format(component.address,

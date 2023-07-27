@@ -196,8 +196,8 @@ class AddSourceDialog(QDialog):
         settings = QSettings(desktop + "/py-behav/pybehave.ini", QSettings.IniFormat)
         source_string = settings.value("sources")
         if source_string == '{}':
-            source_string = "{" + '\'{}": "{}({})"'.format(self.name.text(), self.source.currentText(),
-                                                          ','.join(f'"{w}"' for w in self.params)) + "\'}"
+            source_string = "{" + '"{}": \'{}({})\''.format(self.name.text(), self.source.currentText(),
+                                                          ','.join(f'"{w}"' for w in self.params)) + "}"
         else:
             source_string = source_string[:-1] + ', "{}": "\'{}({})"'.format(self.name.text(), self.source.currentText(),
                                                                            ','.join(f'"{w}"' for w in self.params)) + "\'}"

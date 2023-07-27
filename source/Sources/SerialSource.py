@@ -14,7 +14,7 @@ class SerialSource(Source):
         self.com_tasks = {}
         self.closing = {}
 
-    def register_component(self, component):
+    def register_component(self, component, metadata):
         if component.address not in self.connections:
             self.connections[component.address] = serial.Serial(port=component.address, baudrate=component.baudrate, timeout=1)
             self.closing[component.address] = False

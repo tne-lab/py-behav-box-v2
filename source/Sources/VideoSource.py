@@ -1,9 +1,6 @@
 import asyncio
-import os
 from collections import deque
-from datetime import datetime
 import time
-from multiprocessing import Process
 from typing import Any
 
 import cv2
@@ -12,10 +9,8 @@ import qasync
 from PyQt5.QtGui import QImage, QPixmap
 from PyQt5.QtWidgets import *
 
-from Sources.Source import Source
-from Utilities.PipeQueue import PipeQueue
-from Utilities.create_task import create_task
-from Utilities.handle_task_result import handle_task_result
+from Events import PybEvents
+from Sources.ThreadSource import ThreadSource
 
 
 class CameraWidget(QWidget):
@@ -115,17 +110,16 @@ class CameraWidget(QWidget):
         return self.video_frame
 
 
-class VideoProcess(Process):
-    def __init__(self, inq, outq, screen_width, screen_height, rows, cols):
-        super(VideoProcess, self).__init__()
-        self.inq = inq
-        self.outq = outq
+class VideoSource(ThreadSource):
+    def __init__(self, screen_width=None, screen_height=None, rows=None, cols=None):
+        super(VideoSource, self).__init__()
+        self.available = True
+        self.out_paths = {}
         self.ml = None
         self.screen_width = screen_width
         self.screen_height = screen_height
-        self.rows = rows
-        self.cols = cols
-
+        self.rows = int(rows)
+        self.cols = int(cols)
         self.cameras = {}
         self.writers = {}
         self.fr = {}
@@ -133,7 +127,7 @@ class VideoProcess(Process):
         self.tasks = {}
         self.loop = None
 
-    def run(self):
+    def initialize(self):
         app = QApplication([])
         # app.setStyleSheet(qdarkstyle.load_stylesheet_pyqt())
         app.setStyle(QStyleFactory.create("Cleanlooks"))
@@ -146,65 +140,47 @@ class VideoProcess(Process):
         cw.setLayout(self.ml)
         mw.setCentralWidget(cw)
 
-        if self.screen_width is None:
+        if self.screen_width == 'None':
             self.screen_width = QApplication.desktop().screenGeometry().width()
-        if self.screen_height is None:
+        if self.screen_height == 'None':
             self.screen_height = QApplication.desktop().screenGeometry().height()
+        self.screen_height = int(self.screen_height)
+        self.screen_width = int(self.screen_width)
         mw.setGeometry(0, 0, self.screen_width, self.screen_height)
         mw.show()
-
         asyncio.set_event_loop(qasync.QEventLoop(app))
         self.loop = asyncio.get_event_loop()
-        self.loop.run_in_executor(None, self.ipc_events)
         self.loop.run_forever()
 
-    def ipc_events(self):
-        while True:
-            command = self.inq.get()
-            if command["command"] == "StartFeed":
-                task = asyncio.run_coroutine_threadsafe(self.start_feed(command), loop=self.loop)
-                task.add_done_callback(handle_task_result)
-            elif command["command"] == "StartRecord":
-                task = asyncio.run_coroutine_threadsafe(self.start_record(command), loop=self.loop)
-                task.add_done_callback(handle_task_result)
-            elif command["command"] == "StopRecord":
-                task = asyncio.run_coroutine_threadsafe(self.stop_record(command), loop=self.loop)
-                task.add_done_callback(handle_task_result)
-            elif command["command"] == "CloseComponent":
-                task = asyncio.run_coroutine_threadsafe(self.close_component(command), loop=self.loop)
-                task.add_done_callback(handle_task_result)
+    def register_component(self, component, metadata):
+        asyncio.run_coroutine_threadsafe(self.register_component_async(component, metadata), loop=self.loop)
 
-    async def start_feed(self, command):
-        self.cameras[command["id"]] = CameraWidget(self.loop, self.screen_width // self.cols,
-                                                   self.screen_height // self.rows,
-                                                   command["address"])
-        self.ml.addWidget(self.cameras[command["id"]].get_video_frame(), command["row"], command["col"], command["row_span"],
-                          command["col_span"])
-        self.fr[command["id"]] = command["fr"]
+    async def register_component_async(self, component, metadata):
+        self.cameras[component.id] = CameraWidget(self.loop, self.screen_width // self.cols, self.screen_height // self.rows,
+                                                  int(component.address))
+        self.ml.addWidget(self.cameras[component.id].get_video_frame(), metadata["row"], metadata["col"],
+                          metadata["row_span"], metadata["col_span"])
+        self.fr[component.id] = metadata["fr"]
 
-    async def start_record(self, command):
-        fourcc = cv2.VideoWriter_fourcc(*'MJPG')  # for AVI files
-        self.writers[command["id"]] = cv2.VideoWriter(command["path"], fourcc, self.fr[command["id"]],
-                                                      self.cameras[command["id"]].dims)
-        self.read_times[command["id"]] = time.perf_counter()
-        self.writers[command["id"]].write(self.cameras[command["id"]].deque[-1])
-        self.tasks[command["id"]] = create_task(self.process_frames(command["id"]))
+    def output_file_changed(self, event: PybEvents.OutputFileChangedEvent) -> None:
+        for cid, chamber in self.component_chambers.items():
+            if chamber == event.chamber:
+                self.out_paths[cid] = event.output_file
 
-    async def stop_record(self, command):
-        self.writers[command["id"]].release()
-        self.tasks[command["id"]].cancel()
-        del self.writers[command["id"]]
-        del self.read_times[command["id"]]
-        del self.tasks[command["id"]]
-
-    async def close_component(self, command):
-        if command["id"] in self.writers:
-            await self.stop_record(command)
-        await self.cameras[command["id"]].stop()
-        self.ml.removeWidget(self.cameras[command["id"]].get_video_frame())
-        self.cameras[command["id"]].get_video_frame().deleteLater()
-        del self.cameras[command["id"]]
-        del self.fr[command["id"]]
+    def write_component(self, component_id: str, msg: Any) -> None:
+        if msg:
+            if self.components[component_id].name is None:
+                path = self.out_paths[component_id] + str(time.time()) + ".avi"
+            else:
+                path = self.out_paths[component_id] + self.components[component_id].name + ".avi"
+            fourcc = cv2.VideoWriter_fourcc(*'MJPG')  # for AVI files
+            self.writers[component_id] = cv2.VideoWriter(path, fourcc, self.fr[component_id],
+                                                         self.cameras[component_id].dims)
+            self.read_times[component_id] = time.perf_counter()
+            self.writers[component_id].write(self.cameras[component_id].deque[-1])
+            self.tasks[component_id] = asyncio.run_coroutine_threadsafe(self.process_frames(component_id), loop=self.loop)
+        else:
+            asyncio.run_coroutine_threadsafe(self.stop_record(component_id), loop=self.loop)
 
     async def process_frames(self, vid):
         while True:
@@ -214,42 +190,27 @@ class VideoProcess(Process):
                     self.read_times[vid] += 1 / self.fr[vid]
             await asyncio.sleep(1 / self.fr[vid])
 
-
-class VideoSource(Source):
-    def __init__(self, screen_width=None, screen_height=None, rows=None, cols=None):
-        super(VideoSource, self).__init__()
-        self.available = True
-        self.inq = PipeQueue()
-        self.outq = PipeQueue()
-        self.video_process = VideoProcess(self.outq, self.inq, eval(screen_width), eval(screen_height), eval(rows),
-                                          eval(cols))
-        self.video_process.start()
-
-    async def register_component(self, task, component):
-        await super().register_component(task, component)
-        command = {"command": "StartFeed", "id": component.id, "address": component.address, "row": component.row,
-                   "col": component.col, "row_span": component.row_span, "col_span": component.col_span,
-                   "fr": component.fr}
-        self.outq.put(command)
-
-    def write_component(self, component_id: str, msg: Any) -> None:
-        if msg:
-            desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
-            path = "{}\\py-behav\\{}\\Data\\{}\\{}\\".format(desktop, type(self.tasks[component_id]).__name__,
-                                                             self.tasks[component_id].metadata["subject"],
-                                                             datetime.now().strftime("%m-%d-%Y")) + self.components[component_id].name + ".avi"
-            command = {"command": "StartRecord", "id": component_id, "path": path}
-            self.outq.put(command)
-        else:
-            command = {"command": "StopRecord", "id": component_id}
-            self.outq.put(command)
+    async def stop_record(self, component_id):
+        self.tasks[component_id].cancel()
+        self.writers[component_id].release()
+        del self.writers[component_id]
+        del self.read_times[component_id]
+        del self.tasks[component_id]
 
     def close_source(self):
         self.available = False
 
     def close_component(self, component_id: str) -> None:
-        command = {"command": "CloseComponent", "id": component_id}
-        self.outq.put(command)
+        asyncio.run_coroutine_threadsafe(self.close_component_async(component_id), loop=self.loop)
+
+    async def close_component_async(self, component_id):
+        if component_id in self.writers:
+            await self.stop_record(component_id)
+        self.cameras[component_id].stop()
+        self.ml.removeWidget(self.cameras[component_id].get_video_frame())
+        self.cameras[component_id].get_video_frame().deleteLater()
+        del self.cameras[component_id]
+        del self.fr[component_id]
 
     def is_available(self):
-        return self.available
+        return True

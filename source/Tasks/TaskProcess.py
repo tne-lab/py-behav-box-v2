@@ -147,6 +147,8 @@ class TaskProcess(Process):
         del self.task_event_loggers[event.chamber][event.logger_name]
 
     def output_file_changed(self, event: PybEvents.OutputFileChangedEvent):
+        for q in self.source_buffers.values():
+            q.append(event)
         for el in self.task_event_loggers[event.chamber].values():  # Allow all EventLoggers to handle the change
             if isinstance(el, FileEventLogger):  # Handle the change for FileEventLoggers
                 el.output_folder = event.output_file
@@ -181,7 +183,7 @@ class TaskProcess(Process):
         self.tasks[task.metadata["chamber"]].main_loop(event)
         self.log_event(new_event)
         task.stop__()
-        for logger in self.task_event_loggers:
+        for logger in self.task_event_loggers[event.chamber].values():
             logger.stop()
 
     def pause_task(self, event: PybEvents.PauseEvent):

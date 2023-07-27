@@ -131,10 +131,12 @@ class Task:
                                                                              str(i)), comp.component_address)
                                 if comp.metadata is not None:
                                     component.initialize(comp.metadata)
+                                metadata = comp.metadata.copy()
+                                metadata.update({"chamber": self.metadata["chamber"], "subject": self.metadata["subject"],
+                                                "task": type(self).__name__})
                                 self.tp.source_buffers[comp.source_name].append(
-                                    PybEvents.ComponentRegisterEvent(self.metadata["chamber"], comp.component_type,
-                                                                     component.id, component.address,
-                                                                     metadata=comp.metadata or {}))
+                                    PybEvents.ComponentRegisterEvent(comp.component_type, component.id, component.address,
+                                                                     metadata=metadata))
                                 # If the ID has yet to be registered
                                 if not hasattr(self, cid):
                                     # If the Component is part of a list
