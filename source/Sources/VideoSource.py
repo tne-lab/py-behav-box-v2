@@ -171,9 +171,12 @@ class VideoProcess(Process):
                 task.add_done_callback(handle_task_result)
 
     async def start_feed(self, command):
+        if command["vid_type"] == "imaging_source":
+            vp = ImagingSourceProvider(command["address"])
+        else:
+            vp = WebcamProvider(command["address"])
         self.cameras[command["id"]] = CameraWidget(self.loop, self.screen_width // self.cols,
-                                                   self.screen_height // self.rows,
-                                                   command["address"])
+                                                   self.screen_height // self.rows, vp)
         self.ml.addWidget(self.cameras[command["id"]].get_video_frame(), command["row"], command["col"], command["row_span"],
                           command["col_span"])
         self.fr[command["id"]] = command["fr"]
@@ -224,8 +227,9 @@ class VideoSource(Source):
     async def register_component(self, task, component):
         await super().register_component(task, component)
         command = {"command": "StartFeed", "id": component.id, "address": component.address, "row": component.row,
-                   "col": component.col, "row_span": component.row_span, "col_span": component.col_span,
-                   "fr": component.fr}
+                   "col": component.col, "row_span": component.row_span if hasattr(component, "row_span") else 1,
+                   "col_span": component.col_span if hasattr(component, "col_span") else 1,
+                   "fr": component.fr, "vid_type": component.vid_type if hasattr(component, "vid_type") else "webcam"}
         self.outq.put(command)
 
     def write_component(self, component_id: str, msg: Any) -> None:
