@@ -116,6 +116,3 @@ class HikVisionSource(Source):
                 os.makedirs(output_folder)
             with open(output_folder + name + "_" + addr + ".mp4", 'wb') as file:
                 file.write(dwnld.content)
-
-    def is_available(self):
-        return True

@@ -52,7 +52,7 @@ class SettingsDialog(QDialog):
         self.source_list = QListWidget()
         for sn in workstation.sources:
             ql = QListWidgetItem("{} ({})".format(sn, type(workstation.sources[sn]).__name__), self.source_list)
-            if workstation.sources[sn].is_available():
+            if workstation.sources[sn].available:
                 ql.setIcon(self.source_list.style().standardIcon(QStyle.SP_DialogApplyButton))
             else:
                 ql.setIcon(self.source_list.style().standardIcon(QStyle.SP_DialogCancelButton))

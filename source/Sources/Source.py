@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from Components.Component import Component
 
 from abc import ABCMeta, abstractmethod
-from Events.PybEvents import ComponentUpdateEvent
+from Events.PybEvents import ComponentUpdateEvent, UnavailableSourceEvent
 
 
 class Source(Process):
@@ -33,13 +33,15 @@ class Source(Process):
         Sends data msg to the component described by component_id
     """
 
-    def __init__(self):
+    def __init__(self, sid):
         super(Source, self).__init__()
+        self.sid = sid
         self.components = {}
         self.component_chambers = {}
         self.queue = None
         self.decoder = None
         self.encoder = None
+        self.available = True
 
     def initialize(self):
         pass
@@ -92,6 +94,6 @@ class Source(Process):
     def output_file_changed(self, event: PybEvents.OutputFileChangedEvent) -> None:
         pass
 
-    @abstractmethod
-    def is_available(self):
-        raise NotImplementedError
+    def unavailable(self):
+        self.available = False
+        self.queue.send_bytes(self.encoder.encode(UnavailableSourceEvent(self.sid)))

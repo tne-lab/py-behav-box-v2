@@ -62,7 +62,8 @@ class TaskProcess(Process):
                                 PybEvents.ResumeEvent: self.resume_task,
                                 PybEvents.InitEvent: self.init_task,
                                 PybEvents.ClearEvent: self.clear_task,
-                                PybEvents.ComponentUpdateEvent: self.update_component}
+                                PybEvents.ComponentUpdateEvent: self.update_component,
+                                PybEvents.UnavailableSourceEvent: self.source_unavailable}
 
         while True:
             ready = multiprocessing.connection.wait(connections, timeout=0.1)
@@ -235,3 +236,7 @@ class TaskProcess(Process):
         if isinstance(event, PybEvents.TimedEvent) and event.timestamp is None:
             event.acknowledge(self.tasks[event.chamber].time_elapsed())
         self.logger_q.append(event.format())
+
+    def source_unavailable(self, event: PybEvents.UnavailableSourceEvent):
+        # Should all tasks associated with this Source be paused here?
+        self.gui_out.append(event)

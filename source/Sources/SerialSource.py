@@ -57,6 +57,3 @@ class SerialSource(Source):
         else:
             term = ""
         self.connections[self.components[component_id].address].write(bytes(str(msg) + term, 'utf-8'))
-
-    def is_available(self):
-        return True

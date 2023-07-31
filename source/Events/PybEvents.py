@@ -36,6 +36,10 @@ class CloseSourceEvent(PybEvent):
     pass
 
 
+class UnavailableSourceEvent(PybEvent):
+    sid: str
+
+
 class AddTaskEvent(PybEvent):
     chamber: int
     task_name: str

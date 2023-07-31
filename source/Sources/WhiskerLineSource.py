@@ -51,10 +51,10 @@ class WhiskerLineSource(Source):
                 self.read_thread = threading.Thread(target=self.read)
                 self.read_thread.start()
             else:
-                self.available = False
+                self.unavailable()
         except:
             traceback.print_exc()
-            self.available = False
+            self.unavailable()
 
     def read(self):
         while not self.closing:
@@ -111,6 +111,3 @@ class WhiskerLineSource(Source):
             else:
                 out += 'LineSetState {} off\n'.format(a)
         self.client.send(out.encode('utf-8'))
-
-    def is_available(self):
-        return self.available
