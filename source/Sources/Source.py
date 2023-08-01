@@ -33,9 +33,9 @@ class Source(Process):
         Sends data msg to the component described by component_id
     """
 
-    def __init__(self, sid):
+    def __init__(self):
         super(Source, self).__init__()
-        self.sid = sid
+        self.sid = None
         self.components = {}
         self.component_chambers = {}
         self.queue = None
@@ -52,7 +52,8 @@ class Source(Process):
         self.encoder = msgspec.msgpack.Encoder()
         while True:
             events = self.decoder.decode(self.queue.recv_bytes())
-            self.handle_events(events)
+            if not self.handle_events(events):
+                return
 
     def handle_events(self, events: List[PybEvents.PybEvent]):
         for event in events:
@@ -63,9 +64,13 @@ class Source(Process):
             elif isinstance(event, PybEvents.ComponentCloseEvent):
                 self.close_component(event.comp_id)
             elif isinstance(event, PybEvents.CloseSourceEvent):
-                self.close_source()
+                self.close_source_()
+            elif isinstance(event, PybEvents.RemoveSourceEvent):
+                self.close_source_()
+                return False
             elif isinstance(event, PybEvents.OutputFileChangedEvent):
                 self.output_file_changed(event)
+        return True
 
     def register_component_(self, event: PybEvents.ComponentRegisterEvent):
         component_type = getattr(importlib.import_module("Components." + event.comp_type), event.comp_type)
@@ -81,6 +86,10 @@ class Source(Process):
     def update_component(self, cid: str, value: Any, metadata: Dict = None) -> None:
         metadata = metadata or {}
         self.queue.send_bytes(self.encoder.encode(ComponentUpdateEvent(self.component_chambers[cid], cid, value, metadata=metadata)))
+
+    def close_source_(self):
+        self.close_source()
+        self.unavailable()
 
     def close_source(self) -> None:
         pass

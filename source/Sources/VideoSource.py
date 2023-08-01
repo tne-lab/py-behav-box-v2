@@ -211,6 +211,3 @@ class VideoSource(ThreadSource):
         self.cameras[component_id].get_video_frame().deleteLater()
         del self.cameras[component_id]
         del self.fr[component_id]
-
-    def is_available(self):
-        return True

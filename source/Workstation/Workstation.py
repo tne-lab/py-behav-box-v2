@@ -58,8 +58,8 @@ class Workstation:
         self.qui_events_queue = None
         self.refresh_gui = True
         self.tp = None
-        self.encoder = msgspec.msgpack.Encoder()
-        self.decoder = msgspec.msgpack.Decoder(type=List[PybEvents.subclass_union(PybEvents.PybEvent)])
+        self.encoder = msgspec.msgpack.Encoder(enc_hook=PybEvents.enc_hook)
+        self.decoder = msgspec.msgpack.Decoder(type=List[PybEvents.subclass_union(PybEvents.PybEvent)], dec_hook=PybEvents.dec_hook)
 
         # Core application details
         QCoreApplication.setOrganizationName("TNEL")
@@ -125,6 +125,7 @@ class Workstation:
                 segs = code.split('(', 1)
                 source_type = getattr(importlib.import_module("Sources." + segs[0]), segs[0])
                 self.sources[name] = source_type(*eval("(" + segs[1]))
+                self.sources[name].sid = name
         else:
             settings.setValue("sources", '{}')
         source_connections = {}
@@ -320,6 +321,8 @@ class Workstation:
                                 if element.has_updated():
                                     element.draw()
                                     self.gui_updates.append(element.rect.move(col * self.w, row * self.h))
+                    elif isinstance(event, PybEvents.UnavailableSourceEvent):
+                        self.sources[event.sid].available = False
                     if time.perf_counter() - self.last_frame > 1 / self.fr:
                         if len(self.gui_updates) > 0:
                             pygame.display.update(self.gui_updates)
@@ -344,4 +347,4 @@ class Workstation:
         await self.main_task
         self.gui_task.cancel()
         for src in self.sources:  # Close all Sources
-            self.sources[src].close_source()
+            self.sources[src].close_source_()

@@ -4,6 +4,7 @@ import multiprocessing
 import os
 from typing import TYPE_CHECKING
 
+from Events.PybEvents import AddSourceEvent, RemoveSourceEvent
 from Utilities.create_task import create_task
 from Utilities.find_closing_paren import find_closing_paren
 
@@ -133,11 +134,11 @@ class SettingsDialog(QDialog):
         else:
             si -= 1
         se = source_string.find(")", si)
-        self.workstation.sources[st_name].close_source()
+        self.workstation.mainq.send_bytes(self.workstation.encoder.encode(RemoveSourceEvent(st_name)))
         del self.workstation.sources[st_name]
         self.source_list.takeItem(self.source_list.currentRow())
         self.remove_button.setDisabled(False)
-        settings.setValue("sources", source_string[0:si] + source_string[se+1:])
+        settings.setValue("sources", source_string[:si] + source_string[se+2:])
 
     def add_source(self) -> None:
         self.asd = AddSourceDialog(self)
@@ -206,8 +207,9 @@ class AddSourceDialog(QDialog):
         tpq, sourceq = multiprocessing.Pipe()
         self.sd.workstation.sources[self.name.text()].queue = sourceq
         self.sd.workstation.sources[self.name.text()].start()
+        self.sd.workstation.mainq.send_bytes(self.sd.workstation.encoder.encode(AddSourceEvent(self.name.text(), tpq)))
         ql = QListWidgetItem("{} ({})".format(self.name.text(), self.source.currentText()), self.sd.source_list)
-        if self.sd.workstation.sources[self.name.text()].is_available():
+        if self.sd.workstation.sources[self.name.text()].available:
             ql.setIcon(self.sd.source_list.style().standardIcon(QStyle.SP_DialogApplyButton))
         else:
             ql.setIcon(self.sd.source_list.style().standardIcon(QStyle.SP_DialogCancelButton))
