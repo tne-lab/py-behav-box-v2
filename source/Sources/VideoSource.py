@@ -213,7 +213,7 @@ class VideoSource(ThreadSource):
     async def close_component_async(self, component_id):
         if component_id in self.writers:
             await self.stop_record(component_id)
-        self.cameras[component_id].stop()
+        await self.cameras[component_id].stop()
         self.ml.removeWidget(self.cameras[component_id].get_video_frame())
         self.cameras[component_id].get_video_frame().deleteLater()
         del self.cameras[component_id]

@@ -5,7 +5,7 @@ import os
 import re
 import traceback
 from multiprocessing import Process, Pipe
-from multiprocessing.dummy.connection import Connection
+from multiprocessing.connection import PipeConnection
 from typing import Dict
 
 import msgspec.msgpack
@@ -18,7 +18,7 @@ from Tasks.TimeoutManager import TimeoutManager
 
 class TaskProcess(Process):
 
-    def __init__(self, mainq: Connection, guiq: Connection, sourceq: Dict[str, Connection]):
+    def __init__(self, mainq: PipeConnection, guiq: PipeConnection, sourceq: Dict[str, PipeConnection]):
         super().__init__()
         self.mainq = mainq
         self.guiq = guiq
@@ -66,7 +66,8 @@ class TaskProcess(Process):
                                 PybEvents.ComponentUpdateEvent: self.update_component,
                                 PybEvents.UnavailableSourceEvent: self.source_unavailable,
                                 PybEvents.AddSourceEvent: self.add_source,
-                                PybEvents.RemoveSourceEvent: self.remove_source}
+                                PybEvents.RemoveSourceEvent: self.remove_source,
+                                PybEvents.ErrorEvent: self.error}
 
         while True:
             ready = multiprocessing.connection.wait(self.connections, timeout=0.1)
@@ -186,9 +187,12 @@ class TaskProcess(Process):
         new_event = PybEvents.StateExitEvent(event.chamber, task.state.name, task.state.value, metadata=event.metadata)
         self.tasks[task.metadata["chamber"]].main_loop(event)
         self.log_event(new_event)
+        for logger in self.task_event_loggers[event.chamber].values():
+            logger.log_events(self.logger_q)
         task.stop__()
         for logger in self.task_event_loggers[event.chamber].values():
             logger.stop()
+        self.logger_q.clear()
 
     def pause_task(self, event: PybEvents.PauseEvent):
         task = self.tasks[event.chamber]
@@ -241,7 +245,6 @@ class TaskProcess(Process):
         self.logger_q.append(event.format())
 
     def source_unavailable(self, event: PybEvents.UnavailableSourceEvent):
-        # Should all tasks associated with this Source be paused here?
         self.mainq.send_bytes(self.encoder.encode(event))
 
     def add_source(self, event: PybEvents.AddSourceEvent):
@@ -249,8 +252,14 @@ class TaskProcess(Process):
         self.source_buffers[event.sid] = []
         self.connections = [self.mainq, self.tmq_in, *self.sourceq.values()]
 
-    def remove_source(self, event: PybEvents):
+    def remove_source(self, event: PybEvents.RemoveSourceEvent):
         self.sourceq[event.sid].send_bytes(self.encoder.encode([event]))
         del self.sourceq[event.sid]
         del self.source_buffers[event.sid]
         self.connections = [self.mainq, self.tmq_in, *self.sourceq.values()]
+
+    def error(self, event: PybEvents.ErrorEvent):
+        if "sid" in event.metadata and event.metadata["sid"] in self.sourceq:
+            del self.sourceq[event.metadata["sid"]]
+            del self.source_buffers[event.metadata["sid"]]
+        self.mainq.send_bytes(self.encoder.encode(event))

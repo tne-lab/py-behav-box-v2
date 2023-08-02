@@ -25,13 +25,10 @@ import math
 from GUIs import Colors
 import pygame
 
-import Utilities.Exceptions as pyberror
-
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 import os
 import ast
-import traceback
 from screeninfo import get_monitors
 
 
@@ -188,23 +185,27 @@ class Workstation:
                     self.ed = QMessageBox()
                     self.ed.setIcon(QMessageBox.Critical)
                     self.ed.setWindowTitle("Error adding task")
-                    if isinstance(event.error, pyberror.ComponentRegisterError):
-                        self.ed.setText("A Component failed to register\n" + traceback.format_exc())
-                    elif isinstance(event.error, pyberror.SourceUnavailableError):
+                    if event.error == "ComponentRegisterError":
+                        self.ed.setText("A Component failed to register\n" + event.traceback)
+                    elif event.error == "SourceUnavailableError":
                         self.ed.setText("A requested Source is currently unavailable")
-                    elif isinstance(event.error, pyberror.MalformedProtocolError):
-                        self.ed.setText("Error raised when parsing Protocol file\n" + traceback.format_exc())
-                    elif isinstance(event.error, pyberror.MalformedAddressFileError):
-                        self.ed.setText("Error raised when parsing AddressFile\n" + traceback.format_exc())
-                    elif isinstance(event.error, pyberror.InvalidComponentTypeError):
+                    elif event.error == "MalformedProtocolError":
+                        self.ed.setText("Error raised when parsing Protocol file\n" + event.traceback)
+                    elif event.error == "MalformedAddressFileError":
+                        self.ed.setText("Error raised when parsing AddressFile\n" + event.traceback)
+                    elif event.error == "InvalidComponentTypeError":
                         self.ed.setText("A Component in the AddressFile is an invalid type")
+                    elif "sid" in event.metadata:
+                        self.ed.setText("Unhandled exception in source '" + event.metadata["sid"] + "'\n" + event.traceback)
                     else:
-                        self.ed.setText("Unhandled exception\n" + traceback.format_exc())
+                        self.ed.setText("Unhandled exception\n" + event.traceback)
                     self.ed.setStandardButtons(QMessageBox.Ok)
                     self.ed.show()
                     self.wsg.remove_task(event.metadata["chamber"])
             elif isinstance(event, PybEvents.UnavailableSourceEvent):
                 self.sources[event.sid].available = False
+                if self.wsg.sd is not None and self.wsg.sd.isVisible():
+                    self.wsg.sd.update_source_availability()
 
     def add_task(self, chamber: int, task_name: str, subject_name: str, address_file: str, protocol: str, task_event_loggers: str) -> None:
         """
@@ -282,34 +283,37 @@ class Workstation:
                         # Create the GUI
                         self.guis[event.chamber] = gui(event, self.task_gui.subsurface(col * self.w, row * self.h, self.w, self.h), self)
                     elif isinstance(event, PybEvents.TaskEvent):
-                        for widget in self.wsg.chambers[event.chamber].widgets:
-                            if isinstance(widget, EventWidget):
-                                widget.handle_event(event)
-                        print(str(event))
-                        self.guis[event.chamber].handle_event(event)
-                        col = event.chamber % self.n_col
-                        row = math.floor(event.chamber / self.n_col)
-                        rect = pygame.Rect((col * self.w, row * self.h, self.w, self.h))
-                        if isinstance(event, PybEvents.InitEvent) or isinstance(event, PybEvents.StartEvent):
-                            self.guis[event.chamber].complete = False
-                            self.guis[event.chamber].draw()
-                            self.gui_updates.append(rect)
-                        elif isinstance(event, PybEvents.TaskCompleteEvent):
-                            self.guis[event.chamber].complete = True
-                            self.guis[event.chamber].draw()
-                            self.gui_updates.append(rect)
-                        elif isinstance(event, PybEvents.ClearEvent):
-                            pygame.draw.rect(self.task_gui, Colors.black, rect)
-                            self.gui_updates.append(rect)
-                        else:
-                            if isinstance(self.guis[event.chamber], SequenceGUI):
-                                elements = self.guis[event.chamber].get_all_elements()
+                        if event.chamber in self.guis:
+                            for widget in self.wsg.chambers[event.chamber].widgets:
+                                if isinstance(widget, EventWidget):
+                                    widget.handle_event(event)
+                            print(str(event))
+                            self.guis[event.chamber].handle_event(event)
+                            col = event.chamber % self.n_col
+                            row = math.floor(event.chamber / self.n_col)
+                            rect = pygame.Rect((col * self.w, row * self.h, self.w, self.h))
+                            if isinstance(event, PybEvents.InitEvent) or isinstance(event, PybEvents.StartEvent):
+                                self.guis[event.chamber].complete = False
+                                self.guis[event.chamber].draw()
+                                self.gui_updates.append(rect)
+                            elif isinstance(event, PybEvents.TaskCompleteEvent):
+                                self.guis[event.chamber].complete = True
+                                self.guis[event.chamber].draw()
+                                self.gui_updates.append(rect)
+                            elif isinstance(event, PybEvents.ClearEvent):
+                                pygame.draw.rect(self.task_gui, Colors.black, rect)
+                                self.gui_updates.append(rect)
+                                self.wsg.remove_task(event.chamber + 1)
+                                del self.guis[event.chamber]
                             else:
-                                elements = self.guis[event.chamber].elements
-                            for element in elements:
-                                if element.has_updated():
-                                    element.draw()
-                                    self.gui_updates.append(element.rect.move(col * self.w, row * self.h))
+                                if isinstance(self.guis[event.chamber], SequenceGUI):
+                                    elements = self.guis[event.chamber].get_all_elements()
+                                else:
+                                    elements = self.guis[event.chamber].elements
+                                for element in elements:
+                                    if element.has_updated():
+                                        element.draw()
+                                        self.gui_updates.append(element.rect.move(col * self.w, row * self.h))
                     elif isinstance(event, PybEvents.HeartbeatEvent) or isinstance(event, PybEvents.PygameEvent):
                         for key in self.guis.keys():
                             self.guis[key].handle_event(event)

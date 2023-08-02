@@ -123,7 +123,6 @@ class WorkstationGUI(QWidget):
         chamber_index : str
             The index of the task
         """
-        self.workstation.remove_task(chamber_index - 1)  # Remove the task from the main Workstation
         if chamber_index - 1 in self.chambers:
             self.chamber_container.removeWidget(self.chambers[chamber_index - 1])  # Remove the widget
             self.chambers[chamber_index - 1].deleteLater()

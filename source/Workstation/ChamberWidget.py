@@ -306,7 +306,7 @@ class ChamberWidget(QGroupBox):
             save_config = menu.addAction("Save Configuration")  # Saves the current configuration of the chamber
             save_config.triggered.connect(self.save_configuration)
             clear_chamber = menu.addAction("Clear Chamber")  # Alerts the Workstation to remove the Task
-            clear_chamber.triggered.connect(lambda: self.wsg.remove_task(int(self.chamber_id.text())))
+            clear_chamber.triggered.connect(lambda: self.wsg.workstation.remove_task(int(self.chamber_id.text()) - 1))
             edit_config = menu.addAction("Edit Configuration")  # Edits the Task configuration
             edit_config.triggered.connect(self.edit_configuration)
             menu.popup(QCursor.pos())

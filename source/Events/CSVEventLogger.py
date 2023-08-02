@@ -28,6 +28,7 @@ class CSVEventLogger(FileEventLogger):
 
     def log_events(self, le: collections.deque[LoggerEvent]) -> None:
         for event in le:
+            print(event.event)
             self.event_count += 1
             self.log_file.write(self.format_event(event, type(event.event).__name__))
         super().log_events(le)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+import traceback
 from multiprocessing import Process
 from typing import TYPE_CHECKING, Any, Dict, List
 
@@ -11,8 +12,9 @@ from Events import PybEvents
 if TYPE_CHECKING:
     from Components.Component import Component
 
-from abc import ABCMeta, abstractmethod
+from abc import ABCMeta
 from Events.PybEvents import ComponentUpdateEvent, UnavailableSourceEvent
+import Utilities.Exceptions as pyberror
 
 
 class Source(Process):
@@ -47,13 +49,19 @@ class Source(Process):
         pass
 
     def run(self):
-        self.initialize()
         self.decoder = msgspec.msgpack.Decoder(type=List[PybEvents.subclass_union(PybEvents.PybEvent)])
         self.encoder = msgspec.msgpack.Encoder()
-        while True:
-            events = self.decoder.decode(self.queue.recv_bytes())
-            if not self.handle_events(events):
-                return
+        try:
+            self.initialize()
+            while True:
+                events = self.decoder.decode(self.queue.recv_bytes())
+                if not self.handle_events(events):
+                    return
+        except pyberror.ComponentRegisterError as e:
+            self.queue.send_bytes(self.encoder.encode(PybEvents.ErrorEvent(type(e).__name__, traceback.format_exc(), metadata={"sid": self.sid})))
+        except BaseException as e:
+            self.queue.send_bytes(self.encoder.encode(PybEvents.ErrorEvent(type(e).__name__, traceback.format_exc(), metadata={"sid": self.sid})))
+            raise
 
     def handle_events(self, events: List[PybEvents.PybEvent]):
         for event in events:

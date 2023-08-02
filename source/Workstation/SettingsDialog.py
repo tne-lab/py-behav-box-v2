@@ -98,9 +98,13 @@ class SettingsDialog(QDialog):
         self.workstation.compute_chambergui()
         super(SettingsDialog, self).accept()
 
-    def on_source_clicked(self, _) -> None:
+    def on_source_clicked(self, clicked_item) -> None:
         self.remove_button.setDisabled(False)
-        self.refresh_button.setDisabled(False)
+        st_name = clicked_item.text().split(" (")[0]
+        if self.workstation.sources[st_name].available:
+            self.refresh_button.setDisabled(True)
+        else:
+            self.refresh_button.setDisabled(False)
 
     def refresh_source(self) -> None:
         st = self.source_list.currentItem().text()
@@ -113,14 +117,11 @@ class SettingsDialog(QDialog):
             search_str = '\"'+st_name+'\": ' + s_type
             open_ind = source_string.index(search_str) + len(search_str)
             close_ind = find_closing_paren(source_string, open_ind) + 1
-            source_module = importlib.import_module("Sources." + s_type)
-            attribute = getattr(source_module, s_type)
-            globals()[s_type] = attribute
-            self.workstation.sources[st_name] = eval(type(self.workstation.sources[st_name]).__name__ + source_string[open_ind:close_ind])
-            if self.workstation.sources[st_name].is_available():
-                self.source_list.currentItem().setIcon(self.source_list.style().standardIcon(QStyle.SP_DialogApplyButton))
-            else:
-                self.source_list.currentItem().setIcon(self.source_list.style().standardIcon(QStyle.SP_DialogCancelButton))
+            self.workstation.sources[st_name] = s_type(**eval(source_string[open_ind:close_ind]))
+            tpq, sourceq = multiprocessing.Pipe()
+            self.workstation.sources[st_name].queue = sourceq
+            self.workstation.sources[st_name].start()
+            self.workstation.mainq.send_bytes(self.workstation.encoder.encode(AddSourceEvent(st_name, tpq)))
 
     def remove_source(self) -> None:
         st = self.source_list.currentItem().text()
@@ -143,6 +144,13 @@ class SettingsDialog(QDialog):
     def add_source(self) -> None:
         self.asd = AddSourceDialog(self)
         self.asd.show()
+
+    def update_source_availability(self):
+        for i, sn in enumerate(self.workstation.sources):
+            if self.workstation.sources[sn].available:
+                self.source_list.item(i).setIcon(self.source_list.style().standardIcon(QStyle.SP_DialogApplyButton))
+            else:
+                self.source_list.item(i).setIcon(self.source_list.style().standardIcon(QStyle.SP_DialogCancelButton))
 
 
 class AddSourceDialog(QDialog):

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import multiprocessing
-import pickle
 from multiprocessing.connection import PipeConnection
 from typing import Dict, Any
 
@@ -52,7 +51,8 @@ class PybEvent(msgspec.Struct, kw_only=True, tag=True, omit_defaults=True, array
 
 
 class ErrorEvent(PybEvent):
-    error: BaseException
+    error: str
+    traceback: str
 
 
 class CloseSourceEvent(PybEvent):
