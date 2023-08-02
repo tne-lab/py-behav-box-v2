@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import multiprocessing
 import pickle
 from multiprocessing.connection import PipeConnection
 from typing import Dict, Any
@@ -30,7 +31,7 @@ def subclass_union(cls: typing.Type[T]) -> typing.Type[T]:
 def enc_hook(obj: Any) -> Any:
     if isinstance(obj, PipeConnection):
         # Pickle the connection
-        return pickle.dumps(obj)
+        return multiprocessing.context.reduction.ForkingPickler.dumps(obj)
     else:
         # Raise a NotImplementedError for other types
         raise NotImplementedError(f"Objects of type {type(obj)} are not supported")
@@ -40,7 +41,7 @@ def dec_hook(type: typing.Type, obj: Any) -> Any:
     # `type` here is the value of the custom type annotation being decoded.
     if type is PipeConnection:
         # Convert ``obj`` (which should be a ``tuple``) to a complex
-        return pickle.loads(obj)
+        return multiprocessing.context.reduction.ForkingPickler.loads(obj)
     else:
         # Raise a NotImplementedError for other types
         raise NotImplementedError(f"Objects of type {type} are not supported")

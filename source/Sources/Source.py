@@ -63,9 +63,7 @@ class Source(Process):
                 self.register_component_(event)
             elif isinstance(event, PybEvents.ComponentCloseEvent):
                 self.close_component(event.comp_id)
-            elif isinstance(event, PybEvents.CloseSourceEvent):
-                self.close_source_()
-            elif isinstance(event, PybEvents.RemoveSourceEvent):
+            elif isinstance(event, PybEvents.CloseSourceEvent) or isinstance(event, PybEvents.RemoveSourceEvent):
                 self.close_source_()
                 return False
             elif isinstance(event, PybEvents.OutputFileChangedEvent):

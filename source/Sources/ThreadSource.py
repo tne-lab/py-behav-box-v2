@@ -24,10 +24,7 @@ class ThreadSource(Source, ABC):
     def run_(self):
         self.decoder = msgspec.msgpack.Decoder(type=List[PybEvents.subclass_union(PybEvents.PybEvent)])
         self.encoder = msgspec.msgpack.Encoder()
-        while not self.run_stop.is_set():
+        while True:
             events = self.decoder.decode(self.queue.recv_bytes())
-            self.handle_events(events)
-
-    def close_source(self) -> None:
-        self.run_stop.set()
-        self.run_thread.join()
+            if not self.handle_events(events):
+                return

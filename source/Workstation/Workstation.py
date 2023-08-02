@@ -203,6 +203,8 @@ class Workstation:
                     self.ed.setStandardButtons(QMessageBox.Ok)
                     self.ed.show()
                     self.wsg.remove_task(event.metadata["chamber"])
+            elif isinstance(event, PybEvents.UnavailableSourceEvent):
+                self.sources[event.sid].available = False
 
     def add_task(self, chamber: int, task_name: str, subject_name: str, address_file: str, protocol: str, task_event_loggers: str) -> None:
         """
@@ -321,8 +323,6 @@ class Workstation:
                                 if element.has_updated():
                                     element.draw()
                                     self.gui_updates.append(element.rect.move(col * self.w, row * self.h))
-                    elif isinstance(event, PybEvents.UnavailableSourceEvent):
-                        self.sources[event.sid].available = False
                     if time.perf_counter() - self.last_frame > 1 / self.fr:
                         if len(self.gui_updates) > 0:
                             pygame.display.update(self.gui_updates)

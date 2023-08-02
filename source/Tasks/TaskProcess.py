@@ -242,7 +242,7 @@ class TaskProcess(Process):
 
     def source_unavailable(self, event: PybEvents.UnavailableSourceEvent):
         # Should all tasks associated with this Source be paused here?
-        self.gui_out.append(event)
+        self.mainq.send_bytes(self.encoder.encode(event))
 
     def add_source(self, event: PybEvents.AddSourceEvent):
         self.sourceq[event.sid] = event.conn
