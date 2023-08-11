@@ -67,6 +67,8 @@ class Task:
         self.metadata = None
         self.components = {}
         self.state_methods = {}
+        self.complete = False
+        self._complete = False
 
     @overload
     def initialize(self, tp: TaskProcess, metadata: Dict[str, Any]) -> None:
@@ -220,6 +222,7 @@ class Task:
             self.log_event(PybEvents.TaskCompleteEvent(self.metadata["chamber"]))
 
     def start__(self) -> None:
+        self._complete = False
         self.complete = False
         self.state = self.init_state()
         for key, value in self.get_variables().items():
@@ -295,7 +298,10 @@ class Task:
         return False
 
     def is_complete_(self) -> bool:
-        return self.complete or self.is_complete()
+        if not self._complete and (self.complete or self.is_complete()):
+            self._complete = True
+            return True
+        return False
 
     def task_complete(self):
         self.log_event(PybEvents.TaskCompleteEvent(self.metadata["chamber"]))

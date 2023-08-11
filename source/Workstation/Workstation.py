@@ -287,7 +287,6 @@ class Workstation:
                             for widget in self.wsg.chambers[event.chamber].widgets:
                                 if isinstance(widget, EventWidget):
                                     widget.handle_event(event)
-                            print(str(event))
                             self.guis[event.chamber].handle_event(event)
                             col = event.chamber % self.n_col
                             row = math.floor(event.chamber / self.n_col)
@@ -300,7 +299,8 @@ class Workstation:
                                 self.guis[event.chamber].complete = True
                                 self.guis[event.chamber].draw()
                                 self.gui_updates.append(rect)
-                            elif isinstance(event, PybEvents.ClearEvent):
+                                self.wsg.chambers[event.chamber - 1].stop(False)
+                            elif isinstance(event, PybEvents.ClearEvent) and event.del_loggers:
                                 pygame.draw.rect(self.task_gui, Colors.black, rect)
                                 self.gui_updates.append(rect)
                                 self.wsg.remove_task(event.chamber + 1)
@@ -332,23 +332,3 @@ class Workstation:
                             pygame.display.update(self.gui_updates)
                             self.gui_updates = []
                         self.last_frame = time.perf_counter()
-
-    def exit_handler(self, *args):
-        self.loop.run_until_complete(self.exit_handler_())
-
-    async def exit_handler_(self):  # Make async
-        """
-        Callback for when py-behav is closed.
-        """
-        self.heartbeat_task.cancel()
-        self.gui_event_task.cancel()
-        for chamber in self.tasks.keys():  # Stop all Tasks
-            if self.tasks[chamber].started:
-                self.queue.put_nowait(PybEvents.StopEvent(chamber))
-            done = self.remove_task(chamber)
-            await done.wait()
-        self.queue.put_nowait(PybEvents.ExitEvent())
-        await self.main_task
-        self.gui_task.cancel()
-        for src in self.sources:  # Close all Sources
-            self.sources[src].close_source_()

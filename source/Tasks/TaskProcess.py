@@ -137,8 +137,9 @@ class TaskProcess(Process):
                 logger.set_task(self.tasks[event.chamber])
             self.tp_q.append(PybEvents.InitEvent(event.chamber))
         except BaseException as e:
-            print(traceback.format_exc())
-            self.mainq.send_bytes(self.encoder.encode(PybEvents.ErrorEvent(e)))
+            tb = traceback.format_exc()
+            print(tb)
+            self.mainq.send_bytes(self.encoder.encode(PybEvents.ErrorEvent(type(e).__name__, tb)))
 
     def add_logger(self, event: PybEvents.AddLoggerEvent):
         segs = event.logger_code.split('((')
