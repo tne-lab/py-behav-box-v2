@@ -5,7 +5,7 @@ import os
 import re
 import traceback
 from multiprocessing import Process, Pipe
-from multiprocessing.connection import PipeConnection
+from multiprocessing.connection import Connection
 from typing import Dict
 
 import msgspec.msgpack
@@ -18,7 +18,7 @@ from Tasks.TimeoutManager import TimeoutManager
 
 class TaskProcess(Process):
 
-    def __init__(self, mainq: PipeConnection, guiq: PipeConnection, sourceq: Dict[str, PipeConnection]):
+    def __init__(self, mainq: Connection, guiq: Connection, sourceq: Dict[str, Connection]):
         super().__init__()
         self.mainq = mainq
         self.guiq = guiq

@@ -61,7 +61,7 @@ class Workstation:
         # Core application details
         QCoreApplication.setOrganizationName("TNEL")
         QCoreApplication.setOrganizationDomain("tnelab.org")
-        QCoreApplication.setApplicationName("Pybehav")
+        QCoreApplication.setApplicationName("Pybehave")
 
         # Load information from settings or set defaults
         desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
@@ -76,7 +76,7 @@ class Workstation:
 
         os.environ['SDL_VIDEO_WINDOW_POS'] = '%i,%i' % offset  # Position the pygame window
         pygame.init()
-        pygame.display.set_caption("Pybehav")
+        pygame.display.set_caption("Pybehave")
 
         # Store the GUI refresh state
         if settings.contains("refresh_gui"):

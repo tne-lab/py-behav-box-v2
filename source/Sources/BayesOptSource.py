@@ -9,7 +9,6 @@ from abc import ABC, abstractmethod
 from typing import Dict, List
 
 import numpy as np
-import torch
 from matplotlib import pyplot as plt
 
 from Components.Component import Component
@@ -45,7 +44,6 @@ class BayesObject(ABC):
                 self.train_y[key] = []
 
     def add_data(self, trials: List[int], train_x: Dict, train_y: Dict) -> None:
-        print(train_y)
         for key in self.input_labels:
             self.train_x[key].append(train_x[key])
         for key in self.output_labels:
