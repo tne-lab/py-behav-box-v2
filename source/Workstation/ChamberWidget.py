@@ -279,7 +279,7 @@ class ChamberWidget(QGroupBox):
         """
         Callback for when the name of the subject is changed in the GUI.
         """
-        self.task.metadata["subject"] = self.subject.text()
+        # self.task.metadata["subject"] = self.subject.text()
         desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
         # Create a save path corresponding to the subject
         self.output_file_path.setText(

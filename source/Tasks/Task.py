@@ -133,7 +133,9 @@ class Task:
                                                                              str(i)), comp.component_address)
                                 if comp.metadata is not None:
                                     component.initialize(comp.metadata)
-                                metadata = comp.metadata.copy()
+                                    metadata = comp.metadata.copy()
+                                else:
+                                    metadata = {}
                                 metadata.update({"chamber": self.metadata["chamber"], "subject": self.metadata["subject"],
                                                 "task": type(self).__name__})
                                 self.tp.source_buffers[comp.source_name].append(
