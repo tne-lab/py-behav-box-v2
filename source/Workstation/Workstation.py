@@ -299,7 +299,7 @@ class Workstation:
                                 self.guis[event.chamber].complete = True
                                 self.guis[event.chamber].draw()
                                 self.gui_updates.append(rect)
-                                self.wsg.chambers[event.chamber - 1].stop(False)
+                                self.wsg.chambers[event.chamber].stop(False)
                             elif isinstance(event, PybEvents.ClearEvent) and event.del_loggers:
                                 pygame.draw.rect(self.task_gui, Colors.black, rect)
                                 self.gui_updates.append(rect)

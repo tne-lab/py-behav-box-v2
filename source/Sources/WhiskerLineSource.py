@@ -7,7 +7,7 @@ import traceback
 import win32gui
 
 from Components.Component import Component
-from Sources.Source import Source
+from Sources.ThreadSource import ThreadSource
 
 IsWhiskerRunning = False
 
@@ -19,7 +19,7 @@ def look_for_program(hwnd, program_name):
         IsWhiskerRunning = True
 
 
-class WhiskerLineSource(Source):
+class WhiskerLineSource(ThreadSource):
 
     def __init__(self, address='localhost', port=3233,
                  whisker_path=r"C:\Program Files (x86)\WhiskerControl\WhiskerServer.exe"):
@@ -32,7 +32,6 @@ class WhiskerLineSource(Source):
         self.msg = ""
         self.client = None
         self.closing = False
-        self.read_thread = None
 
     def initialize(self):
         try:
@@ -48,31 +47,27 @@ class WhiskerLineSource(Source):
                 self.client.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
                 self.client.connect((self.address, self.port))
                 self.client.settimeout(1)
-                self.read_thread = threading.Thread(target=self.read)
-                self.read_thread.start()
+                while not self.closing:
+                    try:
+                        new_data = self.client.recv(4096)
+                        self.msg += new_data.decode('UTF-8')
+                        if '\n' in self.msg:
+                            msgs = self.msg.split('\n')
+                            self.msg = msgs[-1]
+                        else:
+                            msgs = []
+                        for msg in msgs[:-1]:
+                            if msg.startswith('Event:'):
+                                div = msg.split(' ')[1].rindex("_")
+                                cid, direction = msg.split(' ')[1][:div], msg.split(' ')[1][div + 1:]
+                                self.update_component(cid, direction == "on")
+                    except socket.timeout:
+                        pass
             else:
                 self.unavailable()
         except:
             traceback.print_exc()
             self.unavailable()
-
-    def read(self):
-        while not self.closing:
-            try:
-                new_data = self.client.recv(4096)
-                self.msg += new_data.decode('UTF-8')
-                if '\n' in self.msg:
-                    msgs = self.msg.split('\n')
-                    self.msg = msgs[-1]
-                else:
-                    msgs = []
-                for msg in msgs[:-1]:
-                    if msg.startswith('Event:'):
-                        div = msg.split(' ')[1].rindex("_")
-                        cid, direction = msg.split(' ')[1][:div], msg.split(' ')[1][div + 1:]
-                        self.update_component(cid, direction == "on")
-            except socket.timeout:
-                pass
 
     def register_component(self, component, metadata):
         if component.get_type() == Component.Type.DIGITAL_INPUT:
@@ -96,7 +91,6 @@ class WhiskerLineSource(Source):
     def close_source(self):
         self.closing = True
         self.client.send(b'LineRelinquishAll\n')
-        self.read_thread.join()
         self.client.close()
 
     def write_component(self, component_id, msg):
