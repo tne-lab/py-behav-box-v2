@@ -132,7 +132,6 @@ class OSControllerSource(ThreadSource):
                 if cid == 0:
                     address = data >> 3 & 0x7
                     input_id = "{}_{}".format(serial_index, str(address))
-                    print(input_id)
                     if input_id in self.input_ids:
                         self.values[self.input_ids[input_id]] = not self.values[self.input_ids[input_id]]
                         self.update_component(self.input_ids[input_id], self.values[self.input_ids[input_id]])

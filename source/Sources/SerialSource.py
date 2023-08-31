@@ -22,14 +22,15 @@ class SerialSource(Source):
             self.com_tasks[component.address].start()
 
     def read(self, com):
-        while self.closing[com]:
+        while not self.closing[com]:
             data = self.connections[com].read_until(expected='\n', size=None)
-            for comp in self.components.values():
-                if comp.address == com and (comp.get_type() == Component.Type.DIGITAL_INPUT or
-                                            comp.get_type() == Component.Type.INPUT or
-                                            comp.get_type() == Component.Type.ANALOG_INPUT or
-                                            comp.get_type() == Component.Type.BOTH):
-                    self.update_component(comp.id, data)
+            if len(data) > 0:
+                for comp in self.components.values():
+                    if comp.address == com and (comp.get_type() == Component.Type.DIGITAL_INPUT or
+                                                comp.get_type() == Component.Type.INPUT or
+                                                comp.get_type() == Component.Type.ANALOG_INPUT or
+                                                comp.get_type() == Component.Type.BOTH):
+                        self.update_component(comp.id, data)
         del self.com_tasks[com]
         del self.closing[com]
         self.connections[com].close()
