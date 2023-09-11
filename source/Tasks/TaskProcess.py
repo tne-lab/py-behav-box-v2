@@ -73,29 +73,33 @@ class TaskProcess(Process):
                                 PybEvents.ConstantRemoveEvent: self.remove_constant}
 
         while True:
-            ready = multiprocessing.connection.wait(self.connections, timeout=0.1)
-            if len(ready) == 0:
-                event = PybEvents.HeartbeatEvent()
-                for key in self.tasks.keys():
-                    if self.tasks[key].started and not self.tasks[key].paused:
-                        self.tasks[key].main_loop(event)
-                self.log_gui_event(event)
-            else:
-                for r in ready:
-                    event = self.decoder.decode(r.recv_bytes())
-                    # t = time.perf_counter()
-                    self.handle_event(event)
-                    # print(time.perf_counter() - t)
-                    while len(self.tp_q) > 0:
-                        self.handle_event(self.tp_q.popleft())
-            for source in self.source_buffers:
-                if len(self.source_buffers[source]) > 0:
-                    self.sourceq[source].send_bytes(self.encoder.encode(self.source_buffers[source]))
-                    self.source_buffers[source] = []
-            if isinstance(event, PybEvents.TaskEvent) and len(self.logger_q) > 0:
-                for logger in self.task_event_loggers[event.chamber].values():
-                    logger.log_events(self.logger_q)
-                self.logger_q.clear()
+            try:
+                ready = multiprocessing.connection.wait(self.connections, timeout=0.1)
+                if len(ready) == 0:
+                    event = PybEvents.HeartbeatEvent()
+                    for key in self.tasks.keys():
+                        if self.tasks[key].started and not self.tasks[key].paused:
+                            self.tasks[key].main_loop(event)
+                    self.log_gui_event(event)
+                else:
+                    for r in ready:
+                        event = self.decoder.decode(r.recv_bytes())
+                        # t = time.perf_counter()
+                        self.handle_event(event)
+                        # print(time.perf_counter() - t)
+                        while len(self.tp_q) > 0:
+                            self.handle_event(self.tp_q.popleft())
+                for source in self.source_buffers:
+                    if len(self.source_buffers[source]) > 0:
+                        self.sourceq[source].send_bytes(self.encoder.encode(self.source_buffers[source]))
+                        self.source_buffers[source] = []
+                if isinstance(event, PybEvents.TaskEvent) and len(self.logger_q) > 0:
+                    for logger in self.task_event_loggers[event.chamber].values():
+                        logger.log_events(self.logger_q)
+                    self.logger_q.clear()
+            except BaseException as e:
+                self.guiq.send_bytes(self.encoder.encode(
+                    PybEvents.ErrorEvent(type(e).__name__, traceback.format_exc())))
             if len(self.gui_out) > 0:
                 self.guiq.send_bytes(self.encoder.encode(self.gui_out))
                 self.gui_out.clear()
@@ -250,8 +254,9 @@ class TaskProcess(Process):
 
     def remove_constant(self, event: PybEvents.ConstantRemoveEvent):
         task = self.tasks[event.chamber]
-        task.__setattr__(event.constant, task.initial_constants[event.constant])
-        del task.initial_constants[event.constant]
+        if event.constant in task.initial_constants:
+            task.__setattr__(event.constant, task.initial_constants[event.constant])
+            del task.initial_constants[event.constant]
 
     def log_gui_event(self, event: PybEvents.PybEvent):
         if isinstance(event, PybEvents.TimedEvent) and event.timestamp is None:

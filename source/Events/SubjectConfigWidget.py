@@ -1,9 +1,10 @@
+import importlib
 import os
 
 from PyQt5 import QtCore
 from PyQt5.QtCore import QSettings
 from PyQt5.QtWidgets import QGroupBox, QHBoxLayout, QVBoxLayout, QPushButton, QWidget, QCheckBox, \
-    QListWidget, QListWidgetItem
+    QListWidget, QListWidgetItem, QComboBox
 
 from Events import PybEvents
 
@@ -15,6 +16,9 @@ class SubjectConfigWidget(EventWidget):
 
     def __init__(self):
         super(SubjectConfigWidget, self).__init__("subject_config")
+        self.constant_names = []
+        self.combos = []
+
         self.widget = QGroupBox('Subject Configuration')
         self.config_layout = QVBoxLayout(self.widget)
         self.controls_layout = QHBoxLayout(self.widget)
@@ -35,8 +39,8 @@ class SubjectConfigWidget(EventWidget):
         constants_name_box = QGroupBox('Name')
         constants_name_layout = QVBoxLayout(self.widget)
         self.constants_name_list = QListWidget()
-        self.constants_name_list.itemClicked.connect(self.on_name_clicked)
-        self.constants_name_list.itemDelegate().commitData.connect(self.on_commit_name)
+        # self.constants_name_list.itemClicked.connect(self.on_name_clicked)
+        # self.constants_name_list.itemDelegate().commitData.connect(self.on_commit_name)
         constants_name_layout.addWidget(self.constants_name_list)
         constants_name_box.setLayout(constants_name_layout)
         constants_value_box = QGroupBox('Value')
@@ -69,9 +73,17 @@ class SubjectConfigWidget(EventWidget):
         keys = self.settings.childKeys()
         constants = {}
         for key in keys:
+            options = list(set(self.constant_names) - set(self.names))
+            combo = QComboBox()
+            self.combos.append(combo)
+            combo.addItems(options)
+            combo.setCurrentIndex(options.index(key))
+            index = len(self.combos) - 1
+            combo.activated.connect(lambda _: self.on_commit_name(index))
             self.names.append(key)
             ql = QListWidgetItem(key, self.constants_name_list)
-            ql.setFlags(ql.flags() | QtCore.Qt.ItemIsEditable)
+            self.constants_name_list.setItemWidget(ql, combo)
+            # ql.setFlags(ql.flags() | QtCore.Qt.ItemIsEditable)
             ql = QListWidgetItem(self.settings.value(key, ""), self.constants_value_list)
             ql.setFlags(ql.flags() | QtCore.Qt.ItemIsEditable)
             if len(self.settings.value(key, "")) > 0:
@@ -82,28 +94,46 @@ class SubjectConfigWidget(EventWidget):
 
     def set_chamber(self, cw: ChamberWidget):
         super(SubjectConfigWidget, self).set_chamber(cw)
+        task_module = importlib.import_module("Local.Tasks." + self.cw.task_name.currentText())
+        task = getattr(task_module, self.cw.task_name.currentText())
+        # Get all default values for task constants
+        for key in task.get_constants():
+            self.constant_names.append(key)
         self.load_keys()
 
     def get_widget(self) -> QWidget:
         return self.widget
 
     def remove_constant(self):
-        self.settings.remove(self.constants_name_list.currentItem().text())
+        index = self.constants_value_list.currentRow()
+        self.settings.remove(self.combos[index].currentText())
         self.cw.workstation.mainq.send_bytes(
             self.cw.workstation.encoder.encode(PybEvents.ConstantRemoveEvent(int(self.cw.chamber_id.text()) - 1,
-                                                                             self.constants_name_list.currentItem().text())))
-        self.names.pop(self.constants_name_list.currentRow())
+                                                                             self.combos[index].currentText())))
+        option = self.names.pop(index)
+        self.add_option(option, index)
+        self.combos.pop(index)
         print(self.names)
-        self.constants_value_list.takeItem(self.constants_value_list.currentRow())
-        self.constants_name_list.takeItem(self.constants_name_list.currentRow())
+        self.constants_value_list.takeItem(index)
+        self.constants_name_list.takeItem(index)
         self.remove_button.setDisabled(True)
 
     def add_constant(self):
-        self.names.append("")
+        options = list(set(self.constant_names) - set(self.names))
+        combo = QComboBox()
+        self.combos.append(combo)
+        combo.addItems(options)
+        index = len(self.combos) - 1
+        combo.activated.connect(lambda _: self.on_commit_name(index))
+        self.names.append(combo.currentText())
         ql = QListWidgetItem("", self.constants_name_list)
-        ql.setFlags(ql.flags() | QtCore.Qt.ItemIsEditable)
+        self.constants_name_list.setItemWidget(ql, combo)
         ql = QListWidgetItem("", self.constants_value_list)
         ql.setFlags(ql.flags() | QtCore.Qt.ItemIsEditable)
+        self.constants_name_list.setCurrentRow(len(self.combos)-1)
+        self.constants_value_list.setCurrentRow(len(self.combos)-1)
+        self.remove_option(combo.currentText(), index)
+        self.remove_button.setDisabled(True)
         print(self.names)
 
     def on_value_clicked(self, _):
@@ -111,31 +141,47 @@ class SubjectConfigWidget(EventWidget):
         self.remove_button.setDisabled(False)
 
     def on_name_clicked(self, _):
+        print(self.constants_name_list.currentItem().text())
         self.constants_value_list.setCurrentRow(self.constants_name_list.currentRow())
         self.remove_button.setDisabled(False)
 
-    def on_commit_name(self):
-        if len(self.constants_name_list.currentItem().text()) > 0 or len(self.constants_value_list.currentItem().text()) > 0:
-            prev = self.names[self.constants_name_list.currentRow()]
+    def on_commit_name(self, index):
+        self.remove_option(self.combos[index].currentText(), index)
+        prev = self.names[self.constants_name_list.currentRow()]
+        if self.combos[index].currentText() != prev and len(prev) > 0:
+            self.add_option(prev, index)
+        self.constants_value_list.setCurrentRow(index)
+        if len(self.constants_value_list.currentItem().text()) > 0:
             print(self.constants_name_list.currentItem().text() + " " + prev)
-            if self.constants_name_list.currentItem().text() != prev and len(prev) > 0:
+            if self.combos[index].currentText() != prev and len(prev) > 0:
                 print("edit")
                 self.settings.remove(prev)
                 self.cw.workstation.mainq.send_bytes(
                     self.cw.workstation.encoder.encode(PybEvents.ConstantRemoveEvent(int(self.cw.chamber_id.text()) - 1,
                                                                                      prev)))
-            self.settings.setValue(self.constants_name_list.currentItem().text(), self.constants_value_list.currentItem().text())
+            self.settings.setValue(self.combos[index].currentText(), self.constants_value_list.currentItem().text())
             if len(self.constants_value_list.currentItem().text()) > 0:
                 self.cw.workstation.mainq.send_bytes(
                     self.cw.workstation.encoder.encode(PybEvents.ConstantsUpdateEvent(int(self.cw.chamber_id.text()) - 1,
-                                                       {self.constants_name_list.currentItem().text(): self.constants_value_list.currentItem().text()})))
-            self.names[self.constants_name_list.currentRow()] = self.constants_name_list.currentItem().text()
+                                                       {self.combos[index].currentText(): self.constants_value_list.currentItem().text()})))
+        self.names[self.constants_name_list.currentRow()] = self.combos[index].currentText()
 
     def on_commit_value(self):
-        if len(self.constants_name_list.currentItem().text()) > 0 and len(self.constants_value_list.currentItem().text()) > 0:
-            self.settings.setValue(self.constants_name_list.currentItem().text(), self.constants_value_list.currentItem().text())
+        index = self.constants_value_list.currentRow()
+        if len(self.constants_value_list.currentItem().text()) > 0:
+            self.settings.setValue(self.combos[index].currentText(), self.constants_value_list.currentItem().text())
             if len(self.constants_value_list.currentItem().text()) > 0:
                 self.cw.workstation.mainq.send_bytes(
                     self.cw.workstation.encoder.encode(PybEvents.ConstantsUpdateEvent(int(self.cw.chamber_id.text()) - 1,
-                                                       {self.constants_name_list.currentItem().text(): self.constants_value_list.currentItem().text()})))
+                                                       {self.combos[index].currentText(): self.constants_value_list.currentItem().text()})))
         print(self.names)
+
+    def remove_option(self, option, index):
+        for i, combo in enumerate(self.combos):
+            if i != index:
+                combo.removeItem(combo.findText(option))
+
+    def add_option(self, option, index):
+        for i, combo in enumerate(self.combos):
+            if i != index:
+                combo.addItem(option)
