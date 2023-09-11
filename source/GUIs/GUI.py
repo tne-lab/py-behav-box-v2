@@ -161,7 +161,7 @@ class GUI:
             self.paused = True
         elif event_type == PybEvents.ResumeEvent:
             self.paused = False
-        if isinstance(event, PybEvents.TimedEvent):
+        if isinstance(event, PybEvents.TimedEvent) and self.started:
             self.time_elapsed = event.timestamp
 
     def start(self):

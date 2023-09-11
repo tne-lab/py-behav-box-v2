@@ -53,6 +53,7 @@ class SubjectConfigWidget(EventWidget):
         self.widget.setLayout(self.config_layout)
 
         self.settings = None
+        self.names = []
 
     def handle_event(self, event: PybEvents.PybEvent):
         super(SubjectConfigWidget, self).handle_event(event)
@@ -68,6 +69,7 @@ class SubjectConfigWidget(EventWidget):
         keys = self.settings.childKeys()
         constants = {}
         for key in keys:
+            self.names.append(key)
             ql = QListWidgetItem(key, self.constants_name_list)
             ql.setFlags(ql.flags() | QtCore.Qt.ItemIsEditable)
             ql = QListWidgetItem(self.settings.value(key, ""), self.constants_value_list)
@@ -108,7 +110,15 @@ class SubjectConfigWidget(EventWidget):
         self.constants_value_list.setCurrentRow(self.constants_name_list.currentRow())
         self.remove_button.setDisabled(False)
 
-    def on_commit(self):
+    def on_commit_name(self):
+        if len(self.cw.task_name.currentText()) > 0:
+            self.settings.setValue(self.constants_name_list.currentItem().text(), self.constants_value_list.currentItem().text())
+            if len(self.constants_value_list.currentItem().text()) > 0:
+                self.cw.workstation.mainq.send_bytes(
+                    self.cw.workstation.encoder.encode(PybEvents.ConstantsUpdateEvent(int(self.cw.chamber_id.text()) - 1,
+                                                       {self.constants_name_list.currentItem().text(): self.constants_value_list.currentItem().text()})))
+
+    def on_commit_value(self):
         if len(self.cw.task_name.currentText()) > 0:
             self.settings.setValue(self.constants_name_list.currentItem().text(), self.constants_value_list.currentItem().text())
             if len(self.constants_value_list.currentItem().text()) > 0:
