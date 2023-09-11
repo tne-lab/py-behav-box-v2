@@ -171,6 +171,14 @@ class ComponentUpdateEvent(TimedEvent):
     value: Any
 
 
+class ConstantsUpdateEvent(TaskEvent):
+    constants: Dict
+
+
+class ConstantRemoveEvent(TaskEvent):
+    constant: str
+
+
 class ComponentRegisterEvent(PybEvent):
     comp_type: str
     cid: str

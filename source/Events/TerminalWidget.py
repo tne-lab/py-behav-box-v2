@@ -20,9 +20,8 @@ class TerminalWidget(EventWidget):
         self.cur_text = None
 
     def handle_event(self, event: PybEvents.PybEvent):
-        if isinstance(event, PybEvents.StartEvent):
-            self.start()
-        elif isinstance(event, PybEvents.Loggable):
+        super(TerminalWidget, self).handle_event(event)
+        if isinstance(event, PybEvents.Loggable):
             event_text = self.format_event(event.format(), type(event).__name__)
             self.cur_text = event_text if self.cur_text is None else "\n".join((self.cur_text, event_text))
             self.event_count += 1

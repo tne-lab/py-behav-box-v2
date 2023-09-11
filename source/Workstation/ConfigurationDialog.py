@@ -105,6 +105,7 @@ class ConfigurationDialog(QDialog):
         self.cw.chamber.removeWidget(self.cw.widgets[self.widget_list.currentRow()].get_widget())
         self.cw.widgets[self.widget_list.currentRow()].get_widget().deleteLater()
         del self.cw.widgets[self.widget_list.currentRow()]
+        del self.cw.widget_params[self.widget_list.currentRow()]
         self.widget_list.takeItem(self.widget_list.currentRow())
         self.remove_button.setDisabled(False)
 
@@ -156,6 +157,7 @@ class AddExtrasDialog(QDialog):
             widget_type = getattr(importlib.import_module("Events." + self.extra.currentText()), self.extra.currentText())
             new_widget = widget_type(*self.params)
             self.cd.cw.widgets.append(new_widget)
+            self.cd.cw.widget_params.append(self.params)
             new_widget.set_chamber(self.cd.cw)
             self.cd.cw.chamber.addWidget(new_widget.get_widget())
             QListWidgetItem("{} ({})".format(new_widget.name, self.extra.currentText()), self.cd.widget_list)

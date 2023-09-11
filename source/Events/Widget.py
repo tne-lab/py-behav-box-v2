@@ -22,18 +22,6 @@ class Widget:
     def get_widget(self) -> QWidget:
         raise NotImplementedError
 
-    def start_(self):
-        self.start()
-
-    def start(self):
-        pass
-
-    def stop_(self):
-        self.stop()
-
-    def stop(self):
-        pass
-
     def close_(self):
         self.close()
 

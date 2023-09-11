@@ -48,7 +48,7 @@ class TimedToggle(Toggle):
             if not self.state:
                 self.write(True)
                 self.state = True
-                self.task.tp.tm.reset_timeout(Timeout(self.id, dur, self.toggle_, ()))
+                self.task.tp.tm.reset_timeout(Timeout(self.id, self.task.metadata["chamber"], dur, self.toggle_, ()))
         elif isinstance(dur, bool):
             if not dur:
                 self.task.tp.tm.cancel_timeout(self.id)

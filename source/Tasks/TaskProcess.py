@@ -1,4 +1,5 @@
 import collections
+import copy
 import importlib
 import multiprocessing
 import os
@@ -67,7 +68,9 @@ class TaskProcess(Process):
                                 PybEvents.UnavailableSourceEvent: self.source_unavailable,
                                 PybEvents.AddSourceEvent: self.add_source,
                                 PybEvents.RemoveSourceEvent: self.remove_source,
-                                PybEvents.ErrorEvent: self.error}
+                                PybEvents.ErrorEvent: self.error,
+                                PybEvents.ConstantsUpdateEvent: self.update_constants,
+                                PybEvents.ConstantRemoveEvent: self.remove_constant}
 
         while True:
             ready = multiprocessing.connection.wait(self.connections, timeout=0.1)
@@ -234,6 +237,21 @@ class TaskProcess(Process):
             self.log_event(new_event)
             if task.is_complete_():
                 self.tp_q.append(PybEvents.TaskCompleteEvent(task.metadata["chamber"]))
+
+    def update_constants(self, event: PybEvents.ConstantsUpdateEvent):
+        task = self.tasks[event.chamber]
+        for key in event.constants:
+            try:
+                value = eval(event.constants[key])
+                task.initial_constants[key] = copy.deepcopy(task.__getattribute__(key))
+                task.__setattr__(key, value)
+            except:
+                pass
+
+    def remove_constant(self, event: PybEvents.ConstantRemoveEvent):
+        task = self.tasks[event.chamber]
+        task.__setattr__(event.constant, task.initial_constants[event.constant])
+        del task.initial_constants[event.constant]
 
     def log_gui_event(self, event: PybEvents.PybEvent):
         if isinstance(event, PybEvents.TimedEvent) and event.timestamp is None:
