@@ -36,14 +36,14 @@ class SubjectConfigWidget(EventWidget):
         constants_name_layout = QVBoxLayout(self.widget)
         self.constants_name_list = QListWidget()
         self.constants_name_list.itemClicked.connect(self.on_name_clicked)
-        self.constants_name_list.itemDelegate().commitData.connect(self.on_commit)
+        self.constants_name_list.itemDelegate().commitData.connect(self.on_commit_name)
         constants_name_layout.addWidget(self.constants_name_list)
         constants_name_box.setLayout(constants_name_layout)
         constants_value_box = QGroupBox('Value')
         constants_value_layout = QVBoxLayout(self.widget)
         self.constants_value_list = QListWidget()
         self.constants_value_list.itemClicked.connect(self.on_value_clicked)
-        self.constants_value_list.itemDelegate().commitData.connect(self.on_commit)
+        self.constants_value_list.itemDelegate().commitData.connect(self.on_commit_value)
         constants_value_layout.addWidget(self.constants_value_list)
         constants_value_box.setLayout(constants_value_layout)
         lists_layout = QHBoxLayout(self.widget)
@@ -92,15 +92,19 @@ class SubjectConfigWidget(EventWidget):
         self.cw.workstation.mainq.send_bytes(
             self.cw.workstation.encoder.encode(PybEvents.ConstantRemoveEvent(int(self.cw.chamber_id.text()) - 1,
                                                                              self.constants_name_list.currentItem().text())))
+        self.names.pop(self.constants_name_list.currentRow())
+        print(self.names)
         self.constants_value_list.takeItem(self.constants_value_list.currentRow())
         self.constants_name_list.takeItem(self.constants_name_list.currentRow())
         self.remove_button.setDisabled(True)
 
     def add_constant(self):
+        self.names.append("")
         ql = QListWidgetItem("", self.constants_name_list)
         ql.setFlags(ql.flags() | QtCore.Qt.ItemIsEditable)
         ql = QListWidgetItem("", self.constants_value_list)
         ql.setFlags(ql.flags() | QtCore.Qt.ItemIsEditable)
+        print(self.names)
 
     def on_value_clicked(self, _):
         self.constants_name_list.setCurrentRow(self.constants_value_list.currentRow())
@@ -111,17 +115,27 @@ class SubjectConfigWidget(EventWidget):
         self.remove_button.setDisabled(False)
 
     def on_commit_name(self):
-        if len(self.cw.task_name.currentText()) > 0:
+        if len(self.constants_name_list.currentItem().text()) > 0 or len(self.constants_value_list.currentItem().text()) > 0:
+            prev = self.names[self.constants_name_list.currentRow()]
+            print(self.constants_name_list.currentItem().text() + " " + prev)
+            if self.constants_name_list.currentItem().text() != prev and len(prev) > 0:
+                print("edit")
+                self.settings.remove(prev)
+                self.cw.workstation.mainq.send_bytes(
+                    self.cw.workstation.encoder.encode(PybEvents.ConstantRemoveEvent(int(self.cw.chamber_id.text()) - 1,
+                                                                                     prev)))
             self.settings.setValue(self.constants_name_list.currentItem().text(), self.constants_value_list.currentItem().text())
             if len(self.constants_value_list.currentItem().text()) > 0:
                 self.cw.workstation.mainq.send_bytes(
                     self.cw.workstation.encoder.encode(PybEvents.ConstantsUpdateEvent(int(self.cw.chamber_id.text()) - 1,
                                                        {self.constants_name_list.currentItem().text(): self.constants_value_list.currentItem().text()})))
+            self.names[self.constants_name_list.currentRow()] = self.constants_name_list.currentItem().text()
 
     def on_commit_value(self):
-        if len(self.cw.task_name.currentText()) > 0:
+        if len(self.constants_name_list.currentItem().text()) > 0 and len(self.constants_value_list.currentItem().text()) > 0:
             self.settings.setValue(self.constants_name_list.currentItem().text(), self.constants_value_list.currentItem().text())
             if len(self.constants_value_list.currentItem().text()) > 0:
                 self.cw.workstation.mainq.send_bytes(
                     self.cw.workstation.encoder.encode(PybEvents.ConstantsUpdateEvent(int(self.cw.chamber_id.text()) - 1,
                                                        {self.constants_name_list.currentItem().text(): self.constants_value_list.currentItem().text()})))
+        print(self.names)
