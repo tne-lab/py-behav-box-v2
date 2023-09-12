@@ -19,6 +19,7 @@ class EventWidget(Widget):
 
     def start_(self):
         self.event_count = 0
+        self.start()
 
     def start(self):
         pass
