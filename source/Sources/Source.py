@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+import traceback
 from multiprocessing import Process
 from typing import TYPE_CHECKING, Any, Dict, List
 
@@ -11,8 +12,9 @@ from Events import PybEvents
 if TYPE_CHECKING:
     from Components.Component import Component
 
-from abc import ABCMeta, abstractmethod
-from Events.PybEvents import ComponentUpdateEvent
+from abc import ABCMeta
+from Events.PybEvents import ComponentUpdateEvent, UnavailableSourceEvent
+import Utilities.Exceptions as pyberror
 
 
 class Source(Process):
@@ -35,22 +37,31 @@ class Source(Process):
 
     def __init__(self):
         super(Source, self).__init__()
+        self.sid = None
         self.components = {}
         self.component_chambers = {}
         self.queue = None
         self.decoder = None
         self.encoder = None
+        self.available = True
 
     def initialize(self):
         pass
 
     def run(self):
-        self.initialize()
         self.decoder = msgspec.msgpack.Decoder(type=List[PybEvents.subclass_union(PybEvents.PybEvent)])
         self.encoder = msgspec.msgpack.Encoder()
-        while True:
-            events = self.decoder.decode(self.queue.recv_bytes())
-            self.handle_events(events)
+        try:
+            self.initialize()
+            while True:
+                events = self.decoder.decode(self.queue.recv_bytes())
+                if not self.handle_events(events):
+                    return
+        except pyberror.ComponentRegisterError as e:
+            self.queue.send_bytes(self.encoder.encode(PybEvents.ErrorEvent(type(e).__name__, traceback.format_exc(), metadata={"sid": self.sid})))
+        except BaseException as e:
+            self.queue.send_bytes(self.encoder.encode(PybEvents.ErrorEvent(type(e).__name__, traceback.format_exc(), metadata={"sid": self.sid})))
+            raise
 
     def handle_events(self, events: List[PybEvents.PybEvent]):
         for event in events:
@@ -60,10 +71,12 @@ class Source(Process):
                 self.register_component_(event)
             elif isinstance(event, PybEvents.ComponentCloseEvent):
                 self.close_component(event.comp_id)
-            elif isinstance(event, PybEvents.CloseSourceEvent):
-                self.close_source()
+            elif isinstance(event, PybEvents.CloseSourceEvent) or isinstance(event, PybEvents.RemoveSourceEvent):
+                self.close_source_()
+                return False
             elif isinstance(event, PybEvents.OutputFileChangedEvent):
                 self.output_file_changed(event)
+        return True
 
     def register_component_(self, event: PybEvents.ComponentRegisterEvent):
         component_type = getattr(importlib.import_module("Components." + event.comp_type), event.comp_type)
@@ -80,6 +93,10 @@ class Source(Process):
         metadata = metadata or {}
         self.queue.send_bytes(self.encoder.encode(ComponentUpdateEvent(self.component_chambers[cid], cid, value, metadata=metadata)))
 
+    def close_source_(self):
+        self.close_source()
+        self.unavailable()
+
     def close_source(self) -> None:
         pass
 
@@ -92,6 +109,6 @@ class Source(Process):
     def output_file_changed(self, event: PybEvents.OutputFileChangedEvent) -> None:
         pass
 
-    @abstractmethod
-    def is_available(self):
-        raise NotImplementedError
+    def unavailable(self):
+        self.available = False
+        self.queue.send_bytes(self.encoder.encode(UnavailableSourceEvent(self.sid)))

@@ -56,7 +56,7 @@ class ChamberWidget(QGroupBox):
         validator = QRegExpValidator(rx, self)
         self.subject = QLineEdit(sn)
         self.subject.setValidator(validator)
-        self.subject.textChanged.connect(self.subject_changed)
+        self.subject.editingFinished.connect(self.subject_changed)
         subject_box_layout.addWidget(self.subject)
         row1.addWidget(subject_box)
 
@@ -141,19 +141,19 @@ class ChamberWidget(QGroupBox):
         # Message to display before starting task
         self.prompt = prompt
 
-        # Connect to widgets and loggers
+        self.setLayout(self.chamber)
         self.event_loggers = event_loggers
+        self.workstation.add_task(int(chamber_index) - 1, self.task_name.currentText(), self.subject.text(),
+                                  self.address_file_path.text(),
+                                  self.protocol_path.text(), self.event_loggers)
+        self.output_file_changed()
+
+        # Connect to widgets
         self.widgets = widgets
         self.widget_params = widget_params
         for widget in widgets:
             widget.set_chamber(self)
             self.chamber.addWidget(widget.get_widget())
-
-        self.setLayout(self.chamber)
-        self.workstation.add_task(int(chamber_index) - 1, self.task_name.currentText(), self.subject.text(),
-                                  self.address_file_path.text(),
-                                  self.protocol_path.text(), self.event_loggers)
-        self.output_file_changed()
 
         return self
 
@@ -279,12 +279,14 @@ class ChamberWidget(QGroupBox):
         """
         Callback for when the name of the subject is changed in the GUI.
         """
-        self.task.metadata["subject"] = self.subject.text()
+        # self.task.metadata["subject"] = self.subject.text()
         desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
         # Create a save path corresponding to the subject
+        self.output_file_path.blockSignals(True)
         self.output_file_path.setText(
             "{}/py-behav/{}/Data/{}/{}/".format(desktop, self.task_name.currentText(), self.subject.text(),
                                                 datetime.now().strftime("%m-%d-%Y")))
+        self.output_file_path.blockSignals(False)
         self.output_file_changed()  # Signal to saving systems that the output directory has changed
 
     def output_file_changed(self) -> None:
@@ -306,7 +308,7 @@ class ChamberWidget(QGroupBox):
             save_config = menu.addAction("Save Configuration")  # Saves the current configuration of the chamber
             save_config.triggered.connect(self.save_configuration)
             clear_chamber = menu.addAction("Clear Chamber")  # Alerts the Workstation to remove the Task
-            clear_chamber.triggered.connect(lambda: self.wsg.remove_task(int(self.chamber_id.text())))
+            clear_chamber.triggered.connect(lambda: self.wsg.workstation.remove_task(int(self.chamber_id.text()) - 1))
             edit_config = menu.addAction("Edit Configuration")  # Edits the Task configuration
             edit_config.triggered.connect(self.edit_configuration)
             menu.popup(QCursor.pos())

@@ -1,11 +1,12 @@
 import collections
+import copy
 import importlib
 import multiprocessing
 import os
 import re
 import traceback
 from multiprocessing import Process, Pipe
-from multiprocessing.dummy.connection import Connection
+from multiprocessing.connection import Connection
 from typing import Dict
 
 import msgspec.msgpack
@@ -35,6 +36,7 @@ class TaskProcess(Process):
         self.logger_q = None
         self.event_responses = {}
         self.source_buffers = {}
+        self.connections = []
 
     def run(self):
         p = psutil.Process(os.getpid())
@@ -44,9 +46,9 @@ class TaskProcess(Process):
         self.tp_q = collections.deque()
         self.logger_q = collections.deque()
         self.tmq_in, self.tmq_out = Pipe(False)
-        connections = [self.mainq, self.tmq_in, *self.sourceq.values()]
-        self.encoder = msgspec.msgpack.Encoder()
-        self.decoder = msgspec.msgpack.Decoder(type=PybEvents.subclass_union(PybEvents.PybEvent))
+        self.connections = [self.mainq, self.tmq_in, *self.sourceq.values()]
+        self.encoder = msgspec.msgpack.Encoder(enc_hook=PybEvents.enc_hook)
+        self.decoder = msgspec.msgpack.Decoder(type=PybEvents.subclass_union(PybEvents.PybEvent), dec_hook=PybEvents.dec_hook)
 
         for source in self.sourceq:
             self.source_buffers[source] = []
@@ -62,32 +64,42 @@ class TaskProcess(Process):
                                 PybEvents.ResumeEvent: self.resume_task,
                                 PybEvents.InitEvent: self.init_task,
                                 PybEvents.ClearEvent: self.clear_task,
-                                PybEvents.ComponentUpdateEvent: self.update_component}
+                                PybEvents.ComponentUpdateEvent: self.update_component,
+                                PybEvents.UnavailableSourceEvent: self.source_unavailable,
+                                PybEvents.AddSourceEvent: self.add_source,
+                                PybEvents.RemoveSourceEvent: self.remove_source,
+                                PybEvents.ErrorEvent: self.error,
+                                PybEvents.ConstantsUpdateEvent: self.update_constants,
+                                PybEvents.ConstantRemoveEvent: self.remove_constant}
 
         while True:
-            ready = multiprocessing.connection.wait(connections, timeout=0.1)
-            if len(ready) == 0:
-                event = PybEvents.HeartbeatEvent()
-                for key in self.tasks.keys():
-                    if self.tasks[key].started and not self.tasks[key].paused:
-                        self.tasks[key].main_loop(event)
-                self.log_gui_event(event)
-            else:
-                for r in ready:
-                    event = self.decoder.decode(r.recv_bytes())
-                    # t = time.perf_counter()
-                    self.handle_event(event)
-                    # print(time.perf_counter() - t)
-                    while len(self.tp_q) > 0:
-                        self.handle_event(self.tp_q.popleft())
-            for source in self.source_buffers:
-                if len(self.source_buffers[source]) > 0:
-                    self.sourceq[source].send_bytes(self.encoder.encode(self.source_buffers[source]))
-                    self.source_buffers[source] = []
-            if isinstance(event, PybEvents.TaskEvent) and len(self.logger_q) > 0:
-                for logger in self.task_event_loggers[event.chamber].values():
-                    logger.log_events(self.logger_q)
-                self.logger_q.clear()
+            try:
+                ready = multiprocessing.connection.wait(self.connections, timeout=0.1)
+                if len(ready) == 0:
+                    event = PybEvents.HeartbeatEvent()
+                    for key in self.tasks.keys():
+                        if self.tasks[key].started and not self.tasks[key].paused:
+                            self.tasks[key].main_loop(event)
+                    self.log_gui_event(event)
+                else:
+                    for r in ready:
+                        event = self.decoder.decode(r.recv_bytes())
+                        # t = time.perf_counter()
+                        self.handle_event(event)
+                        # print(time.perf_counter() - t)
+                        while len(self.tp_q) > 0:
+                            self.handle_event(self.tp_q.popleft())
+                for source in self.source_buffers:
+                    if len(self.source_buffers[source]) > 0:
+                        self.sourceq[source].send_bytes(self.encoder.encode(self.source_buffers[source]))
+                        self.source_buffers[source] = []
+                if isinstance(event, PybEvents.TaskEvent) and len(self.logger_q) > 0:
+                    for logger in self.task_event_loggers[event.chamber].values():
+                        logger.log_events(self.logger_q)
+                    self.logger_q.clear()
+            except BaseException as e:
+                self.guiq.send_bytes(self.encoder.encode(
+                    PybEvents.ErrorEvent(type(e).__name__, traceback.format_exc())))
             if len(self.gui_out) > 0:
                 self.guiq.send_bytes(self.encoder.encode(self.gui_out))
                 self.gui_out.clear()
@@ -132,8 +144,9 @@ class TaskProcess(Process):
                 logger.set_task(self.tasks[event.chamber])
             self.tp_q.append(PybEvents.InitEvent(event.chamber))
         except BaseException as e:
-            print(traceback.format_exc())
-            self.mainq.send_bytes(self.encoder.encode(PybEvents.ErrorEvent(e)))
+            tb = traceback.format_exc()
+            print(tb)
+            self.mainq.send_bytes(self.encoder.encode(PybEvents.ErrorEvent(type(e).__name__, tb)))
 
     def add_logger(self, event: PybEvents.AddLoggerEvent):
         segs = event.logger_code.split('((')
@@ -182,9 +195,12 @@ class TaskProcess(Process):
         new_event = PybEvents.StateExitEvent(event.chamber, task.state.name, task.state.value, metadata=event.metadata)
         self.tasks[task.metadata["chamber"]].main_loop(event)
         self.log_event(new_event)
+        for logger in self.task_event_loggers[event.chamber].values():
+            logger.log_events(self.logger_q)
         task.stop__()
         for logger in self.task_event_loggers[event.chamber].values():
             logger.stop()
+        self.logger_q.clear()
 
     def pause_task(self, event: PybEvents.PauseEvent):
         task = self.tasks[event.chamber]
@@ -226,6 +242,22 @@ class TaskProcess(Process):
             if task.is_complete_():
                 self.tp_q.append(PybEvents.TaskCompleteEvent(task.metadata["chamber"]))
 
+    def update_constants(self, event: PybEvents.ConstantsUpdateEvent):
+        task = self.tasks[event.chamber]
+        for key in event.constants:
+            try:
+                value = eval(event.constants[key])
+                task.initial_constants[key] = copy.deepcopy(task.__getattribute__(key))
+                task.__setattr__(key, value)
+            except:
+                pass
+
+    def remove_constant(self, event: PybEvents.ConstantRemoveEvent):
+        task = self.tasks[event.chamber]
+        if event.constant in task.initial_constants:
+            task.__setattr__(event.constant, task.initial_constants[event.constant])
+            del task.initial_constants[event.constant]
+
     def log_gui_event(self, event: PybEvents.PybEvent):
         if isinstance(event, PybEvents.TimedEvent) and event.timestamp is None:
             event.acknowledge(self.tasks[event.chamber].time_elapsed())
@@ -235,3 +267,23 @@ class TaskProcess(Process):
         if isinstance(event, PybEvents.TimedEvent) and event.timestamp is None:
             event.acknowledge(self.tasks[event.chamber].time_elapsed())
         self.logger_q.append(event.format())
+
+    def source_unavailable(self, event: PybEvents.UnavailableSourceEvent):
+        self.mainq.send_bytes(self.encoder.encode(event))
+
+    def add_source(self, event: PybEvents.AddSourceEvent):
+        self.sourceq[event.sid] = event.conn
+        self.source_buffers[event.sid] = []
+        self.connections = [self.mainq, self.tmq_in, *self.sourceq.values()]
+
+    def remove_source(self, event: PybEvents.RemoveSourceEvent):
+        self.sourceq[event.sid].send_bytes(self.encoder.encode([event]))
+        del self.sourceq[event.sid]
+        del self.source_buffers[event.sid]
+        self.connections = [self.mainq, self.tmq_in, *self.sourceq.values()]
+
+    def error(self, event: PybEvents.ErrorEvent):
+        if "sid" in event.metadata and event.metadata["sid"] in self.sourceq:
+            del self.sourceq[event.metadata["sid"]]
+            del self.source_buffers[event.metadata["sid"]]
+        self.mainq.send_bytes(self.encoder.encode(event))

@@ -67,6 +67,9 @@ class Task:
         self.metadata = None
         self.components = {}
         self.state_methods = {}
+        self.complete = False
+        self._complete = False
+        self.initial_constants = {}
 
     @overload
     def initialize(self, tp: TaskProcess, metadata: Dict[str, Any]) -> None:
@@ -131,7 +134,9 @@ class Task:
                                                                              str(i)), comp.component_address)
                                 if comp.metadata is not None:
                                     component.initialize(comp.metadata)
-                                metadata = comp.metadata.copy()
+                                    metadata = comp.metadata.copy()
+                                else:
+                                    metadata = {}
                                 metadata.update({"chamber": self.metadata["chamber"], "subject": self.metadata["subject"],
                                                 "task": type(self).__name__})
                                 self.tp.source_buffers[comp.source_name].append(
@@ -220,6 +225,7 @@ class Task:
             self.log_event(PybEvents.TaskCompleteEvent(self.metadata["chamber"]))
 
     def start__(self) -> None:
+        self._complete = False
         self.complete = False
         self.state = self.init_state()
         for key, value in self.get_variables().items():
@@ -262,7 +268,7 @@ class Task:
             if self.state in self.state_timeouts:
                 for tm in self.state_timeouts[self.state].values():
                     if tm[1]:
-                        self.tp.tm.cancel_timeout(tm[0].name)
+                        self.cancel_timeout(tm[0].name)
         all_handled = self.all_states(event)
         if not all_handled and self.state.name in self.state_methods:
             self.state_methods[self.state.name](event)
@@ -295,7 +301,10 @@ class Task:
         return False
 
     def is_complete_(self) -> bool:
-        return self.complete or self.is_complete()
+        if not self._complete and (self.complete or self.is_complete()):
+            self._complete = True
+            return True
+        return False
 
     def task_complete(self):
         self.log_event(PybEvents.TaskCompleteEvent(self.metadata["chamber"]))
@@ -307,7 +316,7 @@ class Task:
     def set_timeout(self, name: str, timeout: float, end_with_state=True, metadata: Dict = None):
         metadata = metadata or {}
         if name not in self.timeouts:
-            tm = Timeout(name, timeout, self._send_timeout, (name, metadata))
+            tm = Timeout(name, self.metadata["chamber"], timeout, self._send_timeout, (name, metadata))
             self.timeouts[name] = tm
             if self.state not in self.state_timeouts:
                 self.state_timeouts[self.state] = {}
@@ -319,19 +328,19 @@ class Task:
 
     def cancel_timeout(self, name: str):
         if name in self.timeouts:
-            self.tp.tm.cancel_timeout(name)
+            self.tp.tm.cancel_timeout(str(self.metadata["chamber"]) + "/" + name)
 
     def pause_timeout(self, name: str):
         if name in self.timeouts:
-            self.tp.tm.pause_timeout(name)
+            self.tp.tm.pause_timeout(str(self.metadata["chamber"]) + "/" + name)
 
     def resume_timeout(self, name: str):
         if name in self.timeouts:
-            self.tp.tm.resume_timeout(name)
+            self.tp.tm.resume_timeout(str(self.metadata["chamber"]) + "/" + name)
 
     def extend_timeout(self, name: str, timeout: float):
         if name in self.timeouts:
-            self.tp.tm.extend_timeout(name, timeout)
+            self.tp.tm.extend_timeout(str(self.metadata["chamber"]) + "/" + name, timeout)
 
     def log_event(self, event: PybEvents.TaskEvent):
         self.tp.tp_q.append(event)

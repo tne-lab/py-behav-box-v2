@@ -1,4 +1,5 @@
 import threading
+import traceback
 from abc import ABC
 from typing import List
 
@@ -6,6 +7,7 @@ import msgspec.msgpack
 
 from Events import PybEvents
 from Sources.Source import Source
+import Utilities.Exceptions as pyberror
 
 
 class ThreadSource(Source, ABC):
@@ -16,18 +18,27 @@ class ThreadSource(Source, ABC):
         self.run_stop = None
 
     def run(self):
-        self.run_stop = threading.Event()
-        self.run_thread = threading.Thread(target=self.run_)
-        self.run_thread.start()
-        self.initialize()
-
-    def run_(self):
         self.decoder = msgspec.msgpack.Decoder(type=List[PybEvents.subclass_union(PybEvents.PybEvent)])
         self.encoder = msgspec.msgpack.Encoder()
-        while not self.run_stop.is_set():
-            events = self.decoder.decode(self.queue.recv_bytes())
-            self.handle_events(events)
+        try:
+            self.run_stop = threading.Event()
+            self.run_thread = threading.Thread(target=self.run_)
+            self.run_thread.start()
+            self.initialize()
+        except pyberror.ComponentRegisterError as e:
+            self.queue.send_bytes(self.encoder.encode(PybEvents.ErrorEvent(type(e).__name__, traceback.format_exc(), metadata={"sid": self.sid})))
+        except BaseException as e:
+            self.queue.send_bytes(self.encoder.encode(PybEvents.ErrorEvent(type(e).__name__, traceback.format_exc(), metadata={"sid": self.sid})))
+            raise
 
-    def close_source(self) -> None:
-        self.run_stop.set()
-        self.run_thread.join()
+    def run_(self):
+        try:
+            while True:
+                events = self.decoder.decode(self.queue.recv_bytes())
+                if not self.handle_events(events):
+                    return
+        except pyberror.ComponentRegisterError as e:
+            self.queue.send_bytes(self.encoder.encode(PybEvents.ErrorEvent(type(e).__name__, traceback.format_exc(), metadata={"sid": self.sid})))
+        except BaseException as e:
+            self.queue.send_bytes(self.encoder.encode(PybEvents.ErrorEvent(type(e).__name__, traceback.format_exc(), metadata={"sid": self.sid})))
+            raise

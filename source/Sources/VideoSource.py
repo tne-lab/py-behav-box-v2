@@ -1,4 +1,6 @@
 import asyncio
+import concurrent.futures
+from asyncio import Future
 from collections import deque
 import time
 from typing import Any
@@ -126,11 +128,12 @@ class VideoSource(ThreadSource):
         self.read_times = {}
         self.tasks = {}
         self.loop = None
+        self.app = None
 
     def initialize(self):
-        app = QApplication([])
+        self.app = QApplication([])
         # app.setStyleSheet(qdarkstyle.load_stylesheet_pyqt())
-        app.setStyle(QStyleFactory.create("Cleanlooks"))
+        self.app.setStyle(QStyleFactory.create("Cleanlooks"))
         mw = QMainWindow()
         mw.setWindowTitle('Camera GUI')
         # mw.setWindowFlags(QtCore.Qt.FramelessWindowHint)
@@ -148,7 +151,7 @@ class VideoSource(ThreadSource):
         self.screen_width = int(self.screen_width)
         mw.setGeometry(0, 0, self.screen_width, self.screen_height)
         mw.show()
-        asyncio.set_event_loop(qasync.QEventLoop(app))
+        asyncio.set_event_loop(qasync.QEventLoop(self.app))
         self.loop = asyncio.get_event_loop()
         self.loop.run_forever()
 
@@ -198,19 +201,20 @@ class VideoSource(ThreadSource):
         del self.tasks[component_id]
 
     def close_source(self):
-        self.available = False
+        futures = []
+        for comp in self.components:
+            futures.append(self.close_component(comp))
+        concurrent.futures.wait(futures, return_when=concurrent.futures.ALL_COMPLETED)
+        self.app.exit()
 
-    def close_component(self, component_id: str) -> None:
-        asyncio.run_coroutine_threadsafe(self.close_component_async(component_id), loop=self.loop)
+    def close_component(self, component_id: str) -> Future:
+        return asyncio.run_coroutine_threadsafe(self.close_component_async(component_id), loop=self.loop)
 
     async def close_component_async(self, component_id):
         if component_id in self.writers:
             await self.stop_record(component_id)
-        self.cameras[component_id].stop()
+        await self.cameras[component_id].stop()
         self.ml.removeWidget(self.cameras[component_id].get_video_frame())
         self.cameras[component_id].get_video_frame().deleteLater()
         del self.cameras[component_id]
         del self.fr[component_id]
-
-    def is_available(self):
-        return True

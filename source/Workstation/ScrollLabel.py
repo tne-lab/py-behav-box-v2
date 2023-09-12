@@ -1,3 +1,5 @@
+from functools import partial
+
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 
@@ -33,7 +35,7 @@ class ScrollLabel(QScrollArea):
     # the setText method
     def setText(self, text):
         # setting text to the label
-        self.label.setText(text)
+        QTimer.singleShot(0, partial(self.label.setText, text))
 
     def text(self):
         return self.label.text()

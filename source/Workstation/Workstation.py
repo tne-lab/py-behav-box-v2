@@ -25,13 +25,10 @@ import math
 from GUIs import Colors
 import pygame
 
-import Utilities.Exceptions as pyberror
-
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 import os
 import ast
-import traceback
 from screeninfo import get_monitors
 
 
@@ -58,13 +55,13 @@ class Workstation:
         self.qui_events_queue = None
         self.refresh_gui = True
         self.tp = None
-        self.encoder = msgspec.msgpack.Encoder()
-        self.decoder = msgspec.msgpack.Decoder(type=List[PybEvents.subclass_union(PybEvents.PybEvent)])
+        self.encoder = msgspec.msgpack.Encoder(enc_hook=PybEvents.enc_hook)
+        self.decoder = msgspec.msgpack.Decoder(type=List[PybEvents.subclass_union(PybEvents.PybEvent)], dec_hook=PybEvents.dec_hook)
 
         # Core application details
         QCoreApplication.setOrganizationName("TNEL")
         QCoreApplication.setOrganizationDomain("tnelab.org")
-        QCoreApplication.setApplicationName("Pybehav")
+        QCoreApplication.setApplicationName("Pybehave")
 
         # Load information from settings or set defaults
         desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
@@ -79,7 +76,7 @@ class Workstation:
 
         os.environ['SDL_VIDEO_WINDOW_POS'] = '%i,%i' % offset  # Position the pygame window
         pygame.init()
-        pygame.display.set_caption("Pybehav")
+        pygame.display.set_caption("Pybehave")
 
         # Store the GUI refresh state
         if settings.contains("refresh_gui"):
@@ -125,6 +122,7 @@ class Workstation:
                 segs = code.split('(', 1)
                 source_type = getattr(importlib.import_module("Sources." + segs[0]), segs[0])
                 self.sources[name] = source_type(*eval("(" + segs[1]))
+                self.sources[name].sid = name
         else:
             settings.setValue("sources", '{}')
         source_connections = {}
@@ -187,21 +185,27 @@ class Workstation:
                     self.ed = QMessageBox()
                     self.ed.setIcon(QMessageBox.Critical)
                     self.ed.setWindowTitle("Error adding task")
-                    if isinstance(event.error, pyberror.ComponentRegisterError):
-                        self.ed.setText("A Component failed to register\n" + traceback.format_exc())
-                    elif isinstance(event.error, pyberror.SourceUnavailableError):
+                    if event.error == "ComponentRegisterError":
+                        self.ed.setText("A Component failed to register\n" + event.traceback)
+                    elif event.error == "SourceUnavailableError":
                         self.ed.setText("A requested Source is currently unavailable")
-                    elif isinstance(event.error, pyberror.MalformedProtocolError):
-                        self.ed.setText("Error raised when parsing Protocol file\n" + traceback.format_exc())
-                    elif isinstance(event.error, pyberror.MalformedAddressFileError):
-                        self.ed.setText("Error raised when parsing AddressFile\n" + traceback.format_exc())
-                    elif isinstance(event.error, pyberror.InvalidComponentTypeError):
+                    elif event.error == "MalformedProtocolError":
+                        self.ed.setText("Error raised when parsing Protocol file\n" + event.traceback)
+                    elif event.error == "MalformedAddressFileError":
+                        self.ed.setText("Error raised when parsing AddressFile\n" + event.traceback)
+                    elif event.error == "InvalidComponentTypeError":
                         self.ed.setText("A Component in the AddressFile is an invalid type")
+                    elif "sid" in event.metadata:
+                        self.ed.setText("Unhandled exception in source '" + event.metadata["sid"] + "'\n" + event.traceback)
                     else:
-                        self.ed.setText("Unhandled exception\n" + traceback.format_exc())
+                        self.ed.setText("Unhandled exception\n" + event.traceback)
                     self.ed.setStandardButtons(QMessageBox.Ok)
                     self.ed.show()
                     self.wsg.remove_task(event.metadata["chamber"])
+            elif isinstance(event, PybEvents.UnavailableSourceEvent):
+                self.sources[event.sid].available = False
+                if self.wsg.sd is not None and self.wsg.sd.isVisible():
+                    self.wsg.sd.update_source_availability()
 
     def add_task(self, chamber: int, task_name: str, subject_name: str, address_file: str, protocol: str, task_event_loggers: str) -> None:
         """
@@ -279,34 +283,37 @@ class Workstation:
                         # Create the GUI
                         self.guis[event.chamber] = gui(event, self.task_gui.subsurface(col * self.w, row * self.h, self.w, self.h), self)
                     elif isinstance(event, PybEvents.TaskEvent):
-                        for widget in self.wsg.chambers[event.chamber].widgets:
-                            if isinstance(widget, EventWidget):
-                                widget.handle_event(event)
-                        print(str(event))
-                        self.guis[event.chamber].handle_event(event)
-                        col = event.chamber % self.n_col
-                        row = math.floor(event.chamber / self.n_col)
-                        rect = pygame.Rect((col * self.w, row * self.h, self.w, self.h))
-                        if isinstance(event, PybEvents.InitEvent) or isinstance(event, PybEvents.StartEvent):
-                            self.guis[event.chamber].complete = False
-                            self.guis[event.chamber].draw()
-                            self.gui_updates.append(rect)
-                        elif isinstance(event, PybEvents.TaskCompleteEvent):
-                            self.guis[event.chamber].complete = True
-                            self.guis[event.chamber].draw()
-                            self.gui_updates.append(rect)
-                        elif isinstance(event, PybEvents.ClearEvent):
-                            pygame.draw.rect(self.task_gui, Colors.black, rect)
-                            self.gui_updates.append(rect)
-                        else:
-                            if isinstance(self.guis[event.chamber], SequenceGUI):
-                                elements = self.guis[event.chamber].get_all_elements()
+                        if event.chamber in self.guis:
+                            for widget in self.wsg.chambers[event.chamber].widgets:
+                                if isinstance(widget, EventWidget):
+                                    widget.handle_event(event)
+                            self.guis[event.chamber].handle_event(event)
+                            col = event.chamber % self.n_col
+                            row = math.floor(event.chamber / self.n_col)
+                            rect = pygame.Rect((col * self.w, row * self.h, self.w, self.h))
+                            if isinstance(event, PybEvents.InitEvent) or isinstance(event, PybEvents.StartEvent):
+                                self.guis[event.chamber].complete = False
+                                self.guis[event.chamber].draw()
+                                self.gui_updates.append(rect)
+                            elif isinstance(event, PybEvents.TaskCompleteEvent):
+                                self.guis[event.chamber].complete = True
+                                self.guis[event.chamber].draw()
+                                self.gui_updates.append(rect)
+                                self.wsg.chambers[event.chamber].stop(False)
+                            elif isinstance(event, PybEvents.ClearEvent) and event.del_loggers:
+                                pygame.draw.rect(self.task_gui, Colors.black, rect)
+                                self.gui_updates.append(rect)
+                                self.wsg.remove_task(event.chamber + 1)
+                                del self.guis[event.chamber]
                             else:
-                                elements = self.guis[event.chamber].elements
-                            for element in elements:
-                                if element.has_updated():
-                                    element.draw()
-                                    self.gui_updates.append(element.rect.move(col * self.w, row * self.h))
+                                if isinstance(self.guis[event.chamber], SequenceGUI):
+                                    elements = self.guis[event.chamber].get_all_elements()
+                                else:
+                                    elements = self.guis[event.chamber].elements
+                                for element in elements:
+                                    if element.has_updated():
+                                        element.draw()
+                                        self.gui_updates.append(element.rect.move(col * self.w, row * self.h))
                     elif isinstance(event, PybEvents.HeartbeatEvent) or isinstance(event, PybEvents.PygameEvent):
                         for key in self.guis.keys():
                             self.guis[key].handle_event(event)
@@ -325,23 +332,3 @@ class Workstation:
                             pygame.display.update(self.gui_updates)
                             self.gui_updates = []
                         self.last_frame = time.perf_counter()
-
-    def exit_handler(self, *args):
-        self.loop.run_until_complete(self.exit_handler_())
-
-    async def exit_handler_(self):  # Make async
-        """
-        Callback for when py-behav is closed.
-        """
-        self.heartbeat_task.cancel()
-        self.gui_event_task.cancel()
-        for chamber in self.tasks.keys():  # Stop all Tasks
-            if self.tasks[chamber].started:
-                self.queue.put_nowait(PybEvents.StopEvent(chamber))
-            done = self.remove_task(chamber)
-            await done.wait()
-        self.queue.put_nowait(PybEvents.ExitEvent())
-        await self.main_task
-        self.gui_task.cancel()
-        for src in self.sources:  # Close all Sources
-            self.sources[src].close_source()

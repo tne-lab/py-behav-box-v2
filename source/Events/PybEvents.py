@@ -1,4 +1,7 @@
 from __future__ import annotations
+
+import multiprocessing
+from multiprocessing.connection import PipeConnection
 from typing import Dict, Any
 
 import msgspec
@@ -24,16 +27,49 @@ def subclass_union(cls: typing.Type[T]) -> typing.Type[T]:
     return typing.Union[tuple(classes)]
 
 
+def enc_hook(obj: Any) -> Any:
+    if isinstance(obj, PipeConnection):
+        # Pickle the connection
+        return multiprocessing.context.reduction.ForkingPickler.dumps(obj)
+    else:
+        # Raise a NotImplementedError for other types
+        raise NotImplementedError(f"Objects of type {type(obj)} are not supported")
+
+
+def dec_hook(type: typing.Type, obj: Any) -> Any:
+    # `type` here is the value of the custom type annotation being decoded.
+    if type is PipeConnection:
+        # Convert ``obj`` (which should be a ``tuple``) to a complex
+        return multiprocessing.context.reduction.ForkingPickler.loads(obj)
+    else:
+        # Raise a NotImplementedError for other types
+        raise NotImplementedError(f"Objects of type {type} are not supported")
+
+
 class PybEvent(msgspec.Struct, kw_only=True, tag=True, omit_defaults=True, array_like=True):
     metadata: Dict = {}
 
 
 class ErrorEvent(PybEvent):
-    error: BaseException
+    error: str
+    traceback: str
 
 
 class CloseSourceEvent(PybEvent):
     pass
+
+
+class UnavailableSourceEvent(PybEvent):
+    sid: str
+
+
+class AddSourceEvent(PybEvent):
+    sid: str
+    conn: PipeConnection
+
+
+class RemoveSourceEvent(PybEvent):
+    sid: str
 
 
 class AddTaskEvent(PybEvent):
@@ -133,6 +169,14 @@ class ClearEvent(TaskEvent):
 class ComponentUpdateEvent(TimedEvent):
     comp_id: str
     value: Any
+
+
+class ConstantsUpdateEvent(TaskEvent):
+    constants: Dict
+
+
+class ConstantRemoveEvent(TaskEvent):
+    constant: str
 
 
 class ComponentRegisterEvent(PybEvent):

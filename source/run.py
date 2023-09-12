@@ -1,5 +1,6 @@
+import multiprocessing
+
 if __name__ == '__main__':
-    import sys
     from Workstation.Workstation import Workstation
     import faulthandler
     import psutil
@@ -9,6 +10,7 @@ if __name__ == '__main__':
     p.nice(psutil.REALTIME_PRIORITY_CLASS)
 
     faulthandler.enable()
+    multiprocessing.allow_connection_pickling()
     desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
     if not os.path.exists("{}\\py-behav\\".format(desktop)):
         os.mkdir("{}\\py-behav\\".format(desktop))

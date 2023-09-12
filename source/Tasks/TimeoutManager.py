@@ -7,8 +7,9 @@ from threading import Thread
 
 class Timeout:
 
-    def __init__(self, name: str, duration: float, target, args):
+    def __init__(self, name: str, chamber: int, duration: float, target, args):
         self.name = name
+        self.chamber = str(chamber)
         self.duration = duration
         self.duration_ = self.duration
         self.target = target
@@ -70,16 +71,16 @@ class TimeoutManager(Thread):
                 event = self.timeout_queue.get(timeout=wait)
 
                 if isinstance(event, Timeout):
-                    self.timeouts[event.name] = event
+                    self.timeouts[event.chamber + "/" + event.name] = event
                     event.start()
 
                 if isinstance(event, tuple):
                     if event[0] == "Reset":
-                        self.timeouts[event[1].name] = event[1]
-                        self.timeouts[event[1].name].start()
+                        self.timeouts[event[1].chamber + "/" + event[1].name] = event[1]
+                        self.timeouts[event[1].chamber + "/" + event[1].name].start()
                     elif event[0] == "Quit":
                         return
-                    if event[1] in self.timeouts:
+                    elif event[1] in self.timeouts:
                         if event[0] == "Cancel":
                             del self.timeouts[event[1]]
                         elif event[0] == "Pause":

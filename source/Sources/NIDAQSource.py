@@ -97,6 +97,3 @@ class NIDAQSource(Source):
                                                     samps_per_chan=msg.shape[1])
             self.ao_stream.write_many_sample(output)
             self.ao_task.start()
-
-    def is_available(self):
-        return True

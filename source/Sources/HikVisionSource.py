@@ -1,4 +1,5 @@
 import threading
+import time
 
 from hikload.hikvisionapi.classes import HikvisionServer
 import hikload.hikvisionapi.utils as hikutils
@@ -91,7 +92,7 @@ class HikVisionSource(Source):
 
     def download(self, component_id):
         output_folder = self.out_paths[component_id]
-        name = self.components[component_id].name
+        name = time.time_ns()
         if isinstance(self.components[component_id].address, list):
             addresses = self.components[component_id].address
         else:
@@ -114,8 +115,5 @@ class HikVisionSource(Source):
             dwnld = self.server.ContentMgmt.search.downloadURI(vid['mediaSegmentDescriptor']['playbackURI'])
             if not os.path.exists(output_folder):
                 os.makedirs(output_folder)
-            with open(output_folder + name + "_" + addr + ".mp4", 'wb') as file:
+            with open(output_folder + str(name) + "_" + addr + ".mp4", 'wb') as file:
                 file.write(dwnld.content)
-
-    def is_available(self):
-        return True
