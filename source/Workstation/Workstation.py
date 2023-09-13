@@ -4,6 +4,7 @@ import multiprocessing
 import sys
 import threading
 import time
+from functools import partial
 from multiprocessing.dummy.connection import Connection
 from typing import TYPE_CHECKING, Type, List
 
@@ -286,7 +287,7 @@ class Workstation:
                         if event.chamber in self.guis:
                             for widget in self.wsg.chambers[event.chamber].widgets:
                                 if isinstance(widget, EventWidget):
-                                    widget.handle_event(event)
+                                    widget.emitter.emit(event)
                             self.guis[event.chamber].handle_event(event)
                             col = event.chamber % self.n_col
                             row = math.floor(event.chamber / self.n_col)

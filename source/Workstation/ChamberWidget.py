@@ -153,7 +153,7 @@ class ChamberWidget(QGroupBox):
         self.widget_params = widget_params
         for widget in widgets:
             widget.set_chamber(self)
-            self.chamber.addWidget(widget.get_widget())
+            self.chamber.addWidget(widget)
 
         return self
 

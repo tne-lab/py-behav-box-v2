@@ -27,7 +27,7 @@ class CSVEventLogger(FileEventLogger):
         if len(self.task.initial_constants) > 0:
             self.log_file.write("SubjectConfiguration\n")
             for key, value in self.task.initial_constants.items():
-                self.log_file.write("{},{}\n".format(key, value))
+                self.log_file.write("{},\"{}\"\n".format(key, value))
         self.log_file.write("\n")
         self.log_file.write("Trial,Time,Type,Code,State,Metadata\n")
 

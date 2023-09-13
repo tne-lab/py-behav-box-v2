@@ -2,7 +2,7 @@ import importlib
 import os
 
 from PyQt5 import QtCore
-from PyQt5.QtCore import QSettings
+from PyQt5.QtCore import QSettings, QTimer, pyqtSlot
 from PyQt5.QtWidgets import QGroupBox, QHBoxLayout, QVBoxLayout, QPushButton, QWidget, QCheckBox, \
     QListWidget, QListWidgetItem, QComboBox
 
@@ -19,7 +19,10 @@ class SubjectConfigWidget(EventWidget):
         self.constant_names = []
         self.combos = []
 
+        self.layout = QVBoxLayout(self)
         self.widget = QGroupBox('Subject Configuration')
+        self.layout.addWidget(self.widget)
+        self.setLayout(self.layout)
         self.config_layout = QVBoxLayout(self.widget)
         self.controls_layout = QHBoxLayout(self.widget)
         self.protocol_specific = QCheckBox("Protocol Specific")
@@ -59,14 +62,16 @@ class SubjectConfigWidget(EventWidget):
         self.settings = None
         self.names = []
 
+    @pyqtSlot()
     def handle_event(self, event: PybEvents.PybEvent):
         super(SubjectConfigWidget, self).handle_event(event)
         if isinstance(event, PybEvents.OutputFileChangedEvent):
-            self.constants_value_list.clear()
-            self.constants_name_list.clear()
-            self.load_keys()
+            QTimer.singleShot(0, lambda: self.load_keys())
 
     def load_keys(self):
+        self.constants_value_list.clear()
+        self.constants_name_list.clear()
+        self.names = []
         desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
         self.settings = QSettings(desktop + "/py-behav/pybehave.ini", QSettings.IniFormat)
         self.settings.beginGroup("subjectConfig/" + self.cw.task_name.currentText() + "/" + self.cw.subject.text())
@@ -74,6 +79,7 @@ class SubjectConfigWidget(EventWidget):
         constants = {}
         for key in keys:
             options = list(set(self.constant_names) - set(self.names))
+            print(options)
             combo = QComboBox()
             self.combos.append(combo)
             combo.addItems(options)
@@ -99,7 +105,7 @@ class SubjectConfigWidget(EventWidget):
         # Get all default values for task constants
         for key in task.get_constants():
             self.constant_names.append(key)
-        self.load_keys()
+        QTimer.singleShot(0, self.load_keys)
 
     def get_widget(self) -> QWidget:
         return self.widget

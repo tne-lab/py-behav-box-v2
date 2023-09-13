@@ -1,4 +1,4 @@
-from abc import abstractmethod
+from PyQt5.QtCore import pyqtSlot, pyqtSignal
 
 from Events import PybEvents
 from Events.LoggerEvent import LoggerEvent
@@ -6,11 +6,14 @@ from Events.Widget import Widget
 
 
 class EventWidget(Widget):
+    emitter = pyqtSignal(PybEvents.PybEvent)
 
     def __init__(self, name: str):
         super(EventWidget, self).__init__(name)
         self.event_count = 0
+        self.emitter.connect(lambda event: self.handle_event(event))
 
+    @pyqtSlot()
     def handle_event(self, event: PybEvents.PybEvent):
         if isinstance(event, PybEvents.StartEvent):
             self.start_()
