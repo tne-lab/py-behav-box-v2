@@ -160,6 +160,7 @@ class TaskProcess(Process):
         del self.task_event_loggers[event.chamber][event.logger_name]
 
     def output_file_changed(self, event: PybEvents.OutputFileChangedEvent):
+        self.tasks[event.chamber].metadata["subject"] = event.subject
         for q in self.source_buffers.values():
             q.append(event)
         for el in self.task_event_loggers[event.chamber].values():  # Allow all EventLoggers to handle the change

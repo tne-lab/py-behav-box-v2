@@ -76,6 +76,8 @@ class Source(Process):
                 return False
             elif isinstance(event, PybEvents.OutputFileChangedEvent):
                 self.output_file_changed(event)
+            elif isinstance(event, PybEvents.ConstantsUpdateEvent):
+                self.constants_updated(event)
         return True
 
     def register_component_(self, event: PybEvents.ComponentRegisterEvent):
@@ -107,6 +109,9 @@ class Source(Process):
         pass
 
     def output_file_changed(self, event: PybEvents.OutputFileChangedEvent) -> None:
+        pass
+
+    def constants_updated(self, event: PybEvents.ConstantsUpdateEvent) -> None:
         pass
 
     def unavailable(self):

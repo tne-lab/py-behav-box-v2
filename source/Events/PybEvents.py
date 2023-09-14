@@ -123,6 +123,7 @@ class Loggable(TimedEvent):
 
 class OutputFileChangedEvent(TaskEvent):
     output_file: str
+    subject: str
 
 
 class OEEvent(Loggable):

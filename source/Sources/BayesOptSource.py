@@ -67,6 +67,7 @@ class BayesOptSource(ThreadSource):
         self.output_paths = {}
         self.metadata = {}
         self.data_queue = None
+        self.constants = {}
 
     def initialize(self):
         self.data_queue = queue.Queue()
@@ -143,6 +144,11 @@ class BayesOptSource(ThreadSource):
 
     def output_file_changed(self, event: PybEvents.OutputFileChangedEvent) -> None:
         self.output_paths[event.chamber] = event.output_file
+
+    def constants_updated(self, event: PybEvents.ConstantsUpdateEvent) -> None:
+        for cid in self.component_chambers:
+            if self.component_chambers[cid] == event.chamber:
+                self.metadata[cid].update(event.constants)
 
     def posterior_plot(self, component_id, num_steps=120):  # Show plot in separate thread?
         grid_x, grid_y = np.meshgrid(np.linspace(0, 1, num_steps), np.linspace(0, 1, num_steps), indexing='ij')

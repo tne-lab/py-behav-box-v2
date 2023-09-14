@@ -293,7 +293,7 @@ class ChamberWidget(QGroupBox):
         """
         File for handling changes to the desired output directory
         """
-        self.workstation.mainq.send_bytes(self.workstation.encoder.encode(PybEvents.OutputFileChangedEvent(int(self.chamber_id.text()) - 1, self.output_file_path.text())))
+        self.workstation.mainq.send_bytes(self.workstation.encoder.encode(PybEvents.OutputFileChangedEvent(int(self.chamber_id.text()) - 1, self.output_file_path.text(), self.subject.text())))
 
     def contextMenuEvent(self, _):
         """
