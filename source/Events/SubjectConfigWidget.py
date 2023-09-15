@@ -66,11 +66,12 @@ class SubjectConfigWidget(EventWidget):
     def handle_event(self, event: PybEvents.PybEvent):
         super(SubjectConfigWidget, self).handle_event(event)
         if isinstance(event, PybEvents.OutputFileChangedEvent):
-            QTimer.singleShot(0, lambda: self.load_keys())
+            self.load_keys()
 
     def load_keys(self):
         self.constants_value_list.clear()
         self.constants_name_list.clear()
+        self.combos = []
         self.names = []
         desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
         self.settings = QSettings(desktop + "/py-behav/pybehave.ini", QSettings.IniFormat)
@@ -79,7 +80,6 @@ class SubjectConfigWidget(EventWidget):
         constants = {}
         for key in keys:
             options = list(set(self.constant_names) - set(self.names))
-            print(options)
             combo = QComboBox()
             self.combos.append(combo)
             combo.addItems(options)
@@ -119,7 +119,6 @@ class SubjectConfigWidget(EventWidget):
         option = self.names.pop(index)
         self.add_option(option, index)
         self.combos.pop(index)
-        print(self.names)
         self.constants_value_list.takeItem(index)
         self.constants_name_list.takeItem(index)
         self.remove_button.setDisabled(True)
@@ -140,14 +139,12 @@ class SubjectConfigWidget(EventWidget):
         self.constants_value_list.setCurrentRow(len(self.combos)-1)
         self.remove_option(combo.currentText(), index)
         self.remove_button.setDisabled(True)
-        print(self.names)
 
     def on_value_clicked(self, _):
         self.constants_name_list.setCurrentRow(self.constants_value_list.currentRow())
         self.remove_button.setDisabled(False)
 
     def on_name_clicked(self, _):
-        print(self.constants_name_list.currentItem().text())
         self.constants_value_list.setCurrentRow(self.constants_name_list.currentRow())
         self.remove_button.setDisabled(False)
 
@@ -158,9 +155,7 @@ class SubjectConfigWidget(EventWidget):
             self.add_option(prev, index)
         self.constants_value_list.setCurrentRow(index)
         if len(self.constants_value_list.currentItem().text()) > 0:
-            print(self.constants_name_list.currentItem().text() + " " + prev)
             if self.combos[index].currentText() != prev and len(prev) > 0:
-                print("edit")
                 self.settings.remove(prev)
                 self.cw.workstation.mainq.send_bytes(
                     self.cw.workstation.encoder.encode(PybEvents.ConstantRemoveEvent(int(self.cw.chamber_id.text()) - 1,
@@ -180,7 +175,6 @@ class SubjectConfigWidget(EventWidget):
                 self.cw.workstation.mainq.send_bytes(
                     self.cw.workstation.encoder.encode(PybEvents.ConstantsUpdateEvent(int(self.cw.chamber_id.text()) - 1,
                                                        {self.combos[index].currentText(): self.constants_value_list.currentItem().text()})))
-        print(self.names)
 
     def remove_option(self, option, index):
         for i, combo in enumerate(self.combos):

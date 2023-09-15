@@ -128,6 +128,7 @@ class BayesOptSource(ThreadSource):
             subject_folder = self.output_paths[self.component_chambers[component_id]]
             subject_folder = subject_folder[:subject_folder[:-1].rfind("/")]
             data_files = glob.glob('**/{}_*.bayes'.format(component_id), root_dir=subject_folder + "/Model", recursive=True)
+            print(self.metadata[component_id])
             if len(data_files) == 0:
                 self.bayes_objs[component_id].initialize(metadata=self.metadata[component_id])
             else:
@@ -146,6 +147,8 @@ class BayesOptSource(ThreadSource):
         self.output_paths[event.chamber] = event.output_file
 
     def constants_updated(self, event: PybEvents.ConstantsUpdateEvent) -> None:
+        for key in event.constants:
+            event.constants[key] = eval(event.constants[key])
         for cid in self.component_chambers:
             if self.component_chambers[cid] == event.chamber:
                 self.metadata[cid].update(event.constants)

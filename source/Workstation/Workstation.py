@@ -182,6 +182,7 @@ class Workstation:
             if isinstance(event, PybEvents.StopEvent):
                 self.wsg.chambers[event.chamber].stop(from_click=False)
             elif isinstance(event, PybEvents.ErrorEvent):
+                print(event.traceback)
                 if "chamber" in event.metadata:
                     self.ed = QMessageBox()
                     self.ed.setIcon(QMessageBox.Critical)
