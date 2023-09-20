@@ -34,6 +34,15 @@ class StimJim(Stimmer):
             stimulus += "{}".format(durs[i])
         self.write(stimulus)
 
+    def update_parameters(self, per: int, amps: np.ndarray, durs: list[int]):
+        stimulus = "F{}".format(per)
+        for i in range(amps.shape[1]):
+            stimulus += "; "
+            for j in range(amps.shape[0]):
+                stimulus += "{},".format(amps[j, i])
+            stimulus += "{}".format(durs[i])
+        self.write(stimulus)
+
     def start(self, pnum: int, stype: str = "T") -> None:
         self.write("{}{}".format(stype, pnum))
 

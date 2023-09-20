@@ -156,7 +156,7 @@ class BayesOptSource(ThreadSource):
     def posterior_plot(self, component_id, num_steps=120):  # Show plot in separate thread?
         grid_x, grid_y = np.meshgrid(np.linspace(0, 1, num_steps), np.linspace(0, 1, num_steps), indexing='ij')
         values = np.concatenate([grid_x.reshape(-1, 1), grid_y.reshape(-1, 1)], axis=1)
-        post = self.bayes_objs[component_id].predict(values, output_index=component_id)
+        post = self.bayes_objs[component_id].predict(values, output_index=0)
         bounds = self.bayes_objs[component_id].bounds
         grid_x = grid_x * (bounds[1][0] - bounds[0][0]) + bounds[0][0]
         grid_y = grid_y * (bounds[1][1] - bounds[0][1]) + bounds[0][1]
@@ -176,5 +176,5 @@ class BayesOptSource(ThreadSource):
         fig.subplots_adjust(right=0.9)
         cbar_ax = fig.add_axes([0.93, 0.15, 0.01, 0.7])
         cbar = fig.colorbar(CS, cax=cbar_ax)
-        cbar.ax.set_title(self.bayes_objs[component_id].output_labels[2])
+        cbar.ax.set_title(self.bayes_objs[component_id].output_labels[0])
         plt.pause(0.005)
