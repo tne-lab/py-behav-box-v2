@@ -6,12 +6,22 @@ from typing import Dict, Any
 
 import msgspec
 import typing
+import msgpack
+import msgpack_numpy as m
+
+import numpy as np
 
 from Events.LoggerEvent import LoggerEvent
 from Components.Component import Component
 
 
 T = typing.TypeVar("T")
+
+
+class NumpySerializedRepresentation(msgspec.Struct, gc=False, array_like=True):
+    dtype: str
+    shape: tuple
+    data: bytes
 
 
 def subclass_union(cls: typing.Type[T]) -> typing.Type[T]:
@@ -27,8 +37,16 @@ def subclass_union(cls: typing.Type[T]) -> typing.Type[T]:
     return typing.Union[tuple(classes)]
 
 
+NUMPY_TYPE_CODE = 1
+numpy_array_encoder = msgspec.msgpack.Encoder()
+numpy_array_decoder = msgspec.msgpack.Decoder(type=NumpySerializedRepresentation)
+
+
 def enc_hook(obj: Any) -> Any:
-    if isinstance(obj, PipeConnection):
+    if isinstance(obj, np.ndarray):
+        return msgspec.msgpack.Ext(1, numpy_array_encoder.encode(
+            NumpySerializedRepresentation(dtype=obj.dtype.str, shape=obj.shape, data=obj.data)))
+    elif isinstance(obj, PipeConnection):
         # Pickle the connection
         return multiprocessing.context.reduction.ForkingPickler.dumps(obj)
     else:
@@ -36,14 +54,24 @@ def enc_hook(obj: Any) -> Any:
         raise NotImplementedError(f"Objects of type {type(obj)} are not supported")
 
 
-def dec_hook(type: typing.Type, obj: Any) -> Any:
+def dec_hook(typ: typing.Type, obj: Any) -> Any:
     # `type` here is the value of the custom type annotation being decoded.
-    if type is PipeConnection:
+    if typ is PipeConnection:
         # Convert ``obj`` (which should be a ``tuple``) to a complex
         return multiprocessing.context.reduction.ForkingPickler.loads(obj)
     else:
         # Raise a NotImplementedError for other types
-        raise NotImplementedError(f"Objects of type {type} are not supported")
+        raise NotImplementedError(f"Objects of type {typ} are not supported")
+
+
+def ext_hook(code: int, data: memoryview) -> Any:
+    if code == NUMPY_TYPE_CODE:
+        serialized_array_rep = numpy_array_decoder.decode(data)
+        return np.frombuffer(serialized_array_rep.data, dtype=serialized_array_rep.dtype).reshape(
+            serialized_array_rep.shape)
+    else:
+        # Raise a NotImplementedError for other extension type codes
+        raise NotImplementedError(f"Extension type code {code} is not supported")
 
 
 class PybEvent(msgspec.Struct, kw_only=True, tag=True, omit_defaults=True, array_like=True):
@@ -124,13 +152,6 @@ class Loggable(TimedEvent):
 class OutputFileChangedEvent(TaskEvent):
     output_file: str
     subject: str
-
-
-class OEEvent(Loggable):
-    event_type: str
-
-    def format(self) -> LoggerEvent:
-        return LoggerEvent(self, self.event_type, 0, self.timestamp)
 
 
 class InfoEvent(Loggable):

@@ -107,9 +107,6 @@ class SubjectConfigWidget(EventWidget):
             self.constant_names.append(key)
         QTimer.singleShot(0, self.load_keys)
 
-    def get_widget(self) -> QWidget:
-        return self.widget
-
     def remove_constant(self):
         index = self.constants_value_list.currentRow()
         self.settings.remove(self.combos[index].currentText())

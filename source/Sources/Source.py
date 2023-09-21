@@ -49,8 +49,8 @@ class Source(Process):
         pass
 
     def run(self):
-        self.decoder = msgspec.msgpack.Decoder(type=List[PybEvents.subclass_union(PybEvents.PybEvent)])
-        self.encoder = msgspec.msgpack.Encoder()
+        self.decoder = msgspec.msgpack.Decoder(type=List[PybEvents.subclass_union(PybEvents.PybEvent)], dec_hook=PybEvents.dec_hook, ext_hook=PybEvents.ext_hook)
+        self.encoder = msgspec.msgpack.Encoder(enc_hook=PybEvents.enc_hook)
         try:
             self.initialize()
             while True:
