@@ -92,6 +92,7 @@ class BayesOptSource(ThreadSource):
                         with open(subject_folder + "/Model/" + datum + "_" + str(time.time_ns()) + ".bayes", "wb") as f:
                             pickle.dump({"x": self.bayes_objs[datum].train_x, "y": self.bayes_objs[datum].train_y}, f)
                 else:
+                    # Add correct list comprehension
                     if datum["id"] in tensors:
                         tensors[datum["id"]][0].append(datum["trial"])
                         for key in datum["x"]:

@@ -6,8 +6,6 @@ from typing import Dict, Any
 
 import msgspec
 import typing
-import msgpack
-import msgpack_numpy as m
 
 import numpy as np
 
