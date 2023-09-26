@@ -57,6 +57,7 @@ class Workstation:
         self.tp = None
         self.encoder = msgspec.msgpack.Encoder(enc_hook=PybEvents.enc_hook)
         self.decoder = msgspec.msgpack.Decoder(type=List[PybEvents.subclass_union(PybEvents.PybEvent)], dec_hook=PybEvents.dec_hook)
+        self.gui_stop_event = None
 
         # Core application details
         QCoreApplication.setOrganizationName("TNEL")
@@ -140,13 +141,11 @@ class Workstation:
         self.tp = TaskProcess(tpq, gui_out, source_connections)
         self.tp.start()
         self.gui_task = threading.Thread(target=self.update_gui)
+        self.gui_stop_event = threading.Event()
         self.gui_task.start()
-        self.gui_event_task = threading.Thread(target=self.gui_event_loop, args=[gui_events_out])
+        self.gui_event_task = threading.Thread(target=self.gui_event_loop, args=[gui_events_out, self.gui_stop_event])
         self.gui_event_task.start()
 
-        # atexit.register(lambda: self.exit_handler())
-        # signal.signal(signal.SIGTERM, self.exit_handler)
-        # signal.signal(signal.SIGINT, self.exit_handler)
         sys.exit(app.exec())
 
     def compute_chambergui(self) -> None:
@@ -264,10 +263,13 @@ class Workstation:
         """
         self.mainq.send_bytes(self.encoder.encode(PybEvents.ClearEvent(chamber, del_loggers)))
 
-    def gui_event_loop(self, out: Connection) -> None:
-        while True:
-            event = pygame.event.wait()
-            out.send_bytes(self.encoder.encode([PybEvents.PygameEvent(event.type, event.__dict__)]))
+    def gui_event_loop(self, out: Connection, stop_event: threading.Event) -> None:
+        while not stop_event.is_set():
+            event = pygame.event.wait(100)  # millisecond timeout
+
+            if (event.type != pygame.NOEVENT):
+                send_event = PybEvents.PygameEvent(event.type, event.__dict__)
+                out.send_bytes(self.encoder.encode([send_event]))
 
     def update_gui(self) -> None:
         conns = [self.qui_events_queue, self.gui_queue]
@@ -327,8 +329,37 @@ class Workstation:
                                 if element.has_updated():
                                     element.draw()
                                     self.gui_updates.append(element.rect.move(col * self.w, row * self.h))
+                    elif isinstance(event, PybEvents.ExitEvent):
+                        return
                     if time.perf_counter() - self.last_frame > 1 / self.fr:
                         if len(self.gui_updates) > 0:
                             pygame.display.update(self.gui_updates)
                             self.gui_updates = []
                         self.last_frame = time.perf_counter()
+
+    def exit_handler(self, *args):
+        """
+        Callback for when py-behav is closed. 
+            - Sends an Exit event to the main q and joins the TP process.
+            - The TP process tells all sources to close, and the source processes are joined here.
+            - Closes the workstation GUI
+            - Joins the update_gui and gui_event_loop threads
+            - Quits pygame
+        """
+        self.mainq.send_bytes(self.encoder.encode(PybEvents.ExitEvent()))
+        self.tp.join()
+
+        # Join source processes. Assumes all source have terminated
+        for source in self.sources.values():
+            source.join()
+
+        self.wsg.close()
+
+        # Send exit event to main q and tell the GUI event thread to stop
+        self.gui_stop_event.set()
+
+        # Join threads
+        self.gui_event_task.join()
+        self.gui_task.join()
+
+        pygame.quit()

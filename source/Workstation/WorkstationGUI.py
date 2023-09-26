@@ -69,6 +69,9 @@ class WorkstationGUI(QWidget):
         self.move(0, 0)
         self.show()
 
+    def closeEvent(self, event):
+        self.workstation.exit_handler()
+
     def settings_dialog(self) -> None:
         # Opens the SettingsDialog for adjusting py-behav settings
         self.sd = SettingsDialog(self.workstation)
