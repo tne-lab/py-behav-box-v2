@@ -67,13 +67,13 @@ class Workstation:
         # Load information from settings or set defaults
         desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
         settings = QSettings(desktop + "/py-behav/pybehave.ini", QSettings.IniFormat)
-        # Store the position of the pygame window
-        if settings.contains("pygame/offset"):
-            offset = ast.literal_eval(settings.value("pygame/offset"))
-        else:
-            m = get_monitors()[0]
-            offset = (m.width / 6, 30)
-            settings.setValue("pygame/offset", str(offset))
+        # Store the position of the pygame window 
+        # if settings.contains("pygame/offset"):
+        #     offset = ast.literal_eval(settings.value("pygame/offset")) - THIS BREAKS VIZTRACER for some reason
+        # else:
+        m = get_monitors()[0]
+        offset = (m.width / 6, 30)
+        settings.setValue("pygame/offset", str(offset))
 
         os.environ['SDL_VIDEO_WINDOW_POS'] = '%i,%i' % offset  # Position the pygame window
         pygame.init()
@@ -269,6 +269,7 @@ class Workstation:
 
             if (event.type != pygame.NOEVENT):
                 send_event = PybEvents.PygameEvent(event.type, event.__dict__)
+                # !viztracer: log_instant("gui-event-loop-send", scope='g', args={"trace_id": str(send_event.trace_id), "name": type(send_event).__name__})
                 out.send_bytes(self.encoder.encode([send_event]))
 
     def update_gui(self) -> None:
@@ -277,6 +278,7 @@ class Workstation:
             for ready in multiprocessing.connection.wait(conns):
                 events = self.decoder.decode(ready.recv_bytes())
                 for event in events:
+                    # !viztracer: log_instant("update-gui-rcv", scope='g', args={"trace_id": str(event.trace_id), "name": type(event).__name__})
                     if isinstance(event, PybEvents.AddTaskEvent):
                         gui = getattr(importlib.import_module("Local.GUIs." + event.task_name + "GUI"), event.task_name + "GUI")
                         # Position the GUI in pygame

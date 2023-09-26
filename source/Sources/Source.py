@@ -55,6 +55,9 @@ class Source(Process):
             self.initialize()
             while True:
                 events = self.decoder.decode(self.queue.recv_bytes())
+                for event in events:
+                    # !viztracer: log_instant("source_event_receive", scope='g', args={"trace_id": str(event.trace_id), "name": type(event).__name__})
+                    pass
                 if not self.handle_events(events):
                     return
         except pyberror.ComponentRegisterError as e:

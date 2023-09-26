@@ -86,9 +86,10 @@ class TaskProcess(Process):
                 else:
                     for r in ready:
                         event = self.decoder.decode(r.recv_bytes())
-                        # t = time.perf_counter()
+                        # !viztracer: log_instant("tp-handle-start", scope='g', args={"trace_id": str(event.trace_id), "name": type(event).__name__})
                         self.handle_event(event)
-                        # print(time.perf_counter() - t)
+                        # !viztracer: log_instant("tp-handle-end", scope='g', args={"trace_id": str(event.trace_id), "name": type(event).__name__})
+                        
                         while len(self.tp_q) > 0:
                             self.handle_event(self.tp_q.popleft())
                 for source in self.source_buffers:
@@ -103,6 +104,9 @@ class TaskProcess(Process):
                 self.guiq.send_bytes(self.encoder.encode(
                     PybEvents.ErrorEvent(type(e).__name__, traceback.format_exc())))
             if len(self.gui_out) > 0:
+                for event in self.gui_out:
+                    # !viztracer: log_instant("tp-gui-send", scope='g', args={"trace_id": str(event.trace_id), "name": type(event).__name__})
+                    pass
                 self.guiq.send_bytes(self.encoder.encode(self.gui_out))
                 self.gui_out.clear()
 

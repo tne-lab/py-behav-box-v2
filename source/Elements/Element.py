@@ -100,4 +100,6 @@ class Element:
         raise NotImplementedError
 
     def component_changed(self, component: Component, value: Any):
-        self.gui.ws.mainq.send_bytes(self.gui.ws.encoder.encode(ComponentUpdateEvent(self.gui.chamber, component.id, value, metadata={"value": value})))
+        event = ComponentUpdateEvent(self.gui.chamber, component.id, value, metadata={"value": value})
+        # !viztracer: log_instant("element-send-event", scope='g', args={"trace_id": str(event.trace_id), "name": type(event).__name__})
+        self.gui.ws.mainq.send_bytes(self.gui.ws.encoder.encode(event))

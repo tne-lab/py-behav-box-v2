@@ -9,7 +9,7 @@ import typing
 
 from Events.LoggerEvent import LoggerEvent
 from Components.Component import Component
-
+import uuid
 
 T = typing.TypeVar("T")
 
@@ -48,6 +48,7 @@ def dec_hook(type: typing.Type, obj: Any) -> Any:
 
 class PybEvent(msgspec.Struct, kw_only=True, tag=True, omit_defaults=True, array_like=True):
     metadata: Dict = {}
+    trace_id: uuid.UUID = msgspec.field(default_factory=uuid.uuid4)
 
 
 class ErrorEvent(PybEvent):
