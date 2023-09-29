@@ -121,7 +121,10 @@ class Workstation:
             self.sources = eval(settings.value("sources"))
             for name, code in self.sources.items():
                 segs = code.split('(', 1)
-                source_type = getattr(importlib.import_module("Sources." + segs[0]), segs[0])
+                try:
+                    source_type = getattr(importlib.import_module("Sources." + segs[0]), segs[0])
+                except ModuleNotFoundError:
+                    source_type = getattr(importlib.import_module("Local.Sources." + segs[0]), segs[0])
                 self.sources[name] = source_type(*eval("(" + segs[1]))
                 self.sources[name].sid = name
         else:

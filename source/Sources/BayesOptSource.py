@@ -45,9 +45,9 @@ class BayesObject(ABC):
 
     def add_data(self, trials: List[int], train_x: Dict, train_y: Dict) -> None:
         for key in self.input_labels:
-            self.train_x[key].append(train_x[key])
+            self.train_x[key] += train_x[key]
         for key in self.output_labels:
-            self.train_y[key].append(train_y[key])
+            self.train_y[key] += train_y[key]
 
     @abstractmethod
     def generate(self) -> List[Dict]:
@@ -81,7 +81,7 @@ class BayesOptSource(ThreadSource):
             for datum in data:
                 if isinstance(datum, str):
                     if datum not in self.plots:
-                        self.plots[datum] = plt.figure()
+                        self.plots[datum] = plt.figure(figsize=self.bayes_objs[datum].metadata["plot_size"] if "plot_size" in self.bayes_objs[datum].metadata else None)
                         plt.ion()
                         self.plots[datum].show()
                         self.posterior_plot(datum)
@@ -98,8 +98,12 @@ class BayesOptSource(ThreadSource):
                         for key in datum["x"]:
                             tensors[datum["id"]][1][key].append(datum["x"][key])
                         for key in datum["y"]:
-                            tensors[datum["id"]][1][key].append(datum["y"][key])
+                            tensors[datum["id"]][2][key].append(datum["y"][key])
                     else:
+                        for key in datum["x"]:
+                            datum["x"][key] = [datum["x"][key]]
+                        for key in datum["y"]:
+                            datum["y"][key] = [datum["y"][key]]
                         tensors[datum["id"]] = ([datum["trial"]], datum["x"], datum["y"])
             for tensor in tensors:
                 self.bayes_objs[tensor].add_data(*tensors[tensor])
@@ -157,25 +161,26 @@ class BayesOptSource(ThreadSource):
     def posterior_plot(self, component_id, num_steps=120):  # Show plot in separate thread?
         grid_x, grid_y = np.meshgrid(np.linspace(0, 1, num_steps), np.linspace(0, 1, num_steps), indexing='ij')
         values = np.concatenate([grid_x.reshape(-1, 1), grid_y.reshape(-1, 1)], axis=1)
-        post = self.bayes_objs[component_id].predict(values, output_index=0)
         bounds = self.bayes_objs[component_id].bounds
         grid_x = grid_x * (bounds[1][0] - bounds[0][0]) + bounds[0][0]
         grid_y = grid_y * (bounds[1][1] - bounds[0][1]) + bounds[0][1]
         fig = self.plots[component_id]
         fig.clf()
-        ax = fig.add_subplot(1, 1, 1)
-        CS = ax.contourf(grid_x, grid_y, post.reshape((num_steps, num_steps)), 20)
-        y_data = np.asarray(self.bayes_objs[component_id].train_y[self.bayes_objs[component_id].metadata["output"]])
-        x_data = []
-        if self.bayes_objs[component_id].x_data is not None:
-            for key in self.bayes_objs[component_id].input_labels:
-                x_data.append(self.bayes_objs[component_id].train_x[key])
-            x_data = np.atleast_2d(np.asarray(x_data))
-            ax.scatter(x_data[0, :], x_data[1, :], c=y_data, edgecolors='k', norm=CS.norm)
-        ax.set_xlabel(self.bayes_objs[component_id].input_labels[0])
-        ax.set_ylabel(self.bayes_objs[component_id].input_labels[1])
-        fig.subplots_adjust(right=0.9)
-        cbar_ax = fig.add_axes([0.93, 0.15, 0.01, 0.7])
-        cbar = fig.colorbar(CS, cax=cbar_ax)
-        cbar.ax.set_title(self.bayes_objs[component_id].output_labels[0])
+        for i in range(len(self.bayes_objs[component_id].metadata["outputs"])):
+            post = self.bayes_objs[component_id].predict(values, output_index=self.bayes_objs[component_id].metadata[
+                "output_labels"].index(self.bayes_objs[component_id].metadata["outputs"][i]))
+            ax = fig.add_subplot(self.bayes_objs[component_id].metadata["plot_dims"][0], self.bayes_objs[component_id].metadata["plot_dims"][1], i + 1)
+            CS = ax.contourf(grid_x, grid_y, post.reshape((num_steps, num_steps)), 20)
+            y_data = np.asarray(self.bayes_objs[component_id].train_y[self.bayes_objs[component_id].metadata["outputs"][i]])
+            x_data = []
+            if self.bayes_objs[component_id].x_data is not None:
+                for key in self.bayes_objs[component_id].input_labels:
+                    x_data.append(self.bayes_objs[component_id].train_x[key])
+                x_data = np.atleast_2d(np.asarray(x_data))
+                ax.scatter(x_data[0, :], x_data[1, :], c=y_data, edgecolors='k', norm=CS.norm)
+            ax.set_xlabel(self.bayes_objs[component_id].input_labels[0])
+            ax.set_ylabel(self.bayes_objs[component_id].input_labels[1])
+            # fig.subplots_adjust(right=0.9)
+            cbar = fig.colorbar(CS, ax=ax)
+            cbar.ax.set_title(self.bayes_objs[component_id].metadata["outputs"][i])
         plt.pause(0.005)

@@ -25,7 +25,13 @@ class SubjectConfigWidget(EventWidget):
         self.setLayout(self.layout)
         self.config_layout = QVBoxLayout(self.widget)
         self.controls_layout = QHBoxLayout(self.widget)
+        self.specific_layout = QVBoxLayout(self.widget)
         self.protocol_specific = QCheckBox("Protocol Specific")
+        self.protocol_specific.stateChanged.connect(lambda _: self.load_keys())
+        self.address_specific = QCheckBox("Address File Specific")
+        self.address_specific.stateChanged.connect(lambda _: self.load_keys())
+        self.specific_layout.addWidget(self.protocol_specific)
+        self.specific_layout.addWidget(self.address_specific)
         self.remove_button = QPushButton()
         self.remove_button.setText("−")
         self.remove_button.setFixedWidth(30)
@@ -35,7 +41,7 @@ class SubjectConfigWidget(EventWidget):
         self.add_button.setText("+")
         self.add_button.setFixedWidth(30)
         self.add_button.clicked.connect(self.add_constant)
-        self.controls_layout.addWidget(self.protocol_specific)
+        self.controls_layout.addLayout(self.specific_layout)
         self.controls_layout.addWidget(self.remove_button)
         self.controls_layout.addWidget(self.add_button)
         self.config_layout.addLayout(self.controls_layout)
@@ -75,7 +81,13 @@ class SubjectConfigWidget(EventWidget):
         self.names = []
         desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
         self.settings = QSettings(desktop + "/py-behav/pybehave.ini", QSettings.IniFormat)
-        self.settings.beginGroup("subjectConfig/" + self.cw.task_name.currentText() + "/" + self.cw.subject.text())
+        settings_path = "subjectConfig/" + self.cw.task_name.currentText() + "/"
+        if self.protocol_specific.isChecked() and len(self.cw.protocol_path.text()) > 0:
+            settings_path += "protocol_" + self.cw.protocol_path.text() + "/"
+        if self.address_specific.isChecked() and len(self.cw.address_file_path.text()) > 0:
+            settings_path += "address_" + self.cw.address_file_path.text() + "/"
+        settings_path += self.cw.subject.text()
+        self.settings.beginGroup(settings_path)
         keys = self.settings.childKeys()
         constants = {}
         for key in keys:
@@ -182,3 +194,4 @@ class SubjectConfigWidget(EventWidget):
         for i, combo in enumerate(self.combos):
             if i != index:
                 combo.addItem(option)
+

@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Union
 from Components.Component import Component
 
 if TYPE_CHECKING:
-    from Sources.Source import Source
+    from Tasks.Task import Task
     import numpy as np
 
 from Components.Stimmer import Stimmer
@@ -14,13 +14,13 @@ from Components.Stimmer import Stimmer
 
 class StimJim(Stimmer):
 
-    def __init__(self, source: Source, component_id: str, component_address: str):
+    def __init__(self, task: Task, component_id: str, component_address: str):
         self.state = None
         self.in_buffer = ""
         self.cur_command = None
         self.commands = []
         self.configs = {}
-        super().__init__(source, component_id, component_address)
+        super().__init__(task, component_id, component_address)
 
     def trigger(self, ichan: int, pnum: int, falling: int = 0) -> None:
         self.write("R{},{},{}".format(ichan, pnum, falling))
