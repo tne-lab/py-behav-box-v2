@@ -83,13 +83,16 @@ by going to File->Add Task to open the corresponding dialog.
 
 The desired task can be selected from the dropdown along with the chamber it should be associated
 with. A task can also be loaded from a configuration file which we will create in the next few
-steps.
+steps. Once the Task is added, a corresponding ChamberWidget will appear in the GUI:
+
+![chamber_widget_bp.png](img/chamber_widget_bp.png)
 
 ### Creating the Configuration
 
 Now that the Task has been added to the GUI, we can create a configuration that links the 
-AddressFile, Protocol, and other desired information. The AddressFile and Protocol can be selected
-by pressing the browse button 
+AddressFile, Protocol, and other desired information. The subject can be changed by editing the
+Subject text field. The AddressFile and Protocol can be selected by pressing the corresponding
+browse button and navigating the resultant file explorer. The exact save location for Task data ca
 
 ## Adding a Widget
 
