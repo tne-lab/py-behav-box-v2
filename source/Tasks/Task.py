@@ -269,6 +269,8 @@ class Task:
                 for tm in self.state_timeouts[self.state].values():
                     if tm[1]:
                         self.cancel_timeout(tm[0].name)
+        elif isinstance(event, PybEvents.TimeoutEvent):
+            del self.timeouts[event.name]
         all_handled = self.all_states(event)
         if not all_handled and self.state.name in self.state_methods:
             self.state_methods[self.state.name](event)
@@ -311,7 +313,6 @@ class Task:
 
     def _send_timeout(self, name: str, metadata: Dict):
         self.log_timeout(PybEvents.TimeoutEvent(self.metadata["chamber"], name, metadata=metadata))
-        del self.timeouts[name]
 
     def set_timeout(self, name: str, timeout: float, end_with_state=True, metadata: Dict = None):
         metadata = metadata or {}

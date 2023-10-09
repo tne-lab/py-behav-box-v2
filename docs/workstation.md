@@ -3,7 +3,7 @@
 ## Overview
 
 The Workstation GUI is responsible for controlling all user interactions with [Tasks](tasks.md). The interface presents all the necessary
-controls for running tasks, configuring [Sources](sources.md) and [EventLoggers](events.md), and visualizing behavior in real-time. Most configuration
+controls for running tasks, configuring [Sources](sources.md), [Widgets](events.md), and [EventLoggers](events.md), and visualizing behavior in real-time. Most configuration
 is accessible from the menu bar while Tasks are controlled via *ChamberWidgets*.
 
 ![workstation.png](img/workstation.png)
@@ -14,8 +14,8 @@ To add a new Task to the Workstation, select *File->Add Task* from the menu bar.
 
 ![add_task.png](img/add_task.png)
 
-The *Task* dropdown allows for selection of which Task should be added. The list of tasks in generated based on the module 
-names in the *source/Tasks* folder. The *Chamber* dropdown indicates what index the Workstation should associate the Task with.
+The *Task* dropdown allows for selection of which Task should be added. The list of tasks is generated based on the module 
+names in the *source/Local/Tasks* folder. The *Chamber* dropdown indicates what index the Workstation should associate the Task with.
 The number of chambers the Workstation supports is configurable and is described further [below](#workstation-settings). Once the desired values
 have been selected from the dropdowns, the task can be added by clicking *OK*. Alternatively, the task can be loaded from a
 [configuration file](#configurations) by clicking *Load Configuration*.
@@ -48,12 +48,30 @@ can be modified by right-clicking the ChamberWidget and selecting *Edit Configur
 
 Any text entered in the *Prompt* textbox will be included in an alert before the task begins. This can serve as a reminder 
 to start any required programs/processes or turn on external hardware. The add and remove buttons at the bottom of the pop-up
-allow for configuring [EventLoggers](). The add button will produce a pop-up to select the type of EventLogger:
+allow for configuring [EventLoggers](). The add button will produce a pop-up to select the type of EventLogger/Widget:
 
 ![event_loggers.png](img/event_loggers.png)
 
-Depending on the type of EventLogger, a further pop-up may be raised to configure other attributes. EventLoggers
-in the dropdown are generated from the module names in *source/Events* that end in "EventLogger".
+Depending on the type of EventLogger/Widget, a further pop-up may be raised to configure other attributes. Selectable options
+in the dropdown are generated from the module names in *source/Events* that end in "EventLogger" or "Widget".
+
+### Widgets
+
+Additional GUI elements can be added to each ChamberWidget using subclasses of Widget. Each ChamberWidget includes a single TerminalWidget by
+default but can be associated with any number of additional Widgets. Widgets are primarily used for sending Events via user input
+to the associated Task or its EventLoggers or controlling external hardware/software manually from the pybehave GUI. 
+While similar functionality can be implemented in Task GUIs, Widgets will have identical behavior regardless of the Task they are associated with.
+
+#### EventWidget
+
+EventWidget is an abstract subclass of Widget that provides access to the Task event stream. This functionality should only be necessary if
+the Widget is intended for visualizing/displaying Task information or requires feedback from the Task
+
+#### SubjectConfigWidget
+
+SubjectConfigWidget is a special purpose Widget that is integrated into the pybehave core. This Widget allows for overriding the
+value of any Task constant for a particular subject. This is useful if constants need to be set on a per-subject basis. 
+Values can also be made specific to the address file or protocol the subject is running on.
 
 ## Workstation Settings
 
@@ -71,3 +89,40 @@ The add button will produce a pop-up:
 
 A name/ID for the source can be indicated by the *Name* textbox along with the *Source* type from the dropdown. Sources
 in the dropdown are generated from the module names in *source/Sources*.
+
+## Class reference
+
+### Widget
+
+The classes below are in the `Events` package and associated with Widgets.
+
+#### Widget
+
+    class Widget(QWidget):
+        name: str
+
+#### EventWidget
+
+    class EventWidgetQWidget):
+        name: str
+
+#### TerminalWidget
+
+    class TerminalWidget(EventWidget):
+        name: str
+
+#### SubjectConfigWidget
+    
+    class SubjectConfigWidget(EventWidget)
+
+#### ManualWidget
+
+    class ManualWidget(Widget):
+        name: str
+
+#### OEWidget
+
+    class OEWidget(Widget):
+        name: str
+        address: str
+        port: str

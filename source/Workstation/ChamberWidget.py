@@ -153,7 +153,7 @@ class ChamberWidget(QGroupBox):
         self.widget_params = widget_params
         for widget in widgets:
             widget.set_chamber(self)
-            self.chamber.addWidget(widget.get_widget())
+            self.chamber.addWidget(widget)
 
         return self
 
@@ -226,7 +226,7 @@ class ChamberWidget(QGroupBox):
             self.play_button.icon = 'Workstation/icons/pause.svg'
             self.play_button.hover_icon = 'Workstation/icons/pause_hover.svg'
             self.play_button.setIcon(QIcon(self.play_button.icon))
-            self.workstation.mainq.send_bytes(self.workstation.encode(PybEvents.ResumeEvent(int(self.chamber_id.text()) - 1)))  # Resume the task
+            self.workstation.mainq.send_bytes(self.workstation.encoder.encode(PybEvents.ResumeEvent(int(self.chamber_id.text()) - 1)))  # Resume the task
         else:  # The task is currently playing
             self.paused = True
             # Change the play to a pause button
@@ -293,7 +293,7 @@ class ChamberWidget(QGroupBox):
         """
         File for handling changes to the desired output directory
         """
-        self.workstation.mainq.send_bytes(self.workstation.encoder.encode(PybEvents.OutputFileChangedEvent(int(self.chamber_id.text()) - 1, self.output_file_path.text())))
+        self.workstation.mainq.send_bytes(self.workstation.encoder.encode(PybEvents.OutputFileChangedEvent(int(self.chamber_id.text()) - 1, self.output_file_path.text(), self.subject.text())))
 
     def contextMenuEvent(self, _):
         """

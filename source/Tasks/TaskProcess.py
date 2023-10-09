@@ -98,8 +98,9 @@ class TaskProcess(Process):
                         logger.log_events(self.logger_q)
                     self.logger_q.clear()
             except BaseException as e:
-                self.guiq.send_bytes(self.encoder.encode(
-                    PybEvents.ErrorEvent(type(e).__name__, traceback.format_exc())))
+                if isinstance(event, PybEvents.TaskEvent):
+                    self.log_gui_event(PybEvents.ErrorEvent(type(e).__name__, traceback.format_exc(),
+                                                            metadata={"chamber": event.chamber}))
             if len(self.gui_out) > 0:
                 self.guiq.send_bytes(self.encoder.encode(self.gui_out))
                 self.gui_out.clear()
@@ -160,6 +161,7 @@ class TaskProcess(Process):
         del self.task_event_loggers[event.chamber][event.logger_name]
 
     def output_file_changed(self, event: PybEvents.OutputFileChangedEvent):
+        self.tasks[event.chamber].metadata["subject"] = event.subject
         for q in self.source_buffers.values():
             q.append(event)
         for el in self.task_event_loggers[event.chamber].values():  # Allow all EventLoggers to handle the change
@@ -243,6 +245,8 @@ class TaskProcess(Process):
                 self.tp_q.append(PybEvents.TaskCompleteEvent(task.metadata["chamber"]))
 
     def update_constants(self, event: PybEvents.ConstantsUpdateEvent):
+        for q in self.source_buffers.values():
+            q.append(event)
         task = self.tasks[event.chamber]
         for key in event.constants:
             try:

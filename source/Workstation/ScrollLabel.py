@@ -35,7 +35,7 @@ class ScrollLabel(QScrollArea):
     # the setText method
     def setText(self, text):
         # setting text to the label
-        QTimer.singleShot(0, partial(self.label.setText, text))
+        self.label.setText(text)
 
     def text(self):
         return self.label.text()

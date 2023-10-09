@@ -12,12 +12,15 @@ class ManualWidget(Widget):
         name: str
         value: int
 
-        def format(self, timestamp: float) -> LoggerEvent:
-            return LoggerEvent(self, self.name, self.value, timestamp)
+        def format(self) -> LoggerEvent:
+            return LoggerEvent(self, self.name, self.value, self.timestamp)
 
     def __init__(self, name: str):
         super().__init__(name)
+        self.layout = QVBoxLayout(self)
+        self.setLayout(self.layout)
         self.widget = QGroupBox('Manual Event')
+        self.layout.addWidget(self.widget)
         manual_layout = QHBoxLayout(self.widget)
         input_layout = QVBoxLayout(self.widget)
         self.widget.setLayout(manual_layout)
@@ -41,6 +44,3 @@ class ManualWidget(Widget):
 
     def send_event(self) -> None:
         self.cw.workstation.mainq.send_bytes(self.cw.workstation.encoder.encode(self.ManualEvent(int(self.cw.chamber_id.text()) - 1), self.manual_input.text(), int(self.code_input.text())))
-
-    def get_widget(self) -> QWidget:
-        return self.widget

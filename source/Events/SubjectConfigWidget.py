@@ -2,7 +2,7 @@ import importlib
 import os
 
 from PyQt5 import QtCore
-from PyQt5.QtCore import QSettings
+from PyQt5.QtCore import QSettings, QTimer, pyqtSlot
 from PyQt5.QtWidgets import QGroupBox, QHBoxLayout, QVBoxLayout, QPushButton, QWidget, QCheckBox, \
     QListWidget, QListWidgetItem, QComboBox
 
@@ -19,10 +19,19 @@ class SubjectConfigWidget(EventWidget):
         self.constant_names = []
         self.combos = []
 
+        self.layout = QVBoxLayout(self)
         self.widget = QGroupBox('Subject Configuration')
+        self.layout.addWidget(self.widget)
+        self.setLayout(self.layout)
         self.config_layout = QVBoxLayout(self.widget)
         self.controls_layout = QHBoxLayout(self.widget)
+        self.specific_layout = QVBoxLayout(self.widget)
         self.protocol_specific = QCheckBox("Protocol Specific")
+        self.protocol_specific.stateChanged.connect(lambda _: self.load_keys())
+        self.address_specific = QCheckBox("Address File Specific")
+        self.address_specific.stateChanged.connect(lambda _: self.load_keys())
+        self.specific_layout.addWidget(self.protocol_specific)
+        self.specific_layout.addWidget(self.address_specific)
         self.remove_button = QPushButton()
         self.remove_button.setText("−")
         self.remove_button.setFixedWidth(30)
@@ -32,7 +41,7 @@ class SubjectConfigWidget(EventWidget):
         self.add_button.setText("+")
         self.add_button.setFixedWidth(30)
         self.add_button.clicked.connect(self.add_constant)
-        self.controls_layout.addWidget(self.protocol_specific)
+        self.controls_layout.addLayout(self.specific_layout)
         self.controls_layout.addWidget(self.remove_button)
         self.controls_layout.addWidget(self.add_button)
         self.config_layout.addLayout(self.controls_layout)
@@ -59,17 +68,26 @@ class SubjectConfigWidget(EventWidget):
         self.settings = None
         self.names = []
 
+    @pyqtSlot()
     def handle_event(self, event: PybEvents.PybEvent):
         super(SubjectConfigWidget, self).handle_event(event)
         if isinstance(event, PybEvents.OutputFileChangedEvent):
-            self.constants_value_list.clear()
-            self.constants_name_list.clear()
             self.load_keys()
 
     def load_keys(self):
+        self.constants_value_list.clear()
+        self.constants_name_list.clear()
+        self.combos = []
+        self.names = []
         desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
         self.settings = QSettings(desktop + "/py-behav/pybehave.ini", QSettings.IniFormat)
-        self.settings.beginGroup("subjectConfig/" + self.cw.task_name.currentText() + "/" + self.cw.subject.text())
+        settings_path = "subjectConfig/" + self.cw.task_name.currentText() + "/"
+        if self.protocol_specific.isChecked() and len(self.cw.protocol_path.text()) > 0:
+            settings_path += "protocol_" + self.cw.protocol_path.text() + "/"
+        if self.address_specific.isChecked() and len(self.cw.address_file_path.text()) > 0:
+            settings_path += "address_" + self.cw.address_file_path.text() + "/"
+        settings_path += self.cw.subject.text()
+        self.settings.beginGroup(settings_path)
         keys = self.settings.childKeys()
         constants = {}
         for key in keys:
@@ -99,10 +117,7 @@ class SubjectConfigWidget(EventWidget):
         # Get all default values for task constants
         for key in task.get_constants():
             self.constant_names.append(key)
-        self.load_keys()
-
-    def get_widget(self) -> QWidget:
-        return self.widget
+        QTimer.singleShot(0, self.load_keys)
 
     def remove_constant(self):
         index = self.constants_value_list.currentRow()
@@ -113,7 +128,6 @@ class SubjectConfigWidget(EventWidget):
         option = self.names.pop(index)
         self.add_option(option, index)
         self.combos.pop(index)
-        print(self.names)
         self.constants_value_list.takeItem(index)
         self.constants_name_list.takeItem(index)
         self.remove_button.setDisabled(True)
@@ -134,14 +148,12 @@ class SubjectConfigWidget(EventWidget):
         self.constants_value_list.setCurrentRow(len(self.combos)-1)
         self.remove_option(combo.currentText(), index)
         self.remove_button.setDisabled(True)
-        print(self.names)
 
     def on_value_clicked(self, _):
         self.constants_name_list.setCurrentRow(self.constants_value_list.currentRow())
         self.remove_button.setDisabled(False)
 
     def on_name_clicked(self, _):
-        print(self.constants_name_list.currentItem().text())
         self.constants_value_list.setCurrentRow(self.constants_name_list.currentRow())
         self.remove_button.setDisabled(False)
 
@@ -152,9 +164,7 @@ class SubjectConfigWidget(EventWidget):
             self.add_option(prev, index)
         self.constants_value_list.setCurrentRow(index)
         if len(self.constants_value_list.currentItem().text()) > 0:
-            print(self.constants_name_list.currentItem().text() + " " + prev)
             if self.combos[index].currentText() != prev and len(prev) > 0:
-                print("edit")
                 self.settings.remove(prev)
                 self.cw.workstation.mainq.send_bytes(
                     self.cw.workstation.encoder.encode(PybEvents.ConstantRemoveEvent(int(self.cw.chamber_id.text()) - 1,
@@ -174,7 +184,6 @@ class SubjectConfigWidget(EventWidget):
                 self.cw.workstation.mainq.send_bytes(
                     self.cw.workstation.encoder.encode(PybEvents.ConstantsUpdateEvent(int(self.cw.chamber_id.text()) - 1,
                                                        {self.combos[index].currentText(): self.constants_value_list.currentItem().text()})))
-        print(self.names)
 
     def remove_option(self, option, index):
         for i, combo in enumerate(self.combos):
@@ -185,3 +194,4 @@ class SubjectConfigWidget(EventWidget):
         for i, combo in enumerate(self.combos):
             if i != index:
                 combo.addItem(option)
+
