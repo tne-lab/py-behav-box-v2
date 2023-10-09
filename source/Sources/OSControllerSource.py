@@ -1,44 +1,46 @@
-import traceback
+import ctypes
+import threading
+from contextlib import ExitStack
 
-import zmq
-
-from Sources.Source import Source
+import serial
 
 from Components.Component import Component
 
 from Utilities.Exceptions import ComponentRegisterError
 
+from Sources.ThreadSource import ThreadSource
 
-class OSControllerSource(Source):
 
-    def __init__(self, address='127.0.0.1', port=9296):
+class OSControllerSource(ThreadSource):
+
+    def __init__(self, coms: str):
         super(OSControllerSource, self).__init__()
-        try:
-            context = zmq.Context.instance()
-            self.client = context.socket(zmq.DEALER)
-            self.client.setsockopt(zmq.RCVHWM, 0)
-            self.client.setsockopt(zmq.SNDHWM, 0)
-            self.client.identity = ascii(id(self)).encode('ascii')
-            self.client.connect("tcp://{}:{}".format(address, port))
-            poll = zmq.Poller()
-            poll.register(self.client, zmq.POLLIN)
-            self.client.send(b"READY")
-            sockets = dict(poll.poll(1000))
-            if sockets:
-                self.client.recv()
-                self.available = True
-            else:
-                self.available = False
-        except:
-            traceback.print_exc()
-            self.available = False
-        self.components = {}
-        self.input_ids = {}
+        self.coms = eval(coms)
+        self.sps = None
         self.values = {}
-        self.buffer = ""
+        self.input_ids = {}
+        self.close_event = None
 
-    def register_component(self, _, component):
-        self.components[component.id] = component
+    def initialize(self):
+        self.close_event = threading.Event()
+        self.sps = []
+        threads = []
+        with OSCARContextManager(self.sps) as stack:
+            for i, com in enumerate(self.coms):
+                self.sps.append(serial.Serial(port=com, baudrate=1000000, write_timeout=None, timeout=None, dsrdtr=True))
+                stack.enter_context(self.sps[i].__enter__())
+                self.sps[i].dtr = True
+                self.sps[i].reset_input_buffer()
+                self.sps[i].reset_output_buffer()
+                threads.append(threading.Thread(target=self.serial_thread, args=[i]))
+                threads[i].start()
+            self.close_event.wait()
+            for sp in self.sps:
+                reset = Reset()
+                reset.b.command = 4
+                sp.write(reset.data.to_bytes(1, 'little'))
+
+    def register_component(self, component, metadata):
         if "A" in component.address:
             parts = component.address.split('_')
             if component.get_type() == Component.Type.DIGITAL_OUTPUT:
@@ -49,7 +51,11 @@ class OSControllerSource(Source):
                 tp = 3
             else:
                 raise ComponentRegisterError
-            self.client.send('RegGPIO {} {} {}\n'.format(parts[0], parts[1], tp).encode('utf-8'))
+            command = RegisterGPIO()
+            command.b.command = 3
+            command.b.address = int(parts[1][1])
+            command.b.type = tp
+            self.sps[int(parts[0])].write(command.data.to_bytes(1, 'little'))
         if component.get_type() == Component.Type.DIGITAL_INPUT or component.get_type() == Component.Type.DIGITAL_OUTPUT:
             if component.id not in self.values:
                 self.values[component.id] = False
@@ -60,45 +66,22 @@ class OSControllerSource(Source):
             self.input_ids[component.address] = component.id
 
     def close_source(self):
-        self.client.send(b"CLOSE")
-        self.client.close()
-
-    def read_component(self, component_id):
-        msg = ""
-        try:
-            while True:
-                rmsg = self.client.recv(flags=zmq.NOBLOCK)
-                msg += rmsg.decode()
-        except zmq.ZMQError:
-            pass
-        if len(msg) > 0:
-            msgs = msg[:-1].split('\n')
-        else:
-            msgs = []
-        for msg in msgs:
-            comps = msg.split(' ')
-            cid = comps[1] + '_' + comps[2]
-            if cid in self.input_ids:
-                if comps[0] == 'DIn':
-                    self.values[self.input_ids[cid]] = not self.values[self.input_ids[cid]]
-                elif comps[0] == 'AIn':
-                    self.values[self.input_ids[cid]] = int(comps[3])
-                elif comps[0] == 'GPIOIn':
-                    self.values[self.input_ids[cid]] = not self.values[self.input_ids[cid]]
-        return self.values[component_id]
+        self.close_event.set()
 
     def write_component(self, component_id, msg):
-        # If the intended value for the component differs from the current value, change it
+        # If the intended response for the component differs from the current response, change it
         if not msg == self.values[component_id]:
             if isinstance(self.components[component_id].address, list):
                 comps = self.components[component_id].address
             else:
                 comps = [self.components[component_id].address]
-            command = ""
             for comp in comps:
                 parts = comp.split('_')
                 if 'A' in self.components[component_id].address:
-                    command += 'GPIOOut {} {}\n'.format(parts[0], parts[1])
+                    command = GPIOOut()
+                    command.b.command = 2
+                    command.b.address = int(parts[1][1])
+                    self.sps[int(parts[0])].write(command.data.to_bytes(1, 'little'))
                 elif 'O' in self.components[component_id].address:
                     scaled = msg
                     if scaled < 0:
@@ -106,18 +89,165 @@ class OSControllerSource(Source):
                     elif scaled > 2.5:
                         scaled = 2.5
                     scaled = round(scaled * 65535 / 2.5)
-                    command += 'AOut {} {} {}\n'.format(parts[0], parts[1], scaled)
+                    command = AnalogOut()
+                    command.b.command = 1
+                    command.b.address = int(parts[1][1])
+                    scaled = scaled
+                    command.b.value = scaled
+                    self.sps[int(parts[0])].write(command.data.to_bytes(3, 'little'))
                 else:
-                    command += 'DOut {} {}\n'.format(parts[0], parts[1])
-            self.client.send(command.encode('utf-8'))
+                    command = DigitalOut()
+                    command.b.command = 0
+                    command.b.address = int(parts[1])
+                    self.sps[int(parts[0])].write(command.data.to_bytes(1, 'little'))
         self.values[component_id] = msg
 
     def close_component(self, component_id: str) -> None:
         if component_id in self.components:
             if 'A' in self.components[component_id].address:
                 parts = self.components[component_id].address.split('_')
-                self.client.send('RegGPIO {} {} {}\n'.format(parts[0], parts[1], 0).encode('utf-8'))
+                command = RegisterGPIO()
+                command.b.command = 3
+                command.b.address = int(parts[1][1])
+                command.b.type = 0
+                self.sps[int(parts[0])].write(command.data.to_bytes(1, 'little'))
             del self.components[component_id]
 
-    def is_available(self):
-        return self.available
+    def serial_thread(self, serial_index):
+        serial_port = self.sps[serial_index]
+        nb = serial_port.in_waiting
+        serial_command = bytearray()
+        while True:
+            if nb > 0:
+                msg = serial_port.read(nb)
+            else:
+                msg = serial_port.read(1)
+            for b in msg:
+                serial_command.extend(b.to_bytes(1, 'little'))
+                data = int.from_bytes(serial_command, 'little')
+                cid = data & 0x7
+                if cid == 0:
+                    address = data >> 3 & 0x7
+                    input_id = "{}_{}".format(serial_index, str(address))
+                    if input_id in self.input_ids:
+                        self.values[self.input_ids[input_id]] = not self.values[self.input_ids[input_id]]
+                        self.update_component(self.input_ids[input_id], self.values[self.input_ids[input_id]])
+                    serial_command = bytearray()
+                elif cid == 1:
+                    if len(serial_command) == 2:
+                        data2 = int.from_bytes(serial_command, 'little')
+                        command = AnalogIn()
+                        command.data = data2
+                        input_id = "{}_{}".format(serial_index, "A" + str(command.b.address))
+                        if input_id in self.input_ids:
+                            self.values[self.input_ids[input_id]] = command.b.value
+                            self.update_component(self.input_ids[input_id], self.values[self.input_ids[input_id]])
+                        serial_command = bytearray()
+                elif cid == 2:
+                    address = data >> 3 & 0x3
+                    input_id = "{}_{}".format(serial_index, "A" + str(address))
+                    if input_id in self.input_ids:
+                        self.values[self.input_ids[input_id]] = not self.values[self.input_ids[input_id]]
+                        self.update_component(self.input_ids[input_id], self.values[self.input_ids[input_id]])
+                    serial_command = bytearray()
+
+
+class OSCARContextManager(ExitStack):
+
+    def __init__(self, ports):
+        super(OSCARContextManager, self).__init__()
+        self.ports = ports
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        for spi in self.ports:
+            r = Reset()
+            r.b.command = 4
+            spi.write(r.data.to_bytes(1, 'little'))
+        super(OSCARContextManager, self).__exit__(exc_type, exc_value, exc_tb)
+
+
+class AnalogOutBits(ctypes.LittleEndianStructure):
+    _fields_ = [
+        ("command", ctypes.c_uint32, 3),
+        ("address", ctypes.c_uint32, 2),
+        ("value", ctypes.c_uint32, 16)
+    ]
+
+
+class AnalogOut(ctypes.Union):
+    _fields_ = [("b", AnalogOutBits),
+                ("data", ctypes.c_uint32)]
+
+
+class AnalogInBits(ctypes.LittleEndianStructure):
+    _fields_ = [
+        ("command", ctypes.c_uint16, 3),
+        ("address", ctypes.c_uint16, 2),
+        ("value", ctypes.c_uint16, 10)
+    ]
+
+
+class AnalogIn(ctypes.Union):
+    _fields_ = [("b", AnalogInBits),
+                ("data", ctypes.c_uint16)]
+
+
+class DigitalOutBits(ctypes.LittleEndianStructure):
+    _fields_ = [
+        ("command", ctypes.c_uint8, 3),
+        ("address", ctypes.c_uint8, 5)
+    ]
+
+
+class DigitalOut(ctypes.Union):
+    _fields_ = [("b", DigitalOutBits),
+                ("data", ctypes.c_uint8)]
+
+
+class GPIOOutBits(ctypes.LittleEndianStructure):
+    _fields_ = [
+        ("command", ctypes.c_uint8, 3),
+        ("address", ctypes.c_uint8, 2)
+    ]
+
+
+class GPIOOut(ctypes.Union):
+    _fields_ = [("b", GPIOOutBits),
+                ("data", ctypes.c_uint8)]
+
+
+class RegisterGPIOBits(ctypes.LittleEndianStructure):
+    _fields_ = [
+        ("command", ctypes.c_uint8, 3),
+        ("address", ctypes.c_uint8, 2),
+        ("type", ctypes.c_uint8, 2)
+    ]
+
+
+class RegisterGPIO(ctypes.Union):
+    _fields_ = [("b", RegisterGPIOBits),
+                ("data", ctypes.c_uint8)]
+
+
+class ResetBits(ctypes.LittleEndianStructure):
+    _fields_ = [
+        ("command", ctypes.c_uint8, 3)
+    ]
+
+
+class Reset(ctypes.Union):
+    _fields_ = [("b", RegisterGPIOBits),
+                ("data", ctypes.c_uint8)]
+
+
+class AInParamsBits(ctypes.LittleEndianStructure):
+    _fields_ = [
+        ("command", ctypes.c_uint8, 3),
+        ("fs", ctypes.c_uint8, 2),
+        ("ref", ctypes.c_uint8, 1)
+    ]
+
+
+class AInParams(ctypes.Union):
+    _fields_ = [("b", AInParamsBits),
+                ("data", ctypes.c_uint8)]

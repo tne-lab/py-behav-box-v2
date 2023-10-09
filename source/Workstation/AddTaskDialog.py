@@ -1,5 +1,9 @@
 from __future__ import annotations
+
 from typing import TYPE_CHECKING
+
+from Events.TerminalWidget import TerminalWidget
+
 if TYPE_CHECKING:
     from Workstation.WorkstationGUI import WorkstationGUI
 
@@ -59,9 +63,9 @@ class AddTaskDialog(QDialog):
                 config_reader = csv.reader(csvfile, delimiter=',', quotechar='|')
                 # Default task values
                 chamber = 0
-                task = subject = afp = pfp = ""
-                event_loggers = []
-                logger_params = []
+                event_loggers = task = subject = afp = pfp = ""
+                widgets = []
+                widget_params = []
                 # Check for each relevant row in the configuration
                 for row in config_reader:
                     if row[0] == "Chamber":
@@ -77,20 +81,24 @@ class AddTaskDialog(QDialog):
                     elif row[0] == "Prompt":
                         prompt = row[1]
                     elif row[0] == "EventLoggers":
+                        event_loggers = row[1]
+                    elif row[0] == "Widgets":
                         types = list(
-                            map(lambda x: x.split("))")[-1], row[1].split("((")))  # Get the type of each logger
+                            map(lambda x: x.split("))")[-1],
+                                row[1].split("((")))  # Get the type of each widget
                         params = list(
-                            map(lambda x: x.split("((")[-1], row[1].split("))")))  # Get the parameters for each logger
+                            map(lambda x: x.split("((")[-1],
+                                row[1].split("))")))  # Get the parameters for each widget
                         for i in range(len(types) - 1):
                             logger_type = getattr(importlib.import_module("Events." + types[i]),
                                                   types[i])  # Import the logger
                             param_vals = re.findall("\|\|(.+?)\|\|", params[i])  # Extract the parameters
-                            event_loggers.append(logger_type(*param_vals))  # Instantiate the logger
-                            logger_params.append(param_vals)
+                            widgets.append(logger_type(*param_vals))  # Instantiate the widget
+                            widget_params.append(param_vals)
 
-                self.wsg.add_task(chamber, task, subject, afp, pfp, prompt, (event_loggers, logger_params))
+                self.wsg.add_task(chamber, task, subject, afp, pfp, prompt, event_loggers, widgets, widget_params)
         else:
-            self.wsg.add_task(self.chamber.currentText(), self.task.currentIndex())
+            self.wsg.add_task(self.chamber.currentText(), self.task.currentIndex(), event_loggers="CSVEventLogger((||file_log||))", widgets=[TerminalWidget("gui_log")], widget_params=[["gui_log"]])
         super(AddTaskDialog, self).accept()
 
     def load_config(self) -> None:

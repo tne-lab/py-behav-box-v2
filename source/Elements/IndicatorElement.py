@@ -16,14 +16,19 @@ class IndicatorElement(Element):
         self.radius = int(self.SF * radius)
         self.on_color = on_color
         self.off_color = off_color
+        self.is_on = True
+
+    def has_updated(self) -> bool:
+        return self.is_on != self.on()
 
     # noinspection PyMethodMayBeStatic
     def on(self) -> bool:
-        return True
+        return self.is_on
 
     def draw(self) -> None:
         cx = self.x + self.radius  # center x
         cy = self.y + self.radius  # center y
+        self.is_on = self.on()
 
         if self.on():
             draw_light(self.screen, self.on_color, (0, 0, 0), self.rect, cx, cy, self.radius)

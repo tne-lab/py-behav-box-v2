@@ -1,8 +1,11 @@
+import threading
+import time
+
 from hikload.hikvisionapi.classes import HikvisionServer
 import hikload.hikvisionapi.utils as hikutils
-import threading
 import os
-from datetime import datetime
+
+from Events import PybEvents
 from Sources.Source import Source
 
 
@@ -13,24 +16,23 @@ class HikVisionSource(Source):
         self.ip = ip
         self.user = user
         self.password = password
-        try:
-            self.server = HikvisionServer(ip, user, password)
-            self.available = True
-        except:
-            self.available = False
+        self.server = None
         self.out_paths = {}
-        self.tasks = {}
 
-    def register_component(self, task, component):
-        desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
-        self.out_paths[component.id] = "{}\\py-behav\\{}\\Data\\{{}}\\{{}}\\".format(desktop, type(task).__name__)
-        self.components[component.id] = component
-        self.tasks[component.id] = task
+    def initialize(self):
+        self.server = HikvisionServer(self.ip, self.user, self.password)
+
+    def register_component(self, component, metadata):
+        self.out_paths[component.id] = None
         # hikutils.deleteXML(self.server, 'System/Video/inputs/channels/' + str(component.address) + '/overlays/text')
+
+    def output_file_changed(self, event: PybEvents.OutputFileChangedEvent) -> None:
+        for cid, chamber in self.component_chambers.items():
+            if chamber == event.chamber:
+                self.out_paths[cid] = event.output_file
 
     def close_component(self, component_id):
         del self.components[component_id]
-        del self.tasks[component_id]
         del self.out_paths[component_id]
 
     def close_source(self):
@@ -86,13 +88,11 @@ class HikVisionSource(Source):
                 command = command[:index] + coords + command[index:]
                 hikutils.putXML(self.server, 'System/Video/inputs/channels/' + cam[0] + '/privacyMask/regions', xmldata=command)
         else:
-            vt = threading.Thread(target=self.download, args=[component_id])
-            vt.start()
+            threading.Thread(target=self.download, args=[component_id]).start()
 
     def download(self, component_id):
-        op = self.out_paths[component_id]
-        name = self.components[component_id].name
-        subj = self.tasks[component_id].metadata["subject"]
+        output_folder = self.out_paths[component_id]
+        name = time.time_ns()
         if isinstance(self.components[component_id].address, list):
             addresses = self.components[component_id].address
         else:
@@ -113,11 +113,7 @@ class HikVisionSource(Source):
                 vids = [vids]
             vid = vids[-1]
             dwnld = self.server.ContentMgmt.search.downloadURI(vid['mediaSegmentDescriptor']['playbackURI'])
-            output_folder = op.format(subj, datetime.now().strftime("%m-%d-%Y"))
             if not os.path.exists(output_folder):
                 os.makedirs(output_folder)
-            with open(output_folder + name + "_" + addr + ".mp4", 'wb') as file:
+            with open(output_folder + str(name) + "_" + addr + ".mp4", 'wb') as file:
                 file.write(dwnld.content)
-
-    def is_available(self):
-        return self.available

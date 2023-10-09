@@ -1,11 +1,11 @@
 from __future__ import annotations
+
 from typing import TYPE_CHECKING, Dict
 if TYPE_CHECKING:
-    from Sources.Source import Source
+    from Tasks.Task import Task
 
 from abc import ABCMeta, abstractmethod
 from enum import Enum
-from Sources.Source import Source
 from typing import Any
 
 
@@ -51,17 +51,21 @@ class Component:
         OUTPUT = 5          # Arbitrary output type
         BOTH = 6            # The Component both inputs and outputs (arbitrary type)
 
-    def __init__(self, source: Source, component_id: str, component_address: str):
+    def __init__(self, task: Task, component_id: str, component_address: str):
         self.id = component_id  # The unique identifier for the component or set of related components
         self.address = component_address  # The platform-specific address for the component
-        self.source = source  # The source that is used to identify the component
+        self.task = task  # The source that is used to identify the component
         self.state = None
 
-    def write(self, msg: Any) -> None:
-        self.source.write_component(self.id, msg)
+    def write(self, value: Any) -> None:
+        if self.task is not None:
+            self.task.write_component(self.id, value)
 
-    def read(self) -> Any:
-        return self.source.read_component(self.id)
+    def update(self, value: Any) -> bool:
+        if self.state != value:
+            self.state = value
+            return True
+        return False
 
     def initialize(self, metadata: Dict) -> None:
         for key in metadata:
@@ -79,5 +83,6 @@ class Component:
         raise NotImplementedError
 
     def close(self) -> None:
-        self.source.close_component(self.id)
+        if self.task is not None:
+            self.task.close_component(self.id)
 

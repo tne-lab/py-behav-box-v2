@@ -1,10 +1,13 @@
 from __future__ import annotations
+
+import collections
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
-    from Events.Event import Event
+    from Events.LoggerEvent import LoggerEvent
     from Tasks.Task import Task
 
-from abc import ABCMeta
+from abc import ABCMeta, abstractmethod
 
 
 class EventLogger:
@@ -22,36 +25,36 @@ class EventLogger:
         Handle each event in the input Event list
     """
 
-    def __init__(self):
+    def __init__(self, name: str):
+        self.name = name
         self.task = None
         self.event_count = 0
-        self.started = False
 
     def start_(self):
         self.event_count = 0
         self.start()
-        self.started = True
 
     def start(self) -> None:
         pass
-
-    def stop_(self) -> None:
-        self.started = False
-        self.stop()
 
     def stop(self) -> None:
         pass
 
     def close_(self):
-        if self.started:
-            self.stop_()
+        self.stop()
         self.close()
 
     def close(self) -> None:
         pass
 
-    def log_event(self, events: list[Event]) -> None:
-        pass
+    @abstractmethod
+    def log_events(self, events: collections.deque[LoggerEvent]) -> None:
+        raise NotImplementedError
 
     def set_task(self, task: Task) -> None:
         self.task = task
+
+    def format_event(self, le: LoggerEvent, event_type: str):
+        return "{},{},{},{},{},\"{}\"\n".format(self.event_count, le.entry_time, event_type,
+                                                str(le.eid), le.name,
+                                                str(le.event.metadata))
