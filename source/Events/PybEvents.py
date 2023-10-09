@@ -98,22 +98,6 @@ class RemoveSourceEvent(PybEvent):
     sid: str
 
 
-class AddTaskEvent(PybEvent):
-    chamber: int
-    task_name: str
-    task_event_loggers: str
-
-
-class AddLoggerEvent(PybEvent):
-    chamber: int
-    logger_code: str
-
-
-class RemoveLoggerEvent(PybEvent):
-    chamber: int
-    logger_name: str
-
-
 class ExitEvent(PybEvent):
     pass
 
@@ -144,7 +128,20 @@ class StatefulEvent(TimedEvent):
 
 class Loggable(TimedEvent):
     def format(self) -> LoggerEvent:
-        pass
+        raise NotImplementedError
+
+
+class AddTaskEvent(TaskEvent):
+    task_name: str
+    task_event_loggers: str
+
+
+class AddLoggerEvent(TaskEvent):
+    logger_code: str
+
+
+class RemoveLoggerEvent(TaskEvent):
+    logger_name: str
 
 
 class OutputFileChangedEvent(TaskEvent):
