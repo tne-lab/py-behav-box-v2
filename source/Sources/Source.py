@@ -49,8 +49,8 @@ class Source(Process):
         pass
 
     def run(self):
-        self.decoder = msgspec.msgpack.Decoder(type=List[PybEvents.subclass_union(PybEvents.PybEvent)])
-        self.encoder = msgspec.msgpack.Encoder()
+        self.decoder = msgspec.msgpack.Decoder(type=List[PybEvents.subclass_union(PybEvents.PybEvent)], dec_hook=PybEvents.dec_hook, ext_hook=PybEvents.ext_hook)
+        self.encoder = msgspec.msgpack.Encoder(enc_hook=PybEvents.enc_hook)
         try:
             self.initialize()
             while True:
@@ -79,6 +79,8 @@ class Source(Process):
                 return False
             elif isinstance(event, PybEvents.OutputFileChangedEvent):
                 self.output_file_changed(event)
+            elif isinstance(event, PybEvents.ConstantsUpdateEvent):
+                self.constants_updated(event)
         return True
 
     def register_component_(self, event: PybEvents.ComponentRegisterEvent):
@@ -110,6 +112,9 @@ class Source(Process):
         pass
 
     def output_file_changed(self, event: PybEvents.OutputFileChangedEvent) -> None:
+        pass
+
+    def constants_updated(self, event: PybEvents.ConstantsUpdateEvent) -> None:
         pass
 
     def unavailable(self):

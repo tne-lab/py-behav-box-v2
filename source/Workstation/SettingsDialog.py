@@ -179,9 +179,13 @@ class AddSourceDialog(QDialog):
         source_box.setLayout(source_box_layout)
         self.source = QComboBox()
         self.sources = []
+        self.local_sources = []
         for f in pkgutil.iter_modules(['Sources']):
             if not f.name == "Source":
                 self.sources.append(f.name)
+        for f in pkgutil.iter_modules(['Local.Sources']):
+            if not f.name.endswith('Source'):
+                self.local_sources.append(f.name)
         self.source.addItems(self.sources)
         source_box_layout.addWidget(self.source)
         self.layout.addWidget(source_box)
@@ -190,7 +194,11 @@ class AddSourceDialog(QDialog):
         self.params = []
 
     def set_params(self) -> None:
-        source_type = getattr(importlib.import_module("Sources." + self.source.currentText()), self.source.currentText())
+        if self.source.currentText() in self.sources:
+            source_type = getattr(importlib.import_module("Sources." + self.source.currentText()), self.source.currentText())
+        else:
+            source_type = getattr(importlib.import_module("Local.Sources." + self.source.currentText()),
+                                  self.source.currentText())
         all_params = inspect.getfullargspec(source_type.__init__)
         if len(all_params.args) > 1:
             self.spd = SourceParametersDialog(self, all_params)
@@ -199,17 +207,27 @@ class AddSourceDialog(QDialog):
             self.accept()
 
     def accept(self) -> None:
-        source_type = getattr(importlib.import_module("Sources." + self.source.currentText()),
-                              self.source.currentText())
+        if self.source.currentText() in self.sources:
+            source_type = getattr(importlib.import_module("Sources." + self.source.currentText()),
+                                  self.source.currentText())
+        else:
+            source_type = getattr(importlib.import_module("Local.Sources." + self.source.currentText()),
+                                  self.source.currentText())
         desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
         settings = QSettings(desktop + "/py-behav/pybehave.ini", QSettings.IniFormat)
         source_string = settings.value("sources")
         if source_string == '{}':
-            source_string = "{" + '"{}": \'{}({},)\''.format(self.name.text(), self.source.currentText(),
-                                                          ','.join(f'"{w}"' for w in self.params)) + "}"
+            if len(self.params) > 0:
+                source_string = "{" + '"{}": \'{}({},)\''.format(self.name.text(), self.source.currentText(),
+                                                              ','.join(f'"{w}"' for w in self.params)) + "}"
+            else:
+                source_string = "{" + '"{}": \'{}()\''.format(self.name.text(), self.source.currentText()) + "}"
         else:
-            source_string = source_string[:-1] + ', "{}": \'{}({},)'.format(self.name.text(), self.source.currentText(),
-                                                                           ','.join(f'"{w}"' for w in self.params)) + "\'}"
+            if len(self.params) > 0:
+                source_string = source_string[:-1] + ', "{}": \'{}({},)'.format(self.name.text(), self.source.currentText(),
+                                                                               ','.join(f'"{w}"' for w in self.params)) + "\'}"
+            else:
+                source_string = source_string[:-1] + ', "{}": \'{}()\''.format(self.name.text(), self.source.currentText()) + "}"
         settings.setValue("sources", source_string)
         self.sd.workstation.sources[self.name.text()] = source_type(*self.params)
         tpq, sourceq = multiprocessing.Pipe()

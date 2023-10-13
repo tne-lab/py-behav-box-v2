@@ -159,7 +159,7 @@ class AddExtrasDialog(QDialog):
             self.cd.cw.widgets.append(new_widget)
             self.cd.cw.widget_params.append(self.params)
             new_widget.set_chamber(self.cd.cw)
-            self.cd.cw.chamber.addWidget(new_widget.get_widget())
+            self.cd.cw.chamber.addWidget(new_widget)
             QListWidgetItem("{} ({})".format(new_widget.name, self.extra.currentText()), self.cd.widget_list)
         else:
             logger_text = self.extra.currentText() + "((" + ''.join(f"||{w}||" for w in self.params) + "))"

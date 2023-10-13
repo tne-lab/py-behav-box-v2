@@ -113,9 +113,6 @@ class OSControllerSource(ThreadSource):
                 self.sps[int(parts[0])].write(command.data.to_bytes(1, 'little'))
             del self.components[component_id]
 
-    def is_available(self):
-        return self.available
-
     def serial_thread(self, serial_index):
         serial_port = self.sps[serial_index]
         nb = serial_port.in_waiting

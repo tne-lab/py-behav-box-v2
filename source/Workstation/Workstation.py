@@ -4,6 +4,7 @@ import multiprocessing
 import sys
 import threading
 import time
+from functools import partial
 from multiprocessing.dummy.connection import Connection
 from typing import TYPE_CHECKING, Type, List
 
@@ -121,7 +122,10 @@ class Workstation:
             self.sources = eval(settings.value("sources"))
             for name, code in self.sources.items():
                 segs = code.split('(', 1)
-                source_type = getattr(importlib.import_module("Sources." + segs[0]), segs[0])
+                try:
+                    source_type = getattr(importlib.import_module("Sources." + segs[0]), segs[0])
+                except ModuleNotFoundError:
+                    source_type = getattr(importlib.import_module("Local.Sources." + segs[0]), segs[0])
                 self.sources[name] = source_type(*eval("(" + segs[1]))
                 self.sources[name].sid = name
         else:
@@ -180,6 +184,7 @@ class Workstation:
             if isinstance(event, PybEvents.StopEvent):
                 self.wsg.chambers[event.chamber].stop(from_click=False)
             elif isinstance(event, PybEvents.ErrorEvent):
+                print(event.traceback)
                 if "chamber" in event.metadata:
                     self.ed = QMessageBox()
                     self.ed.setIcon(QMessageBox.Critical)
@@ -290,7 +295,7 @@ class Workstation:
                         if event.chamber in self.guis:
                             for widget in self.wsg.chambers[event.chamber].widgets:
                                 if isinstance(widget, EventWidget):
-                                    widget.handle_event(event)
+                                    widget.emitter.emit(event)
                             self.guis[event.chamber].handle_event(event)
                             col = event.chamber % self.n_col
                             row = math.floor(event.chamber / self.n_col)
