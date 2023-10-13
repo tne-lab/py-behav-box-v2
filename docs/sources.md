@@ -20,7 +20,9 @@ to hardware and any non-basic processing of class attributes should happen in th
 The fundamental purpose of a *Source* is to connect a component to specific hardware which is done through the `register_component`
 method. The `register_component` method takes a *Task* and *Component* as arguments to associate the component's address
 with the corresponding hardware representation. Depending on the hardware that is being interfaced, overriding this method
-may be as simple as keeping track of the components or require extensive interfacing with hardware libraries. 
+may be as simple as keeping track of the components or require extensive interfacing with hardware libraries. Additional information
+necessary for registering a component with the Source can be delivered using a Component's metadata. For the core Sources,
+required metadata is indicated in the package reference.
 
 ## Reading from and writing to components
 
@@ -200,6 +202,14 @@ Source for coordinating connections to serial devices.
 
 `pyserial` used to communicate with the serial ports
 
+*Required Metadata:*
+
+`baudrate: int` the baudrate for the Serial connection corresponding to a registered Component
+
+*Optional Metadata:*
+
+`terminator: str` character sequence appended to the end of every written Serial message for the Component
+
 #### VideoSource
 
     class VideoSource(ThreadSource):
@@ -228,6 +238,18 @@ standard USB webcams.
 `rows` the number of rows for the grid of individual videos in the interface
 
 `cols` the number of columns for the grid of individual videos in the interface
+
+*Required Metadata:*
+
+`row: int` the row the video feed for this Component should be placed in
+
+`col: int` the column the video feed for this Component should be placed in
+
+`row_span: int` how many rows the video feed for this Component should occupy
+
+`col_span: int` how many columns the video feed for this Component should occupy
+
+`fr: int` the frame rate the video feed for this Component should be saved at
 
 #### HikVisionSource
 
@@ -268,6 +290,9 @@ Input functionality is currently not implemented.
 
 `dev` the device ID of the DAQ
 
+*Required Metadata for ANALOG_OUTPUT:*
+
+`sr: int` the sampling rate for the output
 
 #### BayesOptSource
 
