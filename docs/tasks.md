@@ -146,13 +146,8 @@ method could be used to reward following a bar press and transition to a lockout
 Time dependent behavior can be implemented by calling methods from the base `Task` class. All timing should use these methods
 to ensure no issues arise due to pausing and resuming the task. The `time_elapsed` method can be used to query the amount
 of time that has passed since the task started. The `time_in_state` method can be used to query the amount of time since the
-last state change. Both methods will not include any time spent paused.
-
-## Events
-
-Events are used to communicate information from the task to [*EventLogger*]() classes that can complete a variety of roles like
-saving task data, communicating with external programs, or sending digital codes for synchronization. Every task has an `events`
-attribute that can be appended to and later parsed by various *EventLoggers*.
+last state change. Both methods will not include any time spent paused. To have an event queued after a certain amount of time,
+users can call one of a variety of timeout related methods described in more detail [below]():
 
 ### is_complete
 
@@ -284,6 +279,12 @@ Override to return the state the task should begin in (from the `States` enum).
 Call to change the state the task is currently in. Metadata can be provided which will be passed to the EventLogger
 with the event information.
 
+*Parameters:*
+
+`state` the state in the Task States enum that should be entered.
+
+`metadata` a dictionary containing any metadata that should be associated with the state change event.
+
 #### time_elapsed
 
     time_elapsed() -> float
@@ -295,3 +296,65 @@ Returns the time that has passed in seconds (and fractions of a second) since th
     time_in_state() -> float
 
 Returns the time that has passed in seconds (and fractions of a second) since the current state began.
+
+### Timeout methods
+
+The methods below are associated with adding events to the stream related to timing.
+
+#### set_timeout
+
+    set_timeout(name: str, timeout: float, end_with_state=True, metadata: Dict = None) -> None
+
+Begins a timer that will add a TimeoutEvent to the event stream after a prescribed duration.
+
+*Parameters:*
+
+`name` a string representing the name to be associated with the timeout.
+
+`timeout` duration of the timeout in seconds.
+
+`end_with_state` flag indicating whether the timeout should be removed when the state it was created in ends.
+
+`metadata` a dictionary containing any metadata that should be associated with the TimeoutEvent.
+
+#### cancel_timeout
+
+    cancel_timeout(name: str) -> None
+
+Ends the indicated timeout early without adding an event to the stream.
+
+*Parameters:*
+
+`name` the name for the timeout that should be cancelled.
+
+#### pause_timeout
+
+    pause_timeout(name: str) -> None
+
+Pauses the indicated timeout.
+
+*Parameters:*
+
+`name` the name for the timeout that should be paused.
+
+#### resume_timeout
+
+    resume_timeout(name: str) -> None
+
+Resumes a paused timeout.
+
+*Parameters:*
+
+`name` the name for the timeout that should be resumed.
+
+#### extend_timeout
+
+    extend_timeout(name: str, timeout: float) -> None
+
+Adds a prescribed amount of time to a running timeout.
+
+*Parameters:*
+
+`name` the name for the timeout that should be extended.
+
+`timeout` a duration in seconds to be added to the timeout.

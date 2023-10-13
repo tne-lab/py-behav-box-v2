@@ -19,11 +19,10 @@ and are represented by the *TimedEvent* subclass of *TaskEvent*. *TimedEvent* ha
 that are used to forward events to the state-related task methods or event logging system respectively. A full overview of
 the available subclasses is described below.
 
-### Workstation-related events
-
-An additional set of events 
-
 ### Source-related events
+
+An additional set of events are available specifically for communicating with Sources. Additional information on interacting
+with these events is included in the Sources documentation.
 
 ## EventLoggers
 
@@ -50,7 +49,7 @@ An example `log_events` override for the core event types is shown below:
         super().log_events(events)  # Sometimes the super class method should be called
 
 All EventLoggers have an `event_count` attribute for tracking the number of events that have been handled by the logger.
-Additional EventLogger arguments for particular subclasses can be provided when added to the [Workstation](workstation.md).
+Additional EventLogger parameters for particular subclasses can be provided when added to the [Workstation](workstation.md).
 
 ### start, stop, and close
 
@@ -371,19 +370,42 @@ Event associated with information that should be sent to EventLoggers and GUI bu
         sid: str
         conn: PipeConnection
 
+Event associated with adding a new Source to pybehave.
+
+*Attributes:*
+
+`sid` the unique identifier/name given to the Source
+
+`conn` a Pipe object for interprocess communication
+
 #### RemoveSourceEvent
 
     class RemoveSourceEvent(PybEvent):
         sid: str
 
+Event associated with removing a Source from pybehave.
+
+*Attributes:*
+
+`sid` the unique identifier/name given to the Source
+
 #### CloseSourceEvent
     
     class CloseSourceEvent(PybEvent)
+
+Event associated with ending a Source.
 
 #### UnavailableSourceEvent
 
     class UnavailableSourceEvent(PybEvent):
         sid: str
+
+Event associated with a Source signaling to the main process that it no longer has an active connection to its corresponding
+hardware/software.
+
+*Attributes:*
+
+`sid` the unique identifier/name given to the Source
 
 #### ComponentRegisterEvent
 
@@ -392,10 +414,26 @@ Event associated with information that should be sent to EventLoggers and GUI bu
         cid: str
         address: typing.Union[str, typing.List[str]]
 
+Event associated with registering a Component with the Source.
+
+*Attributes:*
+
+`comp_type` the object type of the Component
+
+`cid` the ID of the component
+
+`address` the address in the Source that should be associated with this Component
+
 #### ComponentClosedEvent
 
     class ComponentCloseEvent(PybEvent):
         comp_id: str
+
+Event associated with the request to close the hardware/software connection with a particular Component.
+
+*Attributes:*
+
+`comp_id` the ID of the component
 
 ### EventLoggers
 
@@ -445,7 +483,7 @@ Container class for encapsulating all the information necessary to log a TaskEve
 
 #### FileEventLogger
 
-    class FileEventLogger:
+    class FileEventLogger(EventLogger):
         name: str
 
 Base class for EventLoggers that are exporting events to files. Has default behavior to open a file stream in `start`, flush
@@ -463,7 +501,7 @@ events regularly during `log_events`, and close the file in `stop`.
 
 #### CSVEventLogger
 
-    class CSVEventLogger:
+    class CSVEventLogger(FileEventLogger):
         name: str
 
 Default EventLogger for all Tasks that saves event stream to a CSV file. Saved files include a header with subject,task,
@@ -472,3 +510,17 @@ the task began.
 
 #### OENetworkLogger
 
+    class OENetworkLogger(EventLogger):
+        name: str
+        address: str
+        port: str
+
+EventLogger that transmits pybehave events as strings to OpenEphys to aid in synchronization.
+This logger should be paired with a NetworkEvents plugin in OpenEphys.
+
+*Attributes:*
+
+`address` the IP address of the device running OpenEphys. Use localhost if both pybehave and OpenEphys are running on the
+same system.
+
+`port` the port of the corresponding NetworkEvents plugin for OpenEphys.
