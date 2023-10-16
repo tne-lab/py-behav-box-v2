@@ -1,13 +1,9 @@
 from abc import ABCMeta, abstractmethod
-from enum import Enum
 from typing import Any, Type, Dict, List
 
 from Components.Component import Component
 from Events import PybEvents
 from Tasks.Task import Task
-import time
-
-from Utilities.create_task import create_task
 
 
 class TaskSequence(Task):
@@ -33,37 +29,32 @@ class TaskSequence(Task):
             for name in sub_components:
                 if name not in components:
                     components[name] = sub_components[name]
-                elif len(components[name]) < len(sub_components[name]):
-                    components[name] = sub_components[name]
         components.update(self.get_sequence_components())
         return components
 
-    def switch_task(self, task: Type[Task], protocol: str, new_state: Enum = None, metadata: Any = None) -> None:
-        create_task(self.switch_task_(task, protocol, new_state, metadata))
-
-    async def switch_task_(self, task: Type[Task], protocol: str, new_state: Enum = None, metadata: Any = None) -> None:
+    def switch_task(self, task: Type[Task], protocol: str, metadata: Any = None) -> None:
         if self.cur_task is not None:
             self.cur_task.stop()
-        if new_state is not None and new_state != self.state:
-            self.change_state(new_state, metadata)
-        self.cur_task = await self.ws.switch_task(self, task, protocol)
-        self.log_event(PybEvents.StartEvent(self.cur_task, metadata))
+        self.cur_task = task()
+        self.cur_task.initialize(self, self.components, protocol)
+        metadata = metadata.copy()
+        metadata["sub_task"] = str(task)
+        self.log_event(PybEvents.StartEvent(self.metadata["chamber"], metadata=metadata))
 
     def main_loop(self, event: PybEvents.PybEvent) -> None:
-        self.cur_time = time.perf_counter()
-        if isinstance(event, PybEvents.StateEnterEvent) and event.task is self:
-            self.state = event.state
-        elif isinstance(event, PybEvents.StateExitEvent) and event.task is self:
+        if isinstance(event, PybEvents.StateEnterEvent):
+            self.state = self.States(event.value)
+        elif isinstance(event, PybEvents.StateExitEvent):
             if self.state in self.state_timeouts:
                 for tm in self.state_timeouts[self.state].values():
                     if tm[1]:
-                        tm[0].stop()
+                        self.cancel_timeout(tm[0].name)
+        elif isinstance(event, PybEvents.TimeoutEvent):
+            del self.timeouts[event.name]
         all_handled = self.all_states(event)
-        if not all_handled and hasattr(self, self.state.name):
-            state_method = getattr(self, self.state.name)
-            all_handled = state_method(event)
-        if not all_handled and self.cur_task is not None and self.cur_task.started:
-            self.cur_task.main_loop(event)
+        if not all_handled and self.state.name in self.state_methods:
+            if not self.state_methods[self.state.name](event) and self.cur_task is not None:
+                self.cur_task.state_methods[self.cur_task.state.name](event)
 
     def pause__(self) -> None:
         if self.cur_task is not None:
@@ -79,3 +70,6 @@ class TaskSequence(Task):
         super(TaskSequence, self).resume__()
         if self.cur_task is not None:
             self.cur_task.resume__()
+
+    def task_complete(self):
+        self.log_event(PybEvents.TaskCompleteEvent(self.metadata["chamber"], {"sequence_complete": True}))

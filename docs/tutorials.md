@@ -25,3 +25,5 @@
 ### [Synchronizing with video data]()
 
 ### [Synchronizing with OpenEphys]()
+
+### [Working with Bayesian Optimization]()

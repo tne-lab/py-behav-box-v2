@@ -5,7 +5,7 @@ from abc import ABCMeta, abstractmethod
 import importlib
 from enum import Enum
 import runpy
-from typing import Any, Type, overload, Dict, List, TYPE_CHECKING
+from typing import Any, Type, overload, Dict, List, TYPE_CHECKING, Tuple
 
 from Events import PybEvents
 from Tasks.TimeoutManager import Timeout
@@ -76,7 +76,7 @@ class Task:
         ...
 
     @overload
-    def initialize(self, task: Task, components: List[Component], protocol: str) -> None:
+    def initialize(self, task: Task, components: Dict[Tuple], protocol: str) -> None:
         ...
 
     def initialize(self, *args) -> None:
@@ -94,10 +94,10 @@ class Task:
             # Assign variables from base Task
             self.tp = args[0].tp
             self.metadata = args[0].metadata
-            for ct in args[1].values():
-                component = ct[0]
-                cid = component.id.split('-')[0]
-                if cid in component_definition:
+            for component_tuple in args[1].values():
+                component = component_tuple[0]  # Index 0 in tuple is the Component
+                cid = component.id.split('-')[0]  # Get simple name of Component
+                if cid in component_definition:  # If Component is part of this Task
                     if not hasattr(self, cid):
                         setattr(self, cid, component)
                     else:  # If the Component is part of an already registered list
@@ -106,7 +106,7 @@ class Task:
                             getattr(self, cid).append(component)
                         else:
                             setattr(self, cid, [getattr(self, cid), component])
-                    self.components[component.id] = (component, comp_index)
+                    self.components[component.id] = (component, comp_index, component_tuple[2])
                     comp_index += 1
             # Load protocol is provided
             protocol = args[2]
@@ -222,7 +222,7 @@ class Task:
         if not self.is_complete_():
             self.log_event(PybEvents.StateEnterEvent(self.metadata["chamber"], new_state.name, new_state.value, metadata=metadata.copy()))
         else:
-            self.log_event(PybEvents.TaskCompleteEvent(self.metadata["chamber"]))
+            self.task_complete()
 
     def start__(self) -> None:
         self._complete = False

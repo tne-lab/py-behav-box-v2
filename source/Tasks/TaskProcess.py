@@ -117,7 +117,7 @@ class TaskProcess(Process):
             if task.started and not task.paused:
                 self.tasks[task.metadata["chamber"]].main_loop(event)
                 if task.is_complete_():
-                    self.tp_q.append(PybEvents.TaskCompleteEvent(task.metadata["chamber"]))
+                    self.tasks[task.metadata["chamber"]].task_complete()
         if isinstance(event, PybEvents.Loggable):
             task = self.tasks[event.chamber]
             if task.started and not task.paused:
@@ -169,11 +169,13 @@ class TaskProcess(Process):
                 el.output_folder = event.output_file
 
     def start_task(self, event: PybEvents.StartEvent):
-        task = self.tasks[event.chamber]
-        # TASK SEQUENCE FUNCTIONALITY IS BROKEN
-        if task is self.tasks[task.metadata["chamber"]]:
-            for el in self.task_event_loggers[task.metadata["chamber"]].values():  # Start all EventLoggers
-                el.start_()
+        if "sub_task" in event.metadata:  # If we should start a sub-task
+            task = self.tasks[event.chamber].cur_task
+        else:
+            task = self.tasks[event.chamber]
+            if task is self.tasks[task.metadata["chamber"]]:
+                for el in self.task_event_loggers[task.metadata["chamber"]].values():  # Start all EventLoggers
+                    el.start_()
         task.start__()
         new_event = PybEvents.StateEnterEvent(task.metadata["chamber"], task.state.name, task.state.value,
                                               metadata=event.metadata)
@@ -182,15 +184,16 @@ class TaskProcess(Process):
         self.log_gui_event(new_event)
 
     def task_complete(self, event: PybEvents.TaskCompleteEvent):
-        task = self.tasks[event.chamber]
-        if task is not self.tasks[task.metadata["chamber"]]:  # if it's a child task
-            task.stop__()
-            self.tasks[task.metadata["chamber"]].main_loop(event)
-        else:
+        if "sequence_complete" not in event.metadata:
+            task = self.tasks[event.chamber]
             e = PybEvents.StopEvent(event.chamber)
             self.mainq.send_bytes(self.encoder.encode(e))
             self.tp_q.append(e)
             task.complete = True
+        else:
+            task = self.tasks[event.chamber].cur_task
+            task.stop__()
+            self.tasks[event.chamber].cur_task = None
 
     def stop_task(self, event: PybEvents.StopEvent):
         task = self.tasks[event.chamber]
@@ -242,7 +245,7 @@ class TaskProcess(Process):
             self.tasks[task.metadata["chamber"]].main_loop(new_event)
             self.log_event(new_event)
             if task.is_complete_():
-                self.tp_q.append(PybEvents.TaskCompleteEvent(task.metadata["chamber"]))
+                self.tasks[task.metadata["chamber"]].task_complete()
 
     def update_constants(self, event: PybEvents.ConstantsUpdateEvent):
         for q in self.source_buffers.values():
