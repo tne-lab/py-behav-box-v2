@@ -1,7 +1,7 @@
 # Running a task on hardware
 
 In the following, we will show how to set up the workstation to run a task on
-operant hardware. This is not a complete overview of all possible configuration
+operant hardware. This is not a complete overview of all possible options for configuring pybehave
 but will guide you through adding Sources to the Workstation and creating new
 AddressFiles and Protocols for local configuration.
 
@@ -20,14 +20,14 @@ hardware, we need to link the hardware to the Workstation by adding Sources.
 This only needs to be done once whenever new hardware is needed by the system.
 Sources can be added by going to File->Settings to open the SettingsDialog.
 
-![settings.png](img/settings.png)
+![settings.png](../img/settings.png)
 
 Available Sources are indicated by the list. If the Workstation has more than one chamber, the count
 variable can also be set accordingly in settings. For this tutorial we will be adding a WhiskerLineSource to communicate with the 
 digital inputs and outputs in the operant chamber and a VideoSource to control
 the webcam. To add a Source, press the "+" button to bring up the AddSourceDialog.
 
-![add_source.png](img/add_source.png)
+![add_source.png](../img/add_source.png)
 
 Available Sources can be selected from the dropdown and named via the upper
 textbox. For this Whisker-based task, we will be adding a WhiskerLineSource named "whisker"
@@ -37,8 +37,8 @@ Some Sources might require more parameters to
 set up. If so, a second Dialog, the SourceParametersDialog, will pop up. Examples are shown below
 for the WhiskerLineSource (left) and VideoSource (right):
 
-![add_source.png](img/source_parameters.png)
-![video_source.png](img/video_parameters.png)
+![add_source.png](../img/source_parameters.png)
+![video_source.png](../img/video_parameters.png)
 
 ## Creating an AddressFile
 
@@ -105,13 +105,13 @@ These entries can then be used as a reference for the override in a Protocol fil
 To run a Task, it needs to be associated with one of the Workstation's chambers. This can be done
 by going to File->Add Task to open the corresponding dialog.
 
-![add_task_dialog.png](img/add_task_dialog.png)
+![add_task_dialog.png](../img/add_task_dialog.png)
 
 The desired task can be selected from the dropdown along with the chamber it should be associated
 with. A task can also be loaded from a configuration file which we will create in the next few
 steps. Once the Task is added, a corresponding ChamberWidget will appear in the GUI:
 
-![chamber_widget_bp.png](img/chamber_widget_bp.png)
+![chamber_widget_bp.png](../img/chamber_widget_bp.png)
 
 ## Creating the Configuration
 
@@ -122,7 +122,7 @@ browse button and navigating the resultant file explorer. The exact save locatio
 be set using the Output Folder field. Additional items can be added to the configuration by 
 right-clicking the ChamberWidget and selecting Edit Configuration to open the ConfigurationDialog:
 
-![configuration_dialog.png](img/configuration_dialog.png)
+![configuration_dialog.png](../img/configuration_dialog.png)
 
 ### Adding a Widget
 
@@ -132,11 +132,11 @@ of the Task event stream. If we wanted to simultaneously record electrophysiolog
 was running, we could add an OEWidget to control OpenEphys from the pybehave GUI by pressing the
 plus button below the Widget list:
 
-![add_widget.png](img/add_widget.png)
+![add_widget.png](../img/add_widget.png)
 
 Parameters for the widget including its unique name/identifier can be added in the resultant dialog:
 
-![widget_parameters.png](img/widget_parameters.png)
+![widget_parameters.png](../img/widget_parameters.png)
 
 ### Adding an EventLogger
 
@@ -145,11 +145,11 @@ that all task events are also saved in an OpenEphys events file to simplify sync
 can be done by adding an OENetworkLogger which will forward the event stream to OpenEphys. To add
 the logger, press the plus button below the Event Logger list:
 
-![add_logger.png](img/add_logger.png)
+![add_logger.png](../img/add_logger.png)
 
 Parameters for the logger including its unique name/identifier can be added in the resultant dialog:
 
-![logger_parameters.png](img/logger_parameters.png)
+![logger_parameters.png](../img/logger_parameters.png)
 
 ### Saving the configuration
 

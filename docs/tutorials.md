@@ -2,7 +2,7 @@
 
 ## Using Pybehave
 
-### [Running a task on hardware](task_on_hardware.md)
+### [Running a task on hardware](tutorials/task_on_hardware.md)
 
 ### [Basic analysis of pybehave data]()
 
@@ -27,3 +27,5 @@
 ### [Synchronizing with OpenEphys]()
 
 ### [Working with Bayesian Optimization]()
+
+### [Simulating Behavior]()

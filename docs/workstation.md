@@ -101,15 +101,41 @@ The classes below are in the `Events` package and associated with Widgets.
     class Widget(QWidget):
         name: str
 
+*Attributes:*
+
+`name: str` the identifier given to this Widget
+
+`cw: ChamberWidget` the ChamberWidget this Widget is associated with
+
+*Methods:*
+
+`set_chamber(cw: ChamberWidget) -> None` called when the Widget is successfully initialized and associated with the GUI
+
+`close() -> None` called when the chamber is being cleared
+
 #### EventWidget
 
-    class EventWidgetQWidget):
+    class EventWidgetWidget):
         name: str
+
+*Attributes:*
+
+`name: str` the identifier given to this Widget
+
+*Methods:*
+
+`handle_event(event: PybEvents.PybEvent) -> None` called when a new event is generated
+
+`start() -> None` called when the Task starts
+
+`stop() -> None` called when the Task ends
 
 #### TerminalWidget
 
     class TerminalWidget(EventWidget):
         name: str
+
+Widget showing the event stream in a terminal-like interface. Defaults to only display Loggable events.
 
 #### SubjectConfigWidget
     
@@ -119,6 +145,9 @@ The classes below are in the `Events` package and associated with Widgets.
 
     class ManualWidget(Widget):
         name: str
+
+Widget providing the option to manually send an event to the stream. This is accomplished through a custom ManualEvent class 
+which can be provided with a name/value pair by the GUI.
 
 #### OEWidget
 

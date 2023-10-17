@@ -31,11 +31,10 @@ Depending on the type of *Source* one or both of these functionalities might be 
 a Source, a user should override the `write_component` method. The `write_component` method is responsible for taking a component ID 
 and a value to write (`msg`) and updates the hardware component accordingly. 
 Reading from a *Source* typically requires the implementation of some form of asynchronous programming. One available option is
-to instead have a custom *Source* overr
-To control components *Sources* can override the `read_component` and `write_component` methods. Depending on the type of *Source*
-one or both of these methods might be required. `read_component` takes a component ID as input and will return the current
-value of the component (the type of the return value is left to the particular *Source* implementation). The `write_component` 
-method takes a component ID and a value to write (`msg`) and updates the hardware component accordingly. 
+to instead have a custom *Source* override the *ThreadSource* class which will have event handling run in a separate thread from
+the `initialize` method. Users can then put any polling or external event processing in the end of the `initialize` method. Alternatively,
+new threads can be created based on registering or writing a component. When new values are received for a component, the
+`update_component` method can be called to signal the new value.
 
 ## Closing components
 
