@@ -25,7 +25,6 @@ class BayesObject(ABC):
         self.bounds = None
         self.input_labels = None
         self.output_labels = None
-        self.cur_trial = 0
 
     def initialize(self, train_x: Dict = None, train_y: Dict = None, metadata: Dict = None) -> None:
         self.train_x = train_x
@@ -92,9 +91,8 @@ class BayesOptSource(ThreadSource):
                         with open(subject_folder + "/Model/" + datum + "_" + str(time.time_ns()) + ".bayes", "wb") as f:
                             pickle.dump({"x": self.bayes_objs[datum].train_x, "y": self.bayes_objs[datum].train_y}, f)
                 else:
-                    # Add correct list comprehension
                     if datum["id"] in tensors:
-                        tensors[datum["id"]][0].append(datum["trial"])
+                        tensors[datum["id"]][0].append(datum["uuid"])
                         for key in datum["x"]:
                             tensors[datum["id"]][1][key].append(datum["x"][key])
                         for key in datum["y"]:
@@ -104,13 +102,15 @@ class BayesOptSource(ThreadSource):
                             datum["x"][key] = [datum["x"][key]]
                         for key in datum["y"]:
                             datum["y"][key] = [datum["y"][key]]
-                        tensors[datum["id"]] = ([datum["trial"]], datum["x"], datum["y"])
+                        tensors[datum["id"]] = ([datum["uuid"]], datum["x"], datum["y"])
             for tensor in tensors:
                 self.bayes_objs[tensor].add_data(*tensors[tensor])
                 new_params = self.bayes_objs[tensor].generate()
-                self.update_component(tensor, new_params)
+                if new_params is not None:
+                    self.update_component(tensor, new_params)
             for tensor in tensors:
                 self.posterior_plot(tensor)
+            time.sleep(0)
 
     def register_component(self, component: Component, metadata: Dict) -> None:
         folder = component.address[:component.address.rfind('/')]
@@ -144,7 +144,7 @@ class BayesOptSource(ThreadSource):
             self.update_component(component_id, new_params)
             self.data_queue.put(component_id)
         elif msg["command"] == "add_data":
-            self.data_queue.put({"id": component_id, "trial": msg["x"]["trial"], "x": msg["x"], "y": msg["y"]})
+            self.data_queue.put({"id": component_id, "uuid": msg["x"]["uuid"], "x": msg["x"], "y": msg["y"]})
         elif msg["command"] == "save":
             self.data_queue.put(component_id)
 
