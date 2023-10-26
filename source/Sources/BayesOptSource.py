@@ -5,6 +5,7 @@ import pickle
 import queue
 import sys
 import time
+import uuid
 from abc import ABC, abstractmethod
 from typing import Dict, List
 
@@ -21,10 +22,15 @@ class BayesObject(ABC):
     def __init__(self):
         self.train_x = None
         self.train_y = None
+        self.ids = []
         self.metadata = None
         self.bounds = None
         self.input_labels = None
         self.output_labels = None
+
+    @ staticmethod
+    def generate_tag():
+        return str(uuid.uuid4())
 
     def initialize(self, train_x: Dict = None, train_y: Dict = None, metadata: Dict = None) -> None:
         self.train_x = train_x
@@ -42,7 +48,8 @@ class BayesObject(ABC):
             for key in self.output_labels:
                 self.train_y[key] = []
 
-    def add_data(self, trials: List[int], train_x: Dict, train_y: Dict) -> None:
+    def add_data(self, ids: List[str], train_x: Dict, train_y: Dict) -> None:
+        self.ids += ids
         for key in self.input_labels:
             self.train_x[key] += train_x[key]
         for key in self.output_labels:

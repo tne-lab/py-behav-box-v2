@@ -1,6 +1,6 @@
 # Running a task on hardware
 
-In the following, we will show how to set up the workstation to run a task on
+In the following tutorial, we will show how to set up the workstation to run a task on
 operant hardware. This is not a complete overview of all possible options for configuring pybehave
 but will guide you through adding Sources to the Workstation and creating new
 AddressFiles and Protocols for local configuration.
