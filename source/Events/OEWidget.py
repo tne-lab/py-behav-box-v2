@@ -8,12 +8,12 @@ from PyQt5.QtWidgets import QGroupBox, QHBoxLayout, QVBoxLayout, QLineEdit, QPus
 from Events import PybEvents
 
 from Events.LoggerEvent import LoggerEvent
-from Events.Widget import Widget
+from Events.EventWidget import EventWidget
 from Workstation.ChamberWidget import ChamberWidget
 from Workstation.IconButton import IconButton
 
 
-class OEWidget(Widget):
+class OEWidget(EventWidget):
 
     class OEEvent(PybEvents.Loggable, PybEvents.StatefulEvent):
         name: str
@@ -163,3 +163,13 @@ class OEWidget(Widget):
             self.socket.recv(flags=zmq.NOBLOCK)
         except zmq.ZMQError:
             pass
+
+    def handle_event(self, event: PybEvents.PybEvent):
+        super().handle_event(event)
+        if isinstance(event, PybEvents.OutputFileChangedEvent):
+            desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
+            self.rec_dir.setText("{}/py-behav/{}/Data/{}/{}/".format(desktop,
+                                                                     self.cw.task_name.currentText(),
+                                                                     self.cw.subject.text(),
+                                                                     datetime.now().strftime(
+                                                                         "%m-%d-%Y")))
