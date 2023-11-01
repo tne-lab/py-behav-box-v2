@@ -237,7 +237,7 @@ class TaskProcess(Process):
         task = self.tasks[event.chamber]
         comp = task.components[event.comp_id][0]
         if comp.update(event.value) and task.started and not task.paused:
-            event.value = comp.state
+            # event.value = comp.state
             metadata = event.metadata.copy()
             metadata["value"] = comp.state
             new_event = PybEvents.ComponentChangedEvent(task.metadata["chamber"], comp, task.components[comp.id][1],

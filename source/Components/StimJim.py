@@ -47,16 +47,18 @@ class StimJim(Stimmer):
         self.write("{}{}".format(stype, pnum))
 
     def update(self, value: Union[bytes, str, int]) -> bool:
+        print(value)
         if value is not None:
             if isinstance(value, int):
                 self.state = value
             else:
                 if isinstance(value, str):
-                    segs = value.split('\n')
+                    dec_val = value
                 else:
-                    segs = value.decode('utf-8').split('\n')
+                    dec_val = value.decode('utf-8')
+                segs = dec_val.split('\n')
                 segs[0] = self.in_buffer + segs[0]
-                if not segs[-1].endswith('\n'):
+                if not dec_val.endswith('\n'):
                     self.in_buffer = segs[-1]
                     del segs[-1]
                 self.commands = []
