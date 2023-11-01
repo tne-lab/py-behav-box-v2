@@ -232,31 +232,6 @@ class Workstation:
         metadata = {"chamber": chamber, "subject": subject_name, "protocol": protocol, "address_file": address_file}
         self.mainq.send_bytes(self.encoder.encode(PybEvents.AddTaskEvent(chamber, task_name, task_event_loggers, metadata=metadata)))
 
-    async def switch_task(self, task_base: Task, task_name: Type[Task], protocol: str = None) -> Task:
-        """
-        Switch the active Task in a sequence.
-        Parameters
-        ----------
-        task_base : Task
-            The base Task of the sequence
-        task_name : Class
-            The next Task in the sequence
-        protocol : dict
-            Dictionary representing the protocol for the new Task
-        """
-        # Create the new Task as part of a sequence
-        new_task = task_name()
-        new_task.initialize(task_base, task_base.components, protocol)
-        gui = getattr(importlib.import_module("Local.GUIs." + task_name.__name__ + "GUI"), task_name.__name__ + "GUI")
-        # Position the GUI in pygame
-        col = task_base.metadata['chamber'] % self.n_col
-        row = math.floor(task_base.metadata['chamber'] / self.n_col)
-        # Create the GUI
-        self.guis[task_base.metadata['chamber']].sub_gui = gui(
-            self.task_gui.subsurface(col * self.w, row * self.h, self.w, self.h),
-            new_task)
-        return new_task
-
     def remove_task(self, chamber: int, del_loggers: bool = True) -> None:
         """
         Remove the Task from the specified chamber.
@@ -297,6 +272,8 @@ class Workstation:
                             row = math.floor(event.chamber / self.n_col)
                             rect = pygame.Rect((col * self.w, row * self.h, self.w, self.h))
                             if isinstance(event, PybEvents.InitEvent) or isinstance(event, PybEvents.StartEvent):
+                                if "sub_task" in event.metadata:
+                                    self.guis[event.chamber].switch_sub_gui(event)
                                 self.guis[event.chamber].complete = False
                                 self.guis[event.chamber].draw()
                                 self.gui_updates.append(rect)

@@ -40,6 +40,7 @@ class GUI:
         self.paused = False
         self.state = None
         self.last_event = None
+        self.time_offset = 0
 
         task_module = importlib.import_module("Local.Tasks." + event.task_name)
         task = getattr(task_module, event.task_name)
@@ -176,7 +177,7 @@ class GUI:
         elif event_type == PybEvents.ResumeEvent:
             self.paused = False
         if isinstance(event, PybEvents.TimedEvent) and self.started:
-            self.time_elapsed = event.timestamp
+            self.time_elapsed = event.timestamp - self.time_offset
             self.time_in_state = event.timestamp - self.state_enter_time
 
     def start(self):

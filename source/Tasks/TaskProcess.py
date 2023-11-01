@@ -185,16 +185,15 @@ class TaskProcess(Process):
         self.log_gui_event(new_event)
 
     def task_complete(self, event: PybEvents.TaskCompleteEvent):
-        if "sequence_complete" not in event.metadata:
-            task = self.tasks[event.chamber]
-            e = PybEvents.StopEvent(event.chamber)
-            self.mainq.send_bytes(self.encoder.encode(e))
-            self.tp_q.append(e)
-            task.complete = True
-        else:
+        if "sequence_complete" in event.metadata:
             task = self.tasks[event.chamber].cur_task
             task.stop__()
             self.tasks[event.chamber].cur_task = None
+        task = self.tasks[event.chamber]
+        e = PybEvents.StopEvent(event.chamber)
+        self.mainq.send_bytes(self.encoder.encode(e))
+        self.tp_q.append(e)
+        task.complete = True
 
     def stop_task(self, event: PybEvents.StopEvent):
         task = self.tasks[event.chamber]
