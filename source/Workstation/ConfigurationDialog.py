@@ -163,7 +163,7 @@ class AddExtrasDialog(QDialog):
             QListWidgetItem("{} ({})".format(new_widget.name, self.extra.currentText()), self.cd.widget_list)
         else:
             logger_text = self.extra.currentText() + "((" + ''.join(f"||{w}||" for w in self.params) + "))"
-            self.cd.cw.event_loggers += self.extra.currentText() + logger_text
+            self.cd.cw.event_loggers += logger_text
             QListWidgetItem("{} ({})".format(self.params[0], self.extra.currentText()), self.cd.logger_list)
             self.cd.cw.workstation.mainq.send_bytes(self.cd.cw.workstation.encoder.encode(AddLoggerEvent(int(self.cd.cw.chamber_id.text()) - 1, logger_text)))
             self.cd.cw.output_file_changed()

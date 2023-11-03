@@ -8,7 +8,7 @@
 
 ## Extending Pybehave
 
-### [Creating a new Task]()
+### [Creating a new Task](tutorials/creating_task.md)
 
 ### [Creating a new Component]()
 
@@ -29,3 +29,5 @@
 ### [Working with Bayesian Optimization]()
 
 ### [Simulating Behavior]()
+
+### [Creating a TaskSequence]()
