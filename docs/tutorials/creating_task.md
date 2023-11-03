@@ -31,6 +31,7 @@ is a considerable degree of preserved behavior. For this tutorial, we are entire
 the base class:
 
     class BarPress(Task)
+        """@DynamicAttrs"""
 
 ## States
 
@@ -38,7 +39,6 @@ All Tasks have States which represent different phases of the Task where the Com
 different behaviors. For our BarPress Task, there are two states: one where pressing the lever produces a reward and a second 
 where it does not. We can create an enum to represent these states with the following code segment:
 
-    """@DynamicAttrs"""
     class States(Enum):
         REWARD_AVAILABLE = 0
         REWARD_UNAVAILABLE = 1
@@ -52,8 +52,8 @@ by overriding the `get_components` method. For our BarPress Task, we have a leve
 a dispenser for food, a fan for white noise, a motor to enable the lever, a light over the lever, and a camera in the chamber.
 All of these physical Components are represented in pybehave as implementation independent Component abstractions. Components
 that have distinct on and off states like lights or motors are represented with Toggles. Components like the food dispenser that
-should only be active for brief periods are represented with TimedToggles. On/off inputs are represented by BinaryInputs. Complex 
-components like a camera are represented by Videos. To associate all of these Components with the Task, we must have `get_components`
+should only be active for brief periods are represented with TimedToggles. On/off inputs are represented by BinaryInputs. Complex video-related
+components like the camera are represented by Videos. To associate all of these Components with the Task, we must have `get_components`
 return a dictionary linking the name we want to give each of these components to a list of Components it represents. In this Task,
 all these lists will only have one element but if we had multiple levers we could group related Components together. The keys in 
 the dictionary returned by `get_components` will automatically be added as attributes of the class with a single Component
@@ -102,4 +102,62 @@ constants but for the case of our simple Task, this will just return the state w
 ## start
 
 We often need to have certain behaviors begin right when the Task is started like lights or fans turning on. We can implement
-this functionality by overriding the `start` method. 
+this functionality by overriding the `start` method. This method can also be used to start timers that need to run for the duration
+of the Task. The example override for the BarPress `start` method is below:
+
+    def start(self):
+        self.set_timeout("task_complete", self.duration * 60, end_with_state=False)
+        self.cage_light.toggle(True)
+        self.cam.start()
+        self.fan.toggle(True)
+        self.lever_out.toggle(True)
+        self.food_light.toggle(True)
+
+## stop
+
+Similarly, we may need to have the opposite behaviors occur right when the Task ends. We can implement this functionality 
+by overriding the `stop` method. The example override for the BarPress `stop` method is below:
+
+    def stop(self):
+        self.food_light.toggle(False)
+        self.cage_light.toggle(False)
+        self.fan.toggle(False)
+        self.lever_out.toggle(False)
+        self.cam.stop()
+
+## all_states
+
+Now that we've defined all the setup behavior, we need to implement what happens in each state. In many tasks, there might be
+behavior that should occur regardless of the state the Task is in. This can be implemented using the `all_states` method. Two
+common examples of cross-task behavior are handling the completion timeout or GUI inputs. The example override the BarPress
+task is shown below:
+
+    def all_states(self, event: PybEvents.PybEvent) -> bool:
+        if isinstance(event, PybEvents.TimeoutEvent) and event.name == "task_complete":
+            self.complete = True
+            return True
+        elif isinstance(event, PybEvents.GUIEvent) and event.event == "GUI_PELLET":
+            self.food.toggle(self.dispense_time)
+            return True
+        return False
+
+## State methods
+
+Each state we defined earlier needs a method to define the behavior in response to events. In the REWARD_AVAILABLE state,
+we need to deliver a reward whenever the lever is pressed. Additionally, if we need to lockout rewards after a press, we'll have 
+to change the state. The only event we have to handle to implement this behavior is a ComponentChangedEvent:
+
+    def REWARD_AVAILABLE(self, event: PybEvents.PybEvent):
+        if isinstance(event, PybEvents.ComponentChangedEvent) and event.comp == self.food_lever and event.comp.state:
+            self.food.toggle(self.dispense_time)
+            if self.reward_lockout:
+                self.change_state(self.States.REWARD_UNAVAILABLE)
+
+For the REWARD_UNAVAILABLE state we need to handle two events: a StateEnterEvent where we will start a timer for when the lockout ends 
+and a TimeoutEvent to change to the REWARD_AVAILABLE state when the time has elapsed:
+
+    def REWARD_UNAVAILABLE(self, event: PybEvents.PybEvent):
+        if isinstance(event, PybEvents.StateEnterEvent):
+            self.set_timeout("lockout", self.reward_lockout_min + random.random() * (self.reward_lockout_max - self.reward_lockout_min))
+        elif isinstance(event, PybEvents.TimeoutEvent) and event.name == "lockout":
+            self.change_state(self.States.REWARD_AVAILABLE)
