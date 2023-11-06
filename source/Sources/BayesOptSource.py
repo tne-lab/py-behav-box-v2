@@ -73,7 +73,6 @@ class BayesOptSource(ThreadSource):
         self.output_paths = {}
         self.metadata = {}
         self.data_queue = None
-        self.constants = {}
 
     def initialize(self):
         self.data_queue = queue.Queue()
@@ -85,18 +84,28 @@ class BayesOptSource(ThreadSource):
                 pass
             tensors = {}
             for datum in data:
-                if isinstance(datum, str):
-                    if datum not in self.plots:
-                        self.plots[datum] = plt.figure(figsize=self.bayes_objs[datum].metadata["plot_size"] if "plot_size" in self.bayes_objs[datum].metadata else None)
+                if "initialize" in datum:
+                    if datum["initialize"] not in self.plots:
+                        self.plots[datum["initialize"]] = plt.figure(figsize=self.bayes_objs[datum["initialize"]].metadata["plot_size"] if "plot_size" in self.bayes_objs[datum["initialize"]].metadata else None)
                         plt.ion()
-                        self.plots[datum].show()
-                        self.posterior_plot(datum)
-                    else:
-                        subject_folder = self.output_paths[self.component_chambers[datum]]
-                        subject_folder = subject_folder[:subject_folder[:-1].rfind("/")]
-                        os.makedirs(os.path.dirname(subject_folder + "/Model/"), exist_ok=True)
-                        with open(subject_folder + "/Model/" + datum + "_" + str(time.time_ns()) + ".bayes", "wb") as f:
-                            pickle.dump({"x": self.bayes_objs[datum].train_x, "y": self.bayes_objs[datum].train_y}, f)
+                        self.plots[datum["initialize"]].show()
+                        self.posterior_plot(datum["initialize"])
+                elif "save" in datum:
+                    subject_folder = self.output_paths[self.component_chambers[datum["save"]]]
+                    subject_folder = subject_folder[:subject_folder[:-1].rfind("/")]
+                    os.makedirs(os.path.dirname(subject_folder + "/Model/"), exist_ok=True)
+                    with open(subject_folder + "/Model/" + datum["save"] + "_" + str(time.time_ns()) + ".bayes", "wb") as f:
+                        pickle.dump({"x": self.bayes_objs[datum["save"]].train_x, "y": self.bayes_objs[datum["save"]].train_y}, f)
+                elif "close" in datum:
+                    if datum["close"] in self.plots:
+                        self.plots[datum["close"]].clf()
+                        plt.close(self.plots[datum["close"]])
+                        plt.pause(0.005)
+                    del self.plots[datum["close"]]
+                    del self.bayes_objs[datum["close"]]
+                    del self.metadata[datum["close"]]
+                    if datum["close"] in self.output_paths:
+                        del self.output_paths[datum["close"]]
                 else:
                     if datum["id"] in tensors:
                         tensors[datum["id"]][0].append(datum["uuid"])
@@ -132,7 +141,7 @@ class BayesOptSource(ThreadSource):
         pass
 
     def close_component(self, component_id: str) -> None:
-        pass
+        self.data_queue.put({"close": component_id})
 
     def write_component(self, component_id: str, msg: Dict) -> None:
         if msg["command"] == "initialize":
@@ -140,7 +149,6 @@ class BayesOptSource(ThreadSource):
             subject_folder = self.output_paths[self.component_chambers[component_id]]
             subject_folder = subject_folder[:subject_folder[:-1].rfind("/")]
             data_files = glob.glob('**/{}_*.bayes'.format(component_id), root_dir=subject_folder + "/Model", recursive=True)
-            print(self.metadata[component_id])
             if len(data_files) == 0:
                 self.bayes_objs[component_id].initialize(metadata=self.metadata[component_id])
             else:
@@ -149,11 +157,11 @@ class BayesOptSource(ThreadSource):
                     self.bayes_objs[component_id].initialize(datafile["x"], datafile["y"], metadata=self.metadata[component_id])
             new_params = self.bayes_objs[component_id].generate()
             self.update_component(component_id, new_params)
-            self.data_queue.put(component_id)
+            self.data_queue.put({"initialize": component_id})
         elif msg["command"] == "add_data":
             self.data_queue.put({"id": component_id, "uuid": msg["x"]["uuid"], "x": msg["x"], "y": msg["y"]})
         elif msg["command"] == "save":
-            self.data_queue.put(component_id)
+            self.data_queue.put({"save": component_id})
 
     def output_file_changed(self, event: PybEvents.OutputFileChangedEvent) -> None:
         self.output_paths[event.chamber] = event.output_file
