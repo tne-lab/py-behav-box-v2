@@ -43,39 +43,22 @@ class TaskSequence(Task):
             self.cur_task.stop__()
         self.cur_task = task()
         self.cur_task.initialize(self, self.components, protocol)
-        metadata = metadata.copy()
-        metadata["protocol"] = protocol
-        metadata["sub_task"] = str(task)
+        sub_metadata = metadata.copy()
+        sub_metadata["protocol"] = protocol
+        sub_metadata["sub_task"] = str(task)
 
         if self.state != seq_state:
             self.change_state(seq_state, metadata)
-        self.log_event(PybEvents.StartEvent(self.metadata["chamber"], metadata=metadata))
+        self.log_event(PybEvents.StartEvent(self.metadata["chamber"], metadata=sub_metadata), sequence=False)
 
     def main_loop(self, event: PybEvents.PybEvent) -> None:
-        if isinstance(event, PybEvents.StateEnterEvent):
-            if event.name in self.state_methods:
-                self.state = self.States(event.value)
-            else:
-                self.cur_task.state = self.cur_task.States(event.value)
-        elif isinstance(event, PybEvents.StateExitEvent):
-            if event.name in self.state_methods and self.state in self.state_timeouts:
-                for tm in self.state_timeouts[self.state].values():
-                    if tm[1]:
-                        self.cancel_timeout(tm[0].name)
-            elif event.name in self.cur_task.state_methods and self.state in self.cur_task.state_timeouts:
-                for tm in self.cur_task.state_timeouts[self.state].values():
-                    if tm[1]:
-                        self.cur_task.cancel_timeout(tm[0].name)
-        elif isinstance(event, PybEvents.TimeoutEvent):
-            if event.name in self.timeouts:
-                del self.timeouts[event.name]
-            elif event.name in self.cur_task.timeouts:
-                del self.cur_task.timeouts[event.name]
-
-        if not self.all_states(event):
-            if not self.state_methods[self.state.name](event) and self.cur_task is not None:
-                if not self.cur_task.all_states(event) and self.cur_task.state is not None:
-                    self.cur_task.state_methods[self.cur_task.state.name](event)
+        if "sequence" in event.metadata:
+            super(TaskSequence, self).main_loop(event)
+        else:
+            if not self.all_states(event):
+                self.state_methods[self.state.name](event)
+            if not isinstance(event, PybEvents.TaskCompleteEvent):
+                self.cur_task.main_loop(event)
 
     def start__(self) -> None:
         super(TaskSequence, self).start__()
@@ -99,3 +82,8 @@ class TaskSequence(Task):
 
     def task_complete(self):
         self.log_event(PybEvents.TaskCompleteEvent(self.metadata["chamber"], metadata={"sequence_complete": True}))
+
+    def log_event(self, event: PybEvents.TaskEvent, sequence=True):
+        if sequence:
+            event.metadata["sequence"] = True
+        self.tp.tp_q.append(event)

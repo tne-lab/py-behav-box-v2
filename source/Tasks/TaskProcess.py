@@ -14,6 +14,7 @@ import psutil
 
 from Events import PybEvents
 from Events.FileEventLogger import FileEventLogger
+from Tasks.TaskSequence import TaskSequence
 from Tasks.TimeoutManager import TimeoutManager
 
 
@@ -116,8 +117,6 @@ class TaskProcess(Process):
             task = self.tasks[event.chamber]
             if task.started and not task.paused:
                 self.tasks[task.metadata["chamber"]].main_loop(event)
-                if task.is_complete_():
-                    self.tasks[task.metadata["chamber"]].task_complete()
         if isinstance(event, PybEvents.Loggable):
             task = self.tasks[event.chamber]
             if task.started and not task.paused:
@@ -189,11 +188,14 @@ class TaskProcess(Process):
             task = self.tasks[event.chamber].cur_task
             task.stop__()
             self.tasks[event.chamber].cur_task = None
-        task = self.tasks[event.chamber]
-        e = PybEvents.StopEvent(event.chamber)
-        self.mainq.send_bytes(self.encoder.encode(e))
-        self.tp_q.append(e)
-        task.complete = True
+        elif isinstance(self.tasks[event.chamber], TaskSequence):
+            self.tasks[event.chamber].main_loop(event)
+        else:
+            task = self.tasks[event.chamber]
+            e = PybEvents.StopEvent(event.chamber)
+            self.mainq.send_bytes(self.encoder.encode(e))
+            self.tp_q.append(e)
+            task.complete = True
 
     def stop_task(self, event: PybEvents.StopEvent):
         task = self.tasks[event.chamber]
@@ -244,8 +246,8 @@ class TaskProcess(Process):
                                                         metadata=metadata)
             self.tasks[task.metadata["chamber"]].main_loop(new_event)
             self.log_event(new_event)
-            if task.is_complete_():
-                self.tasks[task.metadata["chamber"]].task_complete()
+            # if task.is_complete_():
+            #     self.tasks[task.metadata["chamber"]].task_complete()
 
     def update_constants(self, event: PybEvents.ConstantsUpdateEvent):
         for q in self.source_buffers.values():
