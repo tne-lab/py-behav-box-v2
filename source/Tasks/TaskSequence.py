@@ -57,8 +57,10 @@ class TaskSequence(Task):
         else:
             if not self.all_states(event):
                 self.state_methods[self.state.name](event)
-            if not isinstance(event, PybEvents.TaskCompleteEvent):
+            if not isinstance(event, PybEvents.TaskCompleteEvent) and self.cur_task is not None:
                 self.cur_task.main_loop(event)
+            if self.is_complete_():
+                self.task_complete()
 
     def start__(self) -> None:
         super(TaskSequence, self).start__()

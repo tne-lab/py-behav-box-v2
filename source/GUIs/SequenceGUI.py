@@ -62,5 +62,7 @@ class SequenceGUI(GUI):
         # Don't reset sequence time for sub-task start events
         if not (isinstance(event, PybEvents.StartEvent) and "sub_task" in event.metadata) and not (isinstance(event, PybEvents.TaskCompleteEvent) and "sequence_complete" not in event.metadata):
             super(SequenceGUI, self).handle_event(event)
+        if isinstance(event, PybEvents.TaskCompleteEvent) and "sequence_complete" in event.metadata:
+            self.started = False
         if self.sub_gui is not None:
             self.sub_gui.handle_event(event)
