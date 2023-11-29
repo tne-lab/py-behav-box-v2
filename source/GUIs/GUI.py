@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib
 import runpy
+import time
 from enum import Enum
 from typing import TYPE_CHECKING, List, Dict
 
@@ -32,10 +33,13 @@ class GUI:
         self.components = {}
         self.time_elapsed = 0
         self.time_in_state = 0
+        self.state_enter_time = 0
         self.complete = False
         self.chamber = event.chamber
         self.started = False
         self.paused = False
+        self.state = None
+        self.last_event = None
 
         task_module = importlib.import_module("Local.Tasks." + event.task_name)
         task = getattr(task_module, event.task_name)
@@ -138,6 +142,11 @@ class GUI:
         pygame.draw.rect(self.task_gui, Colors.white, self.task_gui.get_rect(), 1)
 
     def handle_event(self, event: PybEvents.PybEvent) -> None:
+        if self.last_event is None:
+            dt = 0
+        else:
+            dt = time.perf_counter() - self.last_event
+        self.last_event = time.perf_counter()
         event_type = type(event)
         if event_type == PybEvents.PygameEvent:
             if self.started and not self.paused:
@@ -152,17 +161,23 @@ class GUI:
                 setattr(self, key, value)
         elif event_type == PybEvents.HeartbeatEvent:
             if self.started and not self.paused:
-                self.time_elapsed += 0.1
+                self.time_elapsed += dt
+                self.time_in_state += dt
         elif event_type == PybEvents.StateEnterEvent:
+            self.state = event.name
             self.time_in_state = 0
+            self.state_enter_time = event.timestamp
         elif event_type == PybEvents.StopEvent:
+            self.last_event = None
             self.started = False
         elif event_type == PybEvents.PauseEvent:
+            self.last_event = None
             self.paused = True
         elif event_type == PybEvents.ResumeEvent:
             self.paused = False
         if isinstance(event, PybEvents.TimedEvent) and self.started:
             self.time_elapsed = event.timestamp
+            self.time_in_state = event.timestamp - self.state_enter_time
 
     def start(self):
         self.started = True

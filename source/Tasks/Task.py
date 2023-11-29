@@ -212,7 +212,7 @@ class Task:
         pass
 
     @abstractmethod
-    def init_state(self) -> Enum:
+    def init_state(self) -> Enum | Tuple[Enum, Dict]:
         raise NotImplementedError
 
     def change_state(self, new_state: Enum, metadata: Dict = None) -> None:
@@ -224,15 +224,23 @@ class Task:
         else:
             self.task_complete()
 
-    def start__(self) -> None:
+    def start__(self) -> Dict:
         self._complete = False
         self.complete = False
-        self.state = self.init_state()
+        init_info = self.init_state()
+        if isinstance(init_info, tuple):
+            self.state = init_info[0]
+            metadata = init_info[1]
+        else:
+            self.state = init_info
+            metadata = {}
         for key, value in self.get_variables().items():
             setattr(self, key, value)
         self.start()
         self.started = True
         self.entry_time = self.start_time = time.perf_counter()
+
+        return metadata
 
     def start(self) -> None:
         pass

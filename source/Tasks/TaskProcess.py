@@ -176,9 +176,10 @@ class TaskProcess(Process):
             if task is self.tasks[task.metadata["chamber"]]:
                 for el in self.task_event_loggers[task.metadata["chamber"]].values():  # Start all EventLoggers
                     el.start_()
-        task.start__()
+        metadata = task.start__()
+        metadata.update(event.metadata)
         new_event = PybEvents.StateEnterEvent(task.metadata["chamber"], task.state.name, task.state.value,
-                                              metadata=event.metadata)
+                                              metadata=metadata)
         self.tasks[task.metadata["chamber"]].main_loop(new_event)
         self.log_event(new_event)
         self.log_gui_event(new_event)
