@@ -89,14 +89,14 @@ class TaskProcess(Process):
                         # print(time.perf_counter() - t)
                         while len(self.tp_q) > 0:
                             self.handle_event(self.tp_q.popleft())
-                for source in self.source_buffers:
-                    if len(self.source_buffers[source]) > 0:
-                        self.sourceq[source].send_bytes(self.encoder.encode(self.source_buffers[source]))
-                        self.source_buffers[source] = []
-                if isinstance(event, PybEvents.TaskEvent) and len(self.logger_q) > 0:
-                    for logger in self.task_event_loggers[event.chamber].values():
-                        logger.log_events(self.logger_q)
-                    self.logger_q.clear()
+                        for source in self.source_buffers:
+                            if len(self.source_buffers[source]) > 0:
+                                self.sourceq[source].send_bytes(self.encoder.encode(self.source_buffers[source]))
+                                self.source_buffers[source] = []
+                        if isinstance(event, PybEvents.TaskEvent) and len(self.logger_q) > 0:
+                            for logger in self.task_event_loggers[event.chamber].values():
+                                logger.log_events(self.logger_q)
+                            self.logger_q.clear()
             except BaseException as e:
                 if isinstance(event, PybEvents.TaskEvent):
                     self.log_gui_event(PybEvents.ErrorEvent(type(e).__name__, traceback.format_exc(),

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import webbrowser
 from typing import TYPE_CHECKING, List
 
 from Events.Widget import Widget
@@ -48,8 +49,11 @@ class WorkstationGUI(QWidget):
         settings.triggered.connect(self.settings_dialog)  # Call settings_dialog method when clicked
         action_file.addSeparator()
         action_file.addAction("Quit")  # Quits py-behav
-        menubar.addMenu("View")
-        menubar.addMenu("Help")
+        action_help = menubar.addMenu("Help")
+        documentation = action_help.addAction("Documentation")  # Action for opening documentation
+        documentation.triggered.connect(lambda: webbrowser.open('https://py-behav-box-v2.readthedocs.io/en/dev/'))
+        report = action_help.addAction("Report issue...")  # Action for opening documentation
+        report.triggered.connect(lambda: webbrowser.open('https://github.com/tne-lab/py-behav-box-v2/issues'))
 
         # Sets up the scrolling chamber list UI
         scroll_area = QScrollArea(self)
