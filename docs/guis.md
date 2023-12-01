@@ -19,13 +19,25 @@ to task [Components](). The full list of default Elements and their constructors
 
 ### draw
 
-All Element subclasses must override the `draw` method responsible for visually constructing the component.
+All Element subclasses must override the `draw` method responsible for visually constructing the element in the GUI using
+the various pygame draw methods.
 
 ### has_updated
 
+The `has_updated` method should be overridden to indicate when the element should be redrawn. This is typically handled 
+through two sets of variables one of which is updated externally and the other tracks the current visual state. These are 
+then compared in the `has_updated` method.
+
 ### Mouse events
 
+Two methods are provided for interacting with click events: `mouse_up_` and `mouse_down_`. These will be called whenever 
+the element is clicked. The `Button` element has an example of how these can be used.
+
 ### Interacting with components
+
+Elements can write or read from virtual components represented by the GUI. To read from a component, a component's state should
+be compared to an internal variable in `has_updated` (see `NosePokeElement` for an example). To write a new value to a component,
+use the `component_changed` method.
 
 ## GUI classes
 
@@ -54,7 +66,7 @@ GUIs are given access to the Task event stream through the `handle_events` metho
 
 #### draw
 
-    draw()
+    draw() -> None
 
 By default, the `draw` method will clear the GUI canvas with a gray color and call each GUI Element's `draw` method. This 
 functionality can be altered by overriding the method.
@@ -84,23 +96,31 @@ Additionally calls the standard GUI methods on its `sub_gui` attribute.
 
 #### \_\_init\_\_
 
-    __init__(tg, x, y, rect, SF=None)
+    __init__(tg: GUI, x: int, y: int, rect: pygame.Rect, SF=None)
 
 #### draw
 
-    draw()
+    draw() -> None
+
+Called by the GUI to redraw the Element whenever it has visually updated.
 
 #### handle_event
 
-    handle_event(event)
+    handle_event(event: pygame.event.Event) -> bool
 
-#### mouse_down
+Internal method that will call `mouse_down_` or `mouse_up_` when the Element is clicked.
 
-    mouse_down(event)
+#### mouse_down_
 
-#### mouse_up
+    mouse_down_(event: pygame.event.Event) -> None
 
-    mouse_up(event)
+Called when the left mouse button is pressed.
+
+#### mouse_up_
+
+    mouse_up_(event: pygame.event.Event) -> None
+
+Called when the left mouse button is released.
 
 ### Default elements
 

@@ -74,9 +74,6 @@ class Component:
     def get_state(self) -> Any:
         return self.state
 
-    def reset(self) -> None:
-        pass
-
     @staticmethod
     @abstractmethod
     def get_type() -> Type:
