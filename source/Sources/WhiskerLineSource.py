@@ -33,39 +33,35 @@ class WhiskerLineSource(ThreadSource):
         self.closing = False
 
     def initialize(self):
-        try:
+        win32gui.EnumWindows(look_for_program, 'WhiskerServer')
+        if not IsWhiskerRunning:
+            ws = self.whisker_path
+            os.startfile(ws)
+            time.sleep(2)
+            print("WHISKER server started")
             win32gui.EnumWindows(look_for_program, 'WhiskerServer')
-            if not IsWhiskerRunning:
-                ws = self.whisker_path
-                os.startfile(ws)
-                time.sleep(2)
-                print("WHISKER server started")
-                win32gui.EnumWindows(look_for_program, 'WhiskerServer')
-            if IsWhiskerRunning:
-                self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                self.client.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-                self.client.connect((self.address, self.port))
-                self.client.settimeout(1)
-                while not self.closing:
-                    try:
-                        new_data = self.client.recv(4096)
-                        self.msg += new_data.decode('UTF-8')
-                        if '\n' in self.msg:
-                            msgs = self.msg.split('\n')
-                            self.msg = msgs[-1]
-                        else:
-                            msgs = []
-                        for msg in msgs[:-1]:
-                            if msg.startswith('Event:'):
-                                div = msg.split(' ')[1].rindex("_")
-                                cid, direction = msg.split(' ')[1][:div], msg.split(' ')[1][div + 1:]
-                                self.update_component(cid, direction == "on")
-                    except socket.timeout:
-                        pass
-            else:
-                self.unavailable()
-        except:
-            traceback.print_exc()
+        if IsWhiskerRunning:
+            self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.client.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+            self.client.connect((self.address, self.port))
+            self.client.settimeout(1)
+            while not self.closing:
+                try:
+                    new_data = self.client.recv(4096)
+                    self.msg += new_data.decode('UTF-8')
+                    if '\n' in self.msg:
+                        msgs = self.msg.split('\n')
+                        self.msg = msgs[-1]
+                    else:
+                        msgs = []
+                    for msg in msgs[:-1]:
+                        if msg.startswith('Event:'):
+                            div = msg.split(' ')[1].rindex("_")
+                            cid, direction = msg.split(' ')[1][:div], msg.split(' ')[1][div + 1:]
+                            self.update_component(cid, direction == "on")
+                except socket.timeout:
+                    pass
+        else:
             self.unavailable()
 
     def register_component(self, component, metadata):

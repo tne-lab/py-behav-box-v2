@@ -10,9 +10,9 @@
 
 ### [Creating a new Task](tutorials/creating_task.md)
 
-### [Creating a new Component]()
+### [Creating a new Component](tutorials/creating_component.md)
 
-### [Creating a new Source]()
+### [Creating a new Source](tutorials/creating_source.md)
 
 ### [Creating a new Element]()
 
