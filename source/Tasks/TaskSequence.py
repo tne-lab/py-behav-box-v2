@@ -62,10 +62,11 @@ class TaskSequence(Task):
             if self.is_complete_():
                 self.task_complete()
 
-    def start__(self) -> None:
-        super(TaskSequence, self).start__()
+    def start__(self) -> Dict:
+        metadata = super(TaskSequence, self).start__()
         task, protocol = self.init_sequence()
         self.switch_task(task, self.init_state(), protocol, {})
+        return metadata
         
     def pause__(self) -> None:
         if self.cur_task is not None:
