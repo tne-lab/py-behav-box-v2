@@ -99,9 +99,9 @@ class TaskProcess(Process):
                                 logger.log_events(self.logger_q)
                             self.logger_q.clear()
             except BaseException as e:
-                if isinstance(event, PybEvents.TaskEvent):
-                    self.log_gui_event(PybEvents.ErrorEvent(type(e).__name__, traceback.format_exc(),
-                                                            metadata={"chamber": event.chamber}))
+                metadata = {"chamber": event.chamber} if isinstance(event, PybEvents.TaskEvent) else {}
+                self.log_gui_event(PybEvents.ErrorEvent(type(e).__name__, traceback.format_exc(),
+                                   metadata=metadata))
             if len(self.gui_out) > 0:
                 self.guiq.send_bytes(self.encoder.encode(self.gui_out))
                 self.gui_out.clear()

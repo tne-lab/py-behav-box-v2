@@ -19,11 +19,13 @@ from Workstation.ChamberWidget import ChamberWidget
 
 
 class WorkstationGUI(QWidget):
+    error = pyqtSignal(str, name="error_signal")
     def __init__(self, workstation: Workstation):
         QWidget.__init__(self)
         self.sd = None
         self.td = None
         self.emsg = None
+        self.ignore_errors = False
         self.n_active = 0
         self.workstation = workstation
         desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
@@ -38,6 +40,9 @@ class WorkstationGUI(QWidget):
         p = self.palette()
         p.setColor(self.backgroundRole(), Qt.white)
         self.setPalette(p)
+
+        # Connect signal to error handler
+        self.error.connect(self.on_error)
 
         # Main menu bar
         menubar = QMenuBar()
@@ -132,3 +137,22 @@ class WorkstationGUI(QWidget):
             self.chambers[chamber_index - 1].deleteLater()
             del self.chambers[chamber_index - 1]
         self.n_active -= 1  # Decrement the number of active tasks
+
+    def on_error(self, message):
+        if self.emsg is None and not self.ignore_errors:
+            self.emsg = QMessageBox(self)
+            self.emsg.setIcon(QMessageBox.Critical)
+            self.emsg.setText(message)
+            self.emsg.setTextInteractionFlags(Qt.TextBrowserInteraction)
+            self.emsg.setWindowTitle("Error")
+            ignore_cb = QCheckBox("Ignore future errors")
+            ignore_cb.stateChanged.connect(self.ignore_errors_changed)
+            self.emsg.finished.connect(self.on_error_close)
+            self.emsg.setCheckBox(ignore_cb)
+            self.emsg.exec_()
+
+    def on_error_close(self):
+        self.emsg = None
+
+    def ignore_errors_changed(self, state):
+        self.ignore_errors = (state == Qt.Checked)

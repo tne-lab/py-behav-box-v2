@@ -179,39 +179,6 @@ class Workstation:
         settings.setValue("pyqt/h", int(szo[1] - 70))
         self.task_gui = pygame.display.set_mode((self.w * self.n_col, self.h * self.n_row), pygame.RESIZABLE, 32)
 
-    def main(self):
-        while True:
-            event = self.decoder.decode(self.mainq.recv_bytes())
-            if isinstance(event, PybEvents.StopEvent):
-                self.wsg.chambers[event.chamber].stop(from_click=False)
-            elif isinstance(event, PybEvents.ErrorEvent):
-                print(event.traceback)
-                if "chamber" in event.metadata:
-                    self.ed = QMessageBox()
-                    self.ed.setIcon(QMessageBox.Critical)
-                    self.ed.setWindowTitle("Error adding task")
-                    if event.error == "ComponentRegisterError":
-                        self.ed.setText("A Component failed to register\n" + event.traceback)
-                    elif event.error == "SourceUnavailableError":
-                        self.ed.setText("A requested Source is currently unavailable")
-                    elif event.error == "MalformedProtocolError":
-                        self.ed.setText("Error raised when parsing Protocol file\n" + event.traceback)
-                    elif event.error == "MalformedAddressFileError":
-                        self.ed.setText("Error raised when parsing AddressFile\n" + event.traceback)
-                    elif event.error == "InvalidComponentTypeError":
-                        self.ed.setText("A Component in the AddressFile is an invalid type")
-                    elif "sid" in event.metadata:
-                        self.ed.setText("Unhandled exception in source '" + event.metadata["sid"] + "'\n" + event.traceback)
-                    else:
-                        self.ed.setText("Unhandled exception\n" + event.traceback)
-                    self.ed.setStandardButtons(QMessageBox.Ok)
-                    self.ed.show()
-                    self.wsg.remove_task(event.metadata["chamber"])
-            elif isinstance(event, PybEvents.UnavailableSourceEvent):
-                self.sources[event.sid].available = False
-                if self.wsg.sd is not None and self.wsg.sd.isVisible():
-                    self.wsg.sd.update_source_availability()
-
     def add_task(self, chamber: int, task_name: str, subject_name: str, address_file: str, protocol: str, task_event_loggers: str) -> None:
         """
         Creates a Task and adds it to the chamber.
@@ -310,6 +277,33 @@ class Workstation:
                                 if element.has_updated():
                                     element.draw()
                                     self.gui_updates.append(element.rect.move(col * self.w, row * self.h))
+                    elif isinstance(event, PybEvents.ErrorEvent):
+                        print(event.traceback)
+                        if "chamber" in event.metadata:
+                            chamber_suffix = "in chamber " + str(event.metadata["chamber"] + 1) + "<br>"
+                            if event.error == "ComponentRegisterError":
+                                error_message = "A Component failed to register " + chamber_suffix + event.traceback
+                            elif event.error == "SourceUnavailableError":
+                                error_message = "A requested Source is currently unavailable"
+                            elif event.error == "MalformedProtocolError":
+                                error_message = "Error raised when parsing Protocol file " + chamber_suffix + event.traceback
+                            elif event.error == "MalformedAddressFileError":
+                                error_message = "Error raised when parsing AddressFile " + chamber_suffix + event.traceback
+                            elif event.error == "InvalidComponentTypeError":
+                                error_message = "A Component in the AddressFile is an invalid type" + chamber_suffix
+                            elif "sid" in event.metadata:
+                                error_message = "Unhandled exception in source '" + event.metadata["sid"] + "'\n" + event.traceback
+                            else:
+                                error_message = "Unhandled exception " + chamber_suffix + event.traceback
+                            self.wsg.remove_task(event.metadata["chamber"])
+                        else:
+                            error_message = f"Unhandled exception in PyBehave processing code. <a href='https://github.com/tne-lab/py-behav-box-v2/issues/new?title=Unhandled%20Exception&body={event.traceback}'>Click here</a> to create a GitHub issue<br>" + event.traceback
+                        self.wsg.error.emit(error_message)
+                    elif isinstance(event, PybEvents.UnavailableSourceEvent):
+                        self.sources[event.sid].available = False
+                        if self.wsg.sd is not None and self.wsg.sd.isVisible():
+                            self.wsg.sd.update_source_availability()
+
                     if time.perf_counter() - self.last_frame > 1 / self.fr:
                         if len(self.gui_updates) > 0:
                             pygame.display.update(self.gui_updates)
