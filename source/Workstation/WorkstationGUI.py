@@ -16,7 +16,7 @@ from PyQt5.QtCore import *
 from Workstation.AddTaskDialog import AddTaskDialog
 from Workstation.SettingsDialog import SettingsDialog
 from Workstation.ChamberWidget import ChamberWidget
-
+from Workstation.ErrorMessageBox import ErrorMessageBox
 
 class WorkstationGUI(QWidget):
     error = pyqtSignal(str, name="error_signal")
@@ -141,22 +141,8 @@ class WorkstationGUI(QWidget):
 
     def on_error(self, message):
         if self.emsg is None and not self.ignore_errors:
-            self.emsg = QMessageBox(self)
-            self.emsg.setIcon(QMessageBox.Critical)
-            self.emsg.setText(message)
-            self.emsg.setTextInteractionFlags(Qt.TextBrowserInteraction)
-            self.emsg.setWindowTitle("Error")
-            ignore_cb = QCheckBox("Ignore future errors")
-            ignore_cb.stateChanged.connect(self.ignore_errors_changed)
-            self.emsg.finished.connect(self.on_error_close)
-            self.emsg.setCheckBox(ignore_cb)
-            self.emsg.exec_()
-
-    def on_error_close(self):
-        self.emsg = None
-
-    def ignore_errors_changed(self, state):
-        self.ignore_errors = (state == Qt.Checked)
+            self.emsg = ErrorMessageBox(self, message)
+            self.emsg.show()
 
     def confirm_exit(self):
         emsg = QMessageBox(self)
