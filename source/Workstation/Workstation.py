@@ -54,6 +54,7 @@ class Workstation:
         self.gui_updates = []
         self.gui_queue = None
         self.qui_events_queue = None
+        self.gui_stop_event = None
         self.refresh_gui = True
         self.tp = None
         self.encoder = msgspec.msgpack.Encoder(enc_hook=PybEvents.enc_hook)
@@ -145,7 +146,8 @@ class Workstation:
         self.tp.start()
         self.gui_task = threading.Thread(target=self.update_gui)
         self.gui_task.start()
-        self.gui_event_task = threading.Thread(target=self.gui_event_loop, args=[gui_events_out])
+        self.gui_stop_event = threading.Event()
+        self.gui_event_task = threading.Thread(target=self.gui_event_loop, args=[gui_events_out, self.gui_stop_event])
         self.gui_event_task.start()
 
         # atexit.register(lambda: self.exit_handler())
@@ -211,10 +213,11 @@ class Workstation:
         """
         self.mainq.send_bytes(self.encoder.encode(PybEvents.ClearEvent(chamber, del_loggers)))
 
-    def gui_event_loop(self, out: Connection) -> None:
-        while True:
-            event = pygame.event.wait()
-            out.send_bytes(self.encoder.encode([PybEvents.PygameEvent(event.type, event.__dict__)]))
+    def gui_event_loop(self, out: Connection, stop_event: threading.Event) -> None:
+        while not stop_event.is_set():
+            event = pygame.event.wait(100)  # millisecond timeout
+            if event.type != pygame.NOEVENT:
+                out.send_bytes(self.encoder.encode([PybEvents.PygameEvent(event.type, event.__dict__)]))
 
     def update_gui(self) -> None:
         conns = [self.qui_events_queue, self.gui_queue]
@@ -303,9 +306,39 @@ class Workstation:
                         self.sources[event.sid].available = False
                         if self.wsg.sd is not None and self.wsg.sd.isVisible():
                             self.wsg.sd.update_source_availability()
+                    elif isinstance(event, PybEvents.ExitEvent):
+                        return
 
                     if time.perf_counter() - self.last_frame > 1 / self.fr:
                         if len(self.gui_updates) > 0:
                             pygame.display.update(self.gui_updates)
                             self.gui_updates = []
                         self.last_frame = time.perf_counter()
+
+    def exit(self, stop_tasks=False):
+        """
+            Callback for when PyBehave is closed.
+            - Sends an Exit event to the main q and joins the TaskProcess.
+            - The TP tells all sources to close, and the source processes are joined here.
+            - Joins the update_gui and gui_event_loop threads.
+            - Quits pygame.
+        """
+        if stop_tasks:
+            for chamber, gui in self.guis.items():
+                if gui.started and not gui.paused:
+                    self.mainq.send_bytes(self.encoder.encode(PybEvents.StopEvent(chamber)))
+
+        self.mainq.send_bytes(self.encoder.encode(PybEvents.ExitEvent()))
+        self.tp.join()
+
+        # Join source processes. Assumes all source have terminated
+        for source in self.sources.values():
+            source.join()
+
+        self.gui_stop_event.set()
+
+        # Join event threads
+        self.gui_event_task.join()
+        self.gui_task.join()
+
+        pygame.quit()

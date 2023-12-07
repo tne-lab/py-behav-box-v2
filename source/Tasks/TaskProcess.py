@@ -38,6 +38,7 @@ class TaskProcess(Process):
         self.event_responses = {}
         self.source_buffers = {}
         self.connections = []
+        self.should_exit = False
 
     def run(self):
         p = psutil.Process(os.getpid())
@@ -71,7 +72,8 @@ class TaskProcess(Process):
                                 PybEvents.RemoveSourceEvent: self.remove_source,
                                 PybEvents.ErrorEvent: self.error,
                                 PybEvents.ConstantsUpdateEvent: self.update_constants,
-                                PybEvents.ConstantRemoveEvent: self.remove_constant}
+                                PybEvents.ConstantRemoveEvent: self.remove_constant,
+                                PybEvents.ExitEvent: self.prepare_exit}
 
         while True:
             try:
@@ -106,12 +108,14 @@ class TaskProcess(Process):
                 self.guiq.send_bytes(self.encoder.encode(self.gui_out))
                 self.gui_out.clear()
 
+            if self.should_exit:
+                self.exit()
+                break
+
     def handle_event(self, event):
         event_type = type(event)
         self.log_gui_event(event)
-        if event_type is PybEvents.ExitEvent:
-            return
-        elif event_type in self.event_responses:
+        if event_type in self.event_responses:
             self.event_responses[type(event)](event)
         elif isinstance(event, PybEvents.StatefulEvent):
             task = self.tasks[event.chamber]
@@ -296,3 +300,12 @@ class TaskProcess(Process):
             del self.sourceq[event.metadata["sid"]]
             del self.source_buffers[event.metadata["sid"]]
         self.mainq.send_bytes(self.encoder.encode(event))
+
+    def prepare_exit(self, event: PybEvents.ExitEvent):
+        self.should_exit = True
+
+    def exit(self, *args):
+        for q in self.sourceq.values():
+            q.send_bytes(self.encoder.encode([PybEvents.CloseSourceEvent()]))
+        self.tm.quit()
+        self.tm.join()
