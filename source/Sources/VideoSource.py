@@ -55,7 +55,7 @@ class CameraWidget(QWidget):
     @param aspect_ratio - Whether to maintain frame aspect ratio or force into fraame
     """
 
-    def __init__(self, loop, width, height, vp: VideoProvider, aspect_ratio=False, parent=None, deque_size=1):
+    def __init__(self, loop, width, height, vp: VideoProvider, aspect_ratio=False, parent=None):
         super(CameraWidget, self).__init__(parent)
 
         # Slight offset is needed since PyQt layouts have a built in padding
@@ -76,7 +76,8 @@ class CameraWidget(QWidget):
         # Start background frame grabbing
         self.vp.start()
         # Periodically set video frame to display
-        self.update_task = asyncio.ensure_future(self.set_frame(), loop=self.loop)
+        self.update_task = asyncio.create_task(self.set_frame())
+        self.update_task.add_done_callback(handle_task_result)
 
     async def set_frame(self):
         while True:
@@ -84,6 +85,7 @@ class CameraWidget(QWidget):
             """Sets pixmap image to video frame"""
             frame = self.vp.get_frame()
             if frame is not None:
+                self.dims = (frame.shape[1], frame.shape[0])
                 # Keep frame aspect ratio
                 if self.maintain_aspect_ratio:
                     self.frame = imutils.resize(frame, width=self.screen_width)
@@ -128,11 +130,12 @@ class VideoProcess(Process):
         self.read_times = {}
         self.tasks = {}
         self.loop = None
+        self.app = None
 
     def run(self):
-        app = QApplication([])
+        self.app = QApplication([])
         # app.setStyleSheet(qdarkstyle.load_stylesheet_pyqt())
-        app.setStyle(QStyleFactory.create("Cleanlooks"))
+        self.app.setStyle(QStyleFactory.create("Cleanlooks"))
         mw = QMainWindow()
         mw.setWindowTitle('Camera GUI')
         # mw.setWindowFlags(QtCore.Qt.FramelessWindowHint)
@@ -149,26 +152,29 @@ class VideoProcess(Process):
         mw.setGeometry(0, 0, self.screen_width, self.screen_height)
         mw.show()
 
-        asyncio.set_event_loop(qasync.QEventLoop(app))
+        asyncio.set_event_loop(qasync.QEventLoop(self.app))
         self.loop = asyncio.get_event_loop()
-        self.loop.run_in_executor(None, self.ipc_events)
+        task = self.loop.run_in_executor(None, self.ipc_events)
+        task.add_done_callback(handle_task_result)
         self.loop.run_forever()
 
     def ipc_events(self):
         while True:
-            command = self.inq.get()
-            if command["command"] == "StartFeed":
-                task = asyncio.run_coroutine_threadsafe(self.start_feed(command), loop=self.loop)
-                task.add_done_callback(handle_task_result)
-            elif command["command"] == "StartRecord":
-                task = asyncio.run_coroutine_threadsafe(self.start_record(command), loop=self.loop)
-                task.add_done_callback(handle_task_result)
-            elif command["command"] == "StopRecord":
-                task = asyncio.run_coroutine_threadsafe(self.stop_record(command), loop=self.loop)
-                task.add_done_callback(handle_task_result)
-            elif command["command"] == "CloseComponent":
-                task = asyncio.run_coroutine_threadsafe(self.close_component(command), loop=self.loop)
-                task.add_done_callback(handle_task_result)
+            available = self.inq.poll(1)
+            if available:
+                command = self.inq.get()
+                if command["command"] == "StartFeed":
+                    task = asyncio.run_coroutine_threadsafe(self.start_feed(command), loop=self.loop)
+                    task.add_done_callback(handle_task_result)
+                elif command["command"] == "StartRecord":
+                    task = asyncio.run_coroutine_threadsafe(self.start_record(command), loop=self.loop)
+                    task.add_done_callback(handle_task_result)
+                elif command["command"] == "StopRecord":
+                    task = asyncio.run_coroutine_threadsafe(self.stop_record(command), loop=self.loop)
+                    task.add_done_callback(handle_task_result)
+                elif command["command"] == "CloseComponent":
+                    task = asyncio.run_coroutine_threadsafe(self.close_component(command), loop=self.loop)
+                    task.add_done_callback(handle_task_result)
 
     async def start_feed(self, command):
         if command["vid_type"] == "imaging_source":
@@ -186,7 +192,7 @@ class VideoProcess(Process):
         self.writers[command["id"]] = cv2.VideoWriter(command["path"], fourcc, self.fr[command["id"]],
                                                       self.cameras[command["id"]].dims)
         self.read_times[command["id"]] = time.perf_counter()
-        self.writers[command["id"]].write(self.cameras[command["id"]].deque[-1])
+        self.writers[command["id"]].write(self.cameras[command["id"]].vp.get_frame())
         self.tasks[command["id"]] = create_task(self.process_frames(command["id"]))
 
     async def stop_record(self, command):
@@ -294,45 +300,62 @@ class ImagingSourceProvider(VideoProvider):
     class CallbackData(ctypes.Structure):
         """ Example for user data passed to the callback function. """
 
-        def __init__(self, *args: Any, **kw: Any):
-            super().__init__(*args, **kw)
-            self.width = 0
-            self.height = 0
-            self.BytesPerPixel = 0
-            self.buffer_size = 0
-            self.oldbrightness = 0
-            self.getNextImage = 0
+        def __init__(self):
             self.cvMat = None
 
+    def callback(self, hGrabber, pBuffer, framenumber, pData):
+        """ This is an example callback function for image processing with
+            opencv. The image data in pBuffer is converted into a cv Matrix
+            and with cv.mean() the average brightness of the image is
+            measuered.
+
+        :param: hGrabber: This is the real pointer to the grabber object.
+        :param: pBuffer : Pointer to the first pixel's first byte
+        :param: framenumber : Number of the frame since the stream started
+        :param: pData : Pointer to additional user data structure
+        """
+        # print("camera {}". format(pData.index))
+        Width = ctypes.c_long()
+        Height = ctypes.c_long()
+        BitsPerPixel = ctypes.c_int()
+        colorformat = ctypes.c_int()
+
+        # Query the image description values
+        self.ic.IC_GetImageDescription(hGrabber, Width, Height, BitsPerPixel, colorformat)
+
+        # Calculate the buffer size
+        bpp = int(BitsPerPixel.value / 8.0)
+        buffer_size = Width.value * Height.value * bpp
+
+        if buffer_size > 0:
+            image = ctypes.cast(pBuffer,
+                                ctypes.POINTER(
+                                    ctypes.c_ubyte * buffer_size))
+
+            self.frame = np.ndarray(buffer=image.contents,
+                                     dtype=np.uint8,
+                                     shape=(Height.value,
+                                            Width.value,
+                                            bpp))
+
     def __init__(self, src):
-        self.ic = ctypes.cdll.LoadLibrary("./tisgrabber_x64.dll")
+        self.ic = ctypes.cdll.LoadLibrary("./Sources/library/tisgrabber/tisgrabber_x64.dll")
         tisgrabber.declareFunctions(self.ic)
         self.ic.IC_InitLibrary(0)
         self.camera = self.ic.IC_CreateGrabber()
         self.ic.IC_OpenDevByUniqueName(self.camera, tisgrabber.T(src))
         self.data = self.CallbackData()
-        self.ic.IC_SetFrameReadyCallback(self.camera, self.callback, self.data)
-
-    @staticmethod
-    def callback(pBuffer, framenumber, pData):
-        if pData.getNextImage == 1:
-            pData.getNextImage = 2
-            if pData.buffer_size > 0:
-                image = ctypes.cast(pBuffer, ctypes.POINTER(ctypes.c_ubyte * pData.buffer_size))
-
-                pData.cvMat = np.ndarray(buffer=image.contents,
-                                         dtype=np.uint8,
-                                         shape=(pData.height.value,
-                                                pData.width.value,
-                                                pData.BytesPerPixel))
-            pData.getNextImage = 0
+        self.frame = None
+        self.Callbackfuncptr = self.ic.FRAMEREADYCALLBACK(self.callback)
 
     def get_frame(self):
-        return self.data.cvMat
+        return self.frame
 
     def start(self):
         if self.ic.IC_IsDevValid(self.camera):
-            self.ic.IC_StartLive(self.camera, 1)
+            self.ic.IC_SetFrameReadyCallback(self.camera, self.Callbackfuncptr, self.data)
+            self.ic.IC_SetContinuousMode(self.camera, 0)
+            self.ic.IC_StartLive(self.camera, 0)
 
     def stop(self):
         if self.ic.IC_IsDevValid(self.camera):

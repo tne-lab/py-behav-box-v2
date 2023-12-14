@@ -5,8 +5,8 @@ class PipeQueue:
     def __init__(self, *args):
         self.out_pipe, self.in_pipe = Pipe(*args)
 
-    def poll(self):
-        return self.out_pipe.poll()
+    def poll(self, timeout=None):
+        return self.out_pipe.poll(timeout=timeout)
 
     def put(self, item):
         self.in_pipe.send(item)
