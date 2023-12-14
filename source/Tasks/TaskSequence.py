@@ -27,6 +27,10 @@ class TaskSequence(Task):
     def get_constants() -> Dict[str, Any]:
         return {}
 
+    @abstractmethod
+    def init_sequence(self):
+        raise NotImplementedError
+
     @classmethod
     def get_components(cls) -> Dict[str, List[Type[Component]]]:
         components = {}

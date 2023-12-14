@@ -20,6 +20,7 @@ from Workstation.ErrorMessageBox import ErrorMessageBox
 
 class WorkstationGUI(QWidget):
     error = pyqtSignal(str, name="error_signal")
+
     def __init__(self, workstation: Workstation):
         QWidget.__init__(self)
         self.sd = None

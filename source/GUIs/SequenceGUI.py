@@ -59,10 +59,11 @@ class SequenceGUI(GUI):
             return self.elements
 
     def handle_event(self, event: PybEvents.PybEvent) -> None:
-        # Don't reset sequence time for sub-task start events
-        if not (isinstance(event, PybEvents.StartEvent) and "sub_task" in event.metadata) and not (isinstance(event, PybEvents.TaskCompleteEvent) and "sequence_complete" not in event.metadata):
-            super(SequenceGUI, self).handle_event(event)
         if isinstance(event, PybEvents.TaskCompleteEvent) and "sequence_complete" in event.metadata:
             self.started = False
-        if self.sub_gui is not None:
+        # Don't reset sequence time elapsed on sub-task start events
+        elif not (isinstance(event, PybEvents.StartEvent) and "sub_task" in event.metadata):
+            super(SequenceGUI, self).handle_event(event)
+        # Don't pass sequence component updates to the sub-gui
+        if self.sub_gui is not None and not (isinstance(event, PybEvents.ComponentUpdateEvent) and event.comp_id not in self.sub_gui.components):
             self.sub_gui.handle_event(event)
