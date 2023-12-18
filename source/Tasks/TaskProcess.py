@@ -250,8 +250,6 @@ class TaskProcess(Process):
                                                         metadata=metadata)
             self.tasks[task.metadata["chamber"]].main_loop(new_event)
             self.log_event(new_event)
-            # if task.is_complete_():
-            #     self.tasks[task.metadata["chamber"]].task_complete()
 
     def update_constants(self, event: PybEvents.ConstantsUpdateEvent):
         for q in self.source_buffers.values():
