@@ -54,6 +54,7 @@ class Workstation:
         self.gui_updates = []
         self.gui_queue = None
         self.qui_events_queue = None
+        self.gui_stop_event = None
         self.refresh_gui = True
         self.tp = None
         self.encoder = msgspec.msgpack.Encoder(enc_hook=PybEvents.enc_hook)
@@ -145,7 +146,8 @@ class Workstation:
         self.tp.start()
         self.gui_task = threading.Thread(target=self.update_gui)
         self.gui_task.start()
-        self.gui_event_task = threading.Thread(target=self.gui_event_loop, args=[gui_events_out])
+        self.gui_stop_event = threading.Event()
+        self.gui_event_task = threading.Thread(target=self.gui_event_loop, args=[gui_events_out, self.gui_stop_event])
         self.gui_event_task.start()
 
         # atexit.register(lambda: self.exit_handler())
@@ -179,39 +181,6 @@ class Workstation:
         settings.setValue("pyqt/h", int(szo[1] - 70))
         self.task_gui = pygame.display.set_mode((self.w * self.n_col, self.h * self.n_row), pygame.RESIZABLE, 32)
 
-    def main(self):
-        while True:
-            event = self.decoder.decode(self.mainq.recv_bytes())
-            if isinstance(event, PybEvents.StopEvent):
-                self.wsg.chambers[event.chamber].stop(from_click=False)
-            elif isinstance(event, PybEvents.ErrorEvent):
-                print(event.traceback)
-                if "chamber" in event.metadata:
-                    self.ed = QMessageBox()
-                    self.ed.setIcon(QMessageBox.Critical)
-                    self.ed.setWindowTitle("Error adding task")
-                    if event.error == "ComponentRegisterError":
-                        self.ed.setText("A Component failed to register\n" + event.traceback)
-                    elif event.error == "SourceUnavailableError":
-                        self.ed.setText("A requested Source is currently unavailable")
-                    elif event.error == "MalformedProtocolError":
-                        self.ed.setText("Error raised when parsing Protocol file\n" + event.traceback)
-                    elif event.error == "MalformedAddressFileError":
-                        self.ed.setText("Error raised when parsing AddressFile\n" + event.traceback)
-                    elif event.error == "InvalidComponentTypeError":
-                        self.ed.setText("A Component in the AddressFile is an invalid type")
-                    elif "sid" in event.metadata:
-                        self.ed.setText("Unhandled exception in source '" + event.metadata["sid"] + "'\n" + event.traceback)
-                    else:
-                        self.ed.setText("Unhandled exception\n" + event.traceback)
-                    self.ed.setStandardButtons(QMessageBox.Ok)
-                    self.ed.show()
-                    self.wsg.remove_task(event.metadata["chamber"])
-            elif isinstance(event, PybEvents.UnavailableSourceEvent):
-                self.sources[event.sid].available = False
-                if self.wsg.sd is not None and self.wsg.sd.isVisible():
-                    self.wsg.sd.update_source_availability()
-
     def add_task(self, chamber: int, task_name: str, subject_name: str, address_file: str, protocol: str, task_event_loggers: str) -> None:
         """
         Creates a Task and adds it to the chamber.
@@ -232,31 +201,6 @@ class Workstation:
         metadata = {"chamber": chamber, "subject": subject_name, "protocol": protocol, "address_file": address_file}
         self.mainq.send_bytes(self.encoder.encode(PybEvents.AddTaskEvent(chamber, task_name, task_event_loggers, metadata=metadata)))
 
-    async def switch_task(self, task_base: Task, task_name: Type[Task], protocol: str = None) -> Task:
-        """
-        Switch the active Task in a sequence.
-        Parameters
-        ----------
-        task_base : Task
-            The base Task of the sequence
-        task_name : Class
-            The next Task in the sequence
-        protocol : dict
-            Dictionary representing the protocol for the new Task
-        """
-        # Create the new Task as part of a sequence
-        new_task = task_name()
-        new_task.initialize(task_base, task_base.components, protocol)
-        gui = getattr(importlib.import_module("Local.GUIs." + task_name.__name__ + "GUI"), task_name.__name__ + "GUI")
-        # Position the GUI in pygame
-        col = task_base.metadata['chamber'] % self.n_col
-        row = math.floor(task_base.metadata['chamber'] / self.n_col)
-        # Create the GUI
-        self.guis[task_base.metadata['chamber']].sub_gui = gui(
-            self.task_gui.subsurface(col * self.w, row * self.h, self.w, self.h),
-            new_task)
-        return new_task
-
     def remove_task(self, chamber: int, del_loggers: bool = True) -> None:
         """
         Remove the Task from the specified chamber.
@@ -269,10 +213,11 @@ class Workstation:
         """
         self.mainq.send_bytes(self.encoder.encode(PybEvents.ClearEvent(chamber, del_loggers)))
 
-    def gui_event_loop(self, out: Connection) -> None:
-        while True:
-            event = pygame.event.wait()
-            out.send_bytes(self.encoder.encode([PybEvents.PygameEvent(event.type, event.__dict__)]))
+    def gui_event_loop(self, out: Connection, stop_event: threading.Event) -> None:
+        while not stop_event.is_set():
+            event = pygame.event.wait(100)  # millisecond timeout
+            if event.type != pygame.NOEVENT:
+                out.send_bytes(self.encoder.encode([PybEvents.PygameEvent(event.type, event.__dict__)]))
 
     def update_gui(self) -> None:
         conns = [self.qui_events_queue, self.gui_queue]
@@ -297,14 +242,17 @@ class Workstation:
                             row = math.floor(event.chamber / self.n_col)
                             rect = pygame.Rect((col * self.w, row * self.h, self.w, self.h))
                             if isinstance(event, PybEvents.InitEvent) or isinstance(event, PybEvents.StartEvent):
+                                if "sub_task" in event.metadata:
+                                    self.guis[event.chamber].switch_sub_gui(event)
                                 self.guis[event.chamber].complete = False
                                 self.guis[event.chamber].draw()
                                 self.gui_updates.append(rect)
                             elif isinstance(event, PybEvents.TaskCompleteEvent):
-                                self.guis[event.chamber].complete = True
-                                self.guis[event.chamber].draw()
-                                self.gui_updates.append(rect)
-                                self.wsg.chambers[event.chamber].stop(False)
+                                if not isinstance(self.guis[event.chamber], SequenceGUI) or "sequence_complete" in event.metadata:
+                                    self.guis[event.chamber].complete = True
+                                    self.guis[event.chamber].draw()
+                                    self.gui_updates.append(rect)
+                                    self.wsg.chambers[event.chamber].stop(False)
                             elif isinstance(event, PybEvents.ClearEvent) and event.del_loggers:
                                 pygame.draw.rect(self.task_gui, Colors.black, rect)
                                 self.gui_updates.append(rect)
@@ -332,8 +280,65 @@ class Workstation:
                                 if element.has_updated():
                                     element.draw()
                                     self.gui_updates.append(element.rect.move(col * self.w, row * self.h))
+                    elif isinstance(event, PybEvents.ErrorEvent):
+                        print(event.traceback)
+                        if "chamber" in event.metadata:
+                            chamber_suffix = "in chamber " + str(event.metadata["chamber"] + 1) + "<br>"
+                            if event.error == "ComponentRegisterError":
+                                error_message = "A Component failed to register " + chamber_suffix + event.traceback
+                            elif event.error == "SourceUnavailableError":
+                                error_message = "A requested Source is currently unavailable"
+                            elif event.error == "MalformedProtocolError":
+                                error_message = "Error raised when parsing Protocol file " + chamber_suffix + event.traceback
+                            elif event.error == "MalformedAddressFileError":
+                                error_message = "Error raised when parsing AddressFile " + chamber_suffix + event.traceback
+                            elif event.error == "InvalidComponentTypeError":
+                                error_message = "A Component in the AddressFile is an invalid type" + chamber_suffix
+                            elif "sid" in event.metadata:
+                                error_message = "Unhandled exception in source '" + event.metadata["sid"] + "'\n" + event.traceback
+                            else:
+                                error_message = "Unhandled exception " + chamber_suffix + event.traceback
+                            self.wsg.remove_task(event.metadata["chamber"])
+                        else:
+                            error_message = f"Unhandled exception in PyBehave processing code. <a href='https://github.com/tne-lab/py-behav-box-v2/issues/new?title=Unhandled%20Exception&body={event.traceback}'>Click here</a> to create a GitHub issue<br>" + event.traceback
+                        self.wsg.error.emit(error_message)
+                    elif isinstance(event, PybEvents.UnavailableSourceEvent):
+                        self.sources[event.sid].available = False
+                        if self.wsg.sd is not None and self.wsg.sd.isVisible():
+                            self.wsg.sd.update_source_availability()
+                    elif isinstance(event, PybEvents.ExitEvent):
+                        return
+
                     if time.perf_counter() - self.last_frame > 1 / self.fr:
                         if len(self.gui_updates) > 0:
                             pygame.display.update(self.gui_updates)
                             self.gui_updates = []
                         self.last_frame = time.perf_counter()
+
+    def exit(self, stop_tasks=False):
+        """
+            Callback for when PyBehave is closed.
+            - Sends an Exit event to the main q and joins the TaskProcess.
+            - The TP tells all sources to close, and the source processes are joined here.
+            - Joins the update_gui and gui_event_loop threads.
+            - Quits pygame.
+        """
+        if stop_tasks:
+            for chamber, gui in self.guis.items():
+                if gui.started and not gui.paused:
+                    self.mainq.send_bytes(self.encoder.encode(PybEvents.StopEvent(chamber)))
+
+        self.mainq.send_bytes(self.encoder.encode(PybEvents.ExitEvent()))
+        self.tp.join()
+
+        # Join source processes. Assumes all source have terminated
+        for source in self.sources.values():
+            source.join()
+
+        self.gui_stop_event.set()
+
+        # Join event threads
+        self.gui_event_task.join()
+        self.gui_task.join()
+
+        pygame.quit()

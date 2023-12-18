@@ -11,6 +11,8 @@ an easy task where the every press produces a reward and a hard task where no re
 for subsequent presses after a reward. In our lab, this Task has historically been used with hardware from Lafayette Instruments.
 Hardware from other manufacturers might not have/require all the features we describe in the tutorial.
 
+To start, create a new file in the `Local/Tasks` folder named BarPress.py
+
 ## Imports
 
 We will be using the following imports in the process of developing this Task:
@@ -21,6 +23,7 @@ We will be using the following imports in the process of developing this Task:
     from Components.Toggle import Toggle
     from Components.TimedToggle import TimedToggle
     from Components.Video import Video
+    from Events import PybEvents
     from Tasks.Task import Task
 
 ## Subclassing
@@ -30,7 +33,7 @@ behavior while exposing simpler methods to the user. Tasks can also override oth
 is a considerable degree of preserved behavior. For this tutorial, we are entirely building a Task from scratch so will be extending
 the base class:
 
-    class BarPress(Task)
+    class BarPress(Task):
         """@DynamicAttrs"""
 
 ## States
@@ -81,7 +84,7 @@ names for these constants and their default values, we override the `get_constan
 pairs. The keys in the dictionary returned by `get_constants` will automatically be added as attributes of the class with the
 corresponding initial value. The override for the example task is shown below:
 
-    # noinspection PyMethodMayBeStatic
+    @staticmethod
     def get_constants():
         return {
             'duration': 40,
@@ -136,7 +139,7 @@ task is shown below:
         if isinstance(event, PybEvents.TimeoutEvent) and event.name == "task_complete":
             self.complete = True
             return True
-        elif isinstance(event, PybEvents.GUIEvent) and event.event == "GUI_PELLET":
+        elif isinstance(event, PybEvents.GUIEvent) and event.name == "GUI_PELLET":
             self.food.toggle(self.dispense_time)
             return True
         return False
