@@ -176,7 +176,7 @@ class GUI:
             self.paused = True
         elif event_type == PybEvents.ResumeEvent:
             self.paused = False
-        if isinstance(event, PybEvents.TimedEvent) and self.started:
+        if isinstance(event, PybEvents.TimedEvent) and self.started and not isinstance(event, PybEvents.ResumeEvent):
             self.time_elapsed = event.timestamp - self.time_offset
             self.time_in_state = event.timestamp - self.state_enter_time
 

@@ -302,7 +302,7 @@ class TaskProcess(Process):
     def prepare_exit(self, event: PybEvents.ExitEvent):
         self.should_exit = True
 
-    def exit(self, *args):
+    def exit(self):
         for q in self.sourceq.values():
             q.send_bytes(self.encoder.encode([PybEvents.CloseSourceEvent()]))
         self.tm.quit()

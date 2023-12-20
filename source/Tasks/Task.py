@@ -261,6 +261,7 @@ class Task:
 
     def stop__(self) -> None:
         self.started = False
+        self.time_paused = 0
         for name in self.timeouts.keys():
             self.cancel_timeout(name)
         self.timeouts = {}
