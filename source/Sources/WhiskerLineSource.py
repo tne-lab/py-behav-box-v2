@@ -58,7 +58,8 @@ class WhiskerLineSource(ThreadSource):
                         if msg.startswith('Event:'):
                             div = msg.split(' ')[1].rindex("_")
                             cid, direction = msg.split(' ')[1][:div], msg.split(' ')[1][div + 1:]
-                            self.update_component(cid, direction == "on")
+                            if cid in self.components:
+                                self.update_component(cid, direction == "on")
                 except socket.timeout:
                     pass
         else:
@@ -82,6 +83,9 @@ class WhiskerLineSource(ThreadSource):
             for a in addr:
                 msg += 'LineClaim {} -ResetOff\n'.format(a)
             self.client.send(msg.encode('utf-8'))
+
+    def close_component(self, component_id: str) -> None:
+        del self.components[component_id]
 
     def close_source(self):
         self.closing = True

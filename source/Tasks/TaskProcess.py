@@ -83,6 +83,10 @@ class TaskProcess(Process):
                     for key in self.tasks.keys():
                         if self.tasks[key].started and not self.tasks[key].paused:
                             self.tasks[key].main_loop(event)
+                    for source in self.source_buffers:
+                        if len(self.source_buffers[source]) > 0:
+                            self.sourceq[source].send_bytes(self.encoder.encode(self.source_buffers[source]))
+                            self.source_buffers[source] = []
                     self.log_gui_event(event)
                 else:
                     for r in ready:
