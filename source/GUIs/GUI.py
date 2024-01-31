@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, List, Dict
 
 import pygame
 
+from Elements.LabelElement import LabelElement
 from Events import PybEvents
 from Events.PybEvents import GUIEvent
 from Utilities.AddressFile import AddressFile
@@ -128,6 +129,7 @@ class GUI:
         self.variable_defaults = task.get_variables()
 
         self.elements = self.initialize()
+        self.subject_name = LabelElement(self, 10, self.ws.h - 30, self.ws.w - 20, 20, event.metadata["subject"], SF=1)
 
     @abstractmethod
     def initialize(self) -> List[Element]:
@@ -141,6 +143,7 @@ class GUI:
         for el in self.elements:
             el.draw()
         pygame.draw.rect(self.task_gui, Colors.white, self.task_gui.get_rect(), 1)
+        self.subject_name.draw()
 
     def handle_event(self, event: PybEvents.PybEvent) -> None:
         if self.last_event is None:

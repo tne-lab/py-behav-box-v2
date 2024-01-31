@@ -247,6 +247,11 @@ class Workstation:
                                 self.guis[event.chamber].complete = False
                                 self.guis[event.chamber].draw()
                                 self.gui_updates.append(rect)
+                            elif isinstance(event, PybEvents.OutputFileChangedEvent):
+                                self.guis[event.chamber].subject_name.text = event.subject
+                                pygame.draw.rect(self.guis[event.chamber].task_gui, Colors.darkgray, self.guis[event.chamber].subject_name.rect, 0)
+                                self.guis[event.chamber].subject_name.draw()
+                                self.gui_updates.append(self.guis[event.chamber].subject_name.rect.move(col * self.w, row * self.h))
                             elif isinstance(event, PybEvents.TaskCompleteEvent):
                                 if not isinstance(self.guis[event.chamber], SequenceGUI) or "sequence_complete" in event.metadata:
                                     self.guis[event.chamber].complete = True
