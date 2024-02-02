@@ -115,9 +115,9 @@ class HikVisionSource(Source):
             vids = resp['CMSearchResult']['matchList']['searchMatchItem']
             if not isinstance(vids, list):
                 vids = [vids]
-            for i, vid in enumerate(vids):
-                dwnld = self.server.ContentMgmt.search.downloadURI(vid['mediaSegmentDescriptor']['playbackURI'])
-                if not os.path.exists(output_folder):
-                    os.makedirs(output_folder)
-                with open(output_folder + str(name) + "_" + addr + "_" + str(i) + ".mp4", 'wb') as file:
+            if not os.path.exists(output_folder):
+                os.makedirs(output_folder)
+            with open(output_folder + str(name) + "_" + addr + ".mp4", 'wb') as file:
+                for i, vid in enumerate(vids):
+                    dwnld = self.server.ContentMgmt.search.downloadURI(vid['mediaSegmentDescriptor']['playbackURI'])
                     file.write(dwnld.content)
