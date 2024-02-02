@@ -15,7 +15,7 @@ class EventWidget(Widget):
 
     @pyqtSlot()
     def handle_event(self, event: PybEvents.PybEvent):
-        if isinstance(event, PybEvents.StartEvent):
+        if isinstance(event, PybEvents.StartEvent) and "sub_task" not in event.metadata:
             self.start_()
         elif isinstance(event, PybEvents.StopEvent):
             self.stop_()

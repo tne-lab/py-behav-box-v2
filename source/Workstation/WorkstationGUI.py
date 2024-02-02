@@ -16,14 +16,17 @@ from PyQt5.QtCore import *
 from Workstation.AddTaskDialog import AddTaskDialog
 from Workstation.SettingsDialog import SettingsDialog
 from Workstation.ChamberWidget import ChamberWidget
-
+from Workstation.ErrorMessageBox import ErrorMessageBox
 
 class WorkstationGUI(QWidget):
+    error = pyqtSignal(str, name="error_signal")
+
     def __init__(self, workstation: Workstation):
         QWidget.__init__(self)
         self.sd = None
         self.td = None
         self.emsg = None
+        self.ignore_errors = False
         self.n_active = 0
         self.workstation = workstation
         desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
@@ -39,6 +42,9 @@ class WorkstationGUI(QWidget):
         p.setColor(self.backgroundRole(), Qt.white)
         self.setPalette(p)
 
+        # Connect signal to error handler
+        self.error.connect(self.on_error)
+
         # Main menu bar
         menubar = QMenuBar()
         main_layout.addWidget(menubar)
@@ -48,7 +54,8 @@ class WorkstationGUI(QWidget):
         settings = action_file.addAction("Settings")  # Action for adjusting py-behav settings
         settings.triggered.connect(self.settings_dialog)  # Call settings_dialog method when clicked
         action_file.addSeparator()
-        action_file.addAction("Quit")  # Quits py-behav
+        quit_gui = action_file.addAction("Quit")  # Quits py-behav
+        quit_gui.triggered.connect(self.close)
         action_help = menubar.addMenu("Help")
         documentation = action_help.addAction("Documentation")  # Action for opening documentation
         documentation.triggered.connect(lambda: webbrowser.open('https://py-behav-box-v2.readthedocs.io/en/dev/'))
@@ -132,3 +139,34 @@ class WorkstationGUI(QWidget):
             self.chambers[chamber_index - 1].deleteLater()
             del self.chambers[chamber_index - 1]
         self.n_active -= 1  # Decrement the number of active tasks
+
+    def on_error(self, message):
+        if self.emsg is None and not self.ignore_errors:
+            self.emsg = ErrorMessageBox(self, message)
+            self.emsg.show()
+
+    def confirm_exit(self):
+        emsg = QMessageBox(self)
+        emsg.setIcon(QMessageBox.Warning)
+        emsg.setText("A task is currently running.")
+        emsg.setInformativeText("Do you want to stop the task(s) and exit?")
+        emsg.setWindowTitle("Confirm Exit")
+
+        emsg.addButton("Cancel", QMessageBox.RejectRole)
+        stop_exit_button = emsg.addButton("Stop Task(s) and Exit", QMessageBox.AcceptRole)
+
+        emsg.exec_()
+
+        return emsg.clickedButton() == stop_exit_button
+
+    def closeEvent(self, event):
+        task_running = any(gui.started and not gui.paused for gui in self.workstation.guis.values())
+        if task_running:
+            if self.confirm_exit():
+                self.workstation.exit(stop_tasks=True)
+                event.accept()
+            else:
+                event.ignore()
+        else:
+            self.workstation.exit()
+            event.accept()

@@ -1,5 +1,6 @@
 import threading
 import time
+import datetime
 
 from hikload.hikvisionapi.classes import HikvisionServer
 import hikload.hikvisionapi.utils as hikutils
@@ -18,6 +19,7 @@ class HikVisionSource(Source):
         self.password = password
         self.server = None
         self.out_paths = {}
+        self.start_times = {}
 
     def initialize(self):
         self.server = HikvisionServer(self.ip, self.user, self.password)
@@ -46,6 +48,7 @@ class HikVisionSource(Source):
             else:
                 cams = [self.components[component_id].address]
             for cam in cams:
+                self.start_times[cam] = (datetime.datetime.now() - datetime.timedelta(seconds=10)).isoformat().split('.')[0] + 'Z'
                 cam = str(cam)
                 hikutils.putXML(self.server, 'ContentMgmt/record/control/manual/start/tracks/' + cam)
                 mask = hikutils.xml2dict(b'\
@@ -97,6 +100,7 @@ class HikVisionSource(Source):
             addresses = self.components[component_id].address
         else:
             addresses = [self.components[component_id].address]
+        end_time = (datetime.datetime.now() + datetime.timedelta(seconds=10)).isoformat().split('.')[0] + 'Z'
         for addr in addresses:
             addr = str(addr)
             mask = hikutils.xml2dict(b'\
@@ -107,13 +111,13 @@ class HikVisionSource(Source):
             hikutils.putXML(self.server, 'System/Video/inputs/channels/' + addr[0] + '/privacyMask', mask)
             hikutils.putXML(self.server, 'ContentMgmt/record/control/manual/stop/tracks/' + addr)
             hikutils.putXML(self.server, 'ContentMgmt/record/control/manual/stop/tracks/' + addr)
-            resp = self.server.ContentMgmt.search.getAllRecordingsForID(addr)
+            resp = self.server.ContentMgmt.search.getPastRecordingsForID(addr, self.start_times[addr], end_time)
             vids = resp['CMSearchResult']['matchList']['searchMatchItem']
             if not isinstance(vids, list):
                 vids = [vids]
-            vid = vids[-1]
-            dwnld = self.server.ContentMgmt.search.downloadURI(vid['mediaSegmentDescriptor']['playbackURI'])
-            if not os.path.exists(output_folder):
-                os.makedirs(output_folder)
-            with open(output_folder + str(name) + "_" + addr + ".mp4", 'wb') as file:
-                file.write(dwnld.content)
+            for i, vid in enumerate(vids):
+                dwnld = self.server.ContentMgmt.search.downloadURI(vid['mediaSegmentDescriptor']['playbackURI'])
+                if not os.path.exists(output_folder):
+                    os.makedirs(output_folder)
+                with open(output_folder + str(name) + "_" + addr + "_" + str(i) + ".mp4", 'wb') as file:
+                    file.write(dwnld.content)

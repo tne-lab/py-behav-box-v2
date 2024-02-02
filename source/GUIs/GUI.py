@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, List, Dict
 
 import pygame
 
+from Elements.LabelElement import LabelElement
 from Events import PybEvents
 from Events.PybEvents import GUIEvent
 from Utilities.AddressFile import AddressFile
@@ -40,6 +41,7 @@ class GUI:
         self.paused = False
         self.state = None
         self.last_event = None
+        self.time_offset = 0
 
         task_module = importlib.import_module("Local.Tasks." + event.task_name)
         task = getattr(task_module, event.task_name)
@@ -127,6 +129,7 @@ class GUI:
         self.variable_defaults = task.get_variables()
 
         self.elements = self.initialize()
+        self.subject_name = LabelElement(self, 10, self.ws.h - 30, self.ws.w - 20, 20, event.metadata["subject"], SF=1)
 
     @abstractmethod
     def initialize(self) -> List[Element]:
@@ -140,6 +143,7 @@ class GUI:
         for el in self.elements:
             el.draw()
         pygame.draw.rect(self.task_gui, Colors.white, self.task_gui.get_rect(), 1)
+        self.subject_name.draw()
 
     def handle_event(self, event: PybEvents.PybEvent) -> None:
         if self.last_event is None:
@@ -176,7 +180,7 @@ class GUI:
         elif event_type == PybEvents.ResumeEvent:
             self.paused = False
         if isinstance(event, PybEvents.TimedEvent) and self.started:
-            self.time_elapsed = event.timestamp
+            self.time_elapsed = event.timestamp - self.time_offset
             self.time_in_state = event.timestamp - self.state_enter_time
 
     def start(self):

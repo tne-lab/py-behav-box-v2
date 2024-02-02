@@ -282,6 +282,8 @@ class Task:
         all_handled = self.all_states(event)
         if not all_handled and self.state.name in self.state_methods:
             self.state_methods[self.state.name](event)
+        if self.is_complete_():
+            self.task_complete()
 
     def all_states(self, event: PybEvents.PybEvent) -> bool:
         pass
