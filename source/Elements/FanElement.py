@@ -39,6 +39,8 @@ class FanElement(Element):
         draw_filled_arc(self.screen, (cx - (5 + 35 * sf / 2) / math.sqrt(2), cy + (5 + 35 * sf / 2) / math.sqrt(2)),
                         math.pi, 35 * sf / 2, 5 * math.pi / 4, col)
 
-    def mouse_up(self, event: pygame.event.Event) -> None:
-        self.on = not self.on
-        self.comp.toggle(self.on)
+    def has_updated(self) -> bool:
+        return self.on != self.comp.get_state()
+
+    def mouse_up_(self, event: pygame.event.Event) -> None:
+        self.comp.toggle(not self.on)

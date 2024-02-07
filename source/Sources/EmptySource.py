@@ -10,7 +10,7 @@ class EmptySource(Source):
         components : dict
             Links Component IDs to Component objects
         values : dict
-            Links Component IDs to stored value for each Component
+            Links Component IDs to stored response for each Component
 
         Methods
         -------
@@ -19,9 +19,9 @@ class EmptySource(Source):
         close_source()
             No functionality
         read_component(component_id)
-            Returns the stored value for the component with id component_id
+            Returns the stored response for the component with id component_id
         write_component(component_id, msg)
-            Changes the stored value of the component with id component_id to msg
+            Changes the stored response of the component with id component_id to msg
     """
 
     def __init__(self):

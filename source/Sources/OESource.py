@@ -1,77 +1,74 @@
-import threading
-import time
+from __future__ import annotations
+from typing import TYPE_CHECKING
 
 import zmq
 import json
+from Sources.ThreadSource import ThreadSource
 
-from zmq import ZMQError
+if TYPE_CHECKING:
+    from Components.Component import Component
+    from Tasks.Task import Task
 
-from Sources.Source import Source
 
-
-class OESource(Source):
-
-    def __init__(self, address, port, delay=0):
+class OESource(ThreadSource):
+    def __init__(self, address, in_port, out_port):
         super(OESource, self).__init__()
+        self.address = address
+        self.in_port = in_port
+        self.out_port = out_port
+        self.context = None
+        self.in_socket = None
+        self.out_socket = None
+        self.addresses = {}
+        self.closing = False
+
+    def initialize(self):
         try:
-            context = zmq.Context()
-            self.socket = context.socket(zmq.SUB)
-            self.socket.connect("tcp://" + address + ":" + str(port))
-            self.poller = zmq.Poller()
-            self.poller.register(self.socket, zmq.POLLIN)
-            self.delay = int(delay)
-            self.socket.setsockopt(zmq.SUBSCRIBE, b'ttl')
+            self.context = zmq.Context()
+            self.in_socket = self.context.socket(zmq.SUB)
+            self.in_socket.connect("tcp://" + self.address + ":" + str(self.in_port))
+            self.in_socket.setsockopt(zmq.SUBSCRIBE, b'ttl')
+
+            self.out_socket = self.context.socket(zmq.REQ)
+            self.out_socket.set(zmq.REQ_RELAXED, True)
+            self.out_socket.connect("tcp://" + self.address + ":" + str(self.out_port))
+
             self.available = True
-            self.last_read = time.perf_counter()
-            self.thread = threading.Thread(target=self.clear_thread)
-            self.stop_event = threading.Event()
-            self.thread.start()
-        except:
-            self.available = False
 
-    def register_component(self, _, component):
-        self.components[component.id] = component
-
-    def close_source(self):
-        self.stop_event.set()
-        self.thread.join()
-        self.socket.close()
-
-    def clear_thread(self):
-        while ~self.stop_event.is_set():
-            if time.perf_counter() - self.last_read > 5:
-                sockets = self.poller.poll(self.delay)
-                for socket in sockets:
-                    try:
-                        while True:
-                            socket[0].recv_multipart(flags=zmq.NOBLOCK)
-                    except ZMQError:
-                        pass
-                self.last_read = time.perf_counter()
-            time.sleep(5)
-
-    def read_component(self, component_id):
-        self.last_read = time.perf_counter()
-        sockets = self.poller.poll(self.delay)
-        jsonStrs = []
-        for socket in sockets:
-            try:
-                while True:
-                    msg = socket[0].recv_multipart(flags=zmq.NOBLOCK)
+            while not self.closing:
+                res = self.in_socket.poll(timeout=1000)
+                if res != 0:
+                    msg = self.in_socket.recv_multipart()
                     if len(msg) == 1:
                         envelope = msg
                     elif len(msg) == 2:
                         envelope, jsonStr = msg
                         jsonStr = json.loads(jsonStr.decode('utf-8'))
-                        if jsonStr['type'] == 'ttl' and jsonStr['channel'] == int(
-                                self.components[component_id].address) - 1:
-                            jsonStrs.append(jsonStr)
-            except ZMQError:
-                pass
-        return jsonStrs
+                        if jsonStr['type'] == 'ttl' and jsonStr['channel'] in self.addresses:
+                            self.update_component(self.addresses[jsonStr['channel']], jsonStr)
+            self.in_socket.close()
+            self.out_socket.close()
+        except:
+            self.unavailable()
+
+    def register_component(self, task: Task, component: Component) -> None:
+        self.addresses[int(component.address) - 1] = component.id
+
+    def close_source(self):
+        self.closing = True
 
     def write_component(self, component_id, msg):
-        pass
+        if msg:
+            self.out_socket.send(
+                b"".join([b'TTL Channel=', str(self.components[component_id].address).encode('ascii'), b' on=1']))
+            self.receive()
+        else:
+            self.out_socket.send(
+                b"".join([b'TTL Channel=', str(self.components[component_id].address).encode('ascii'), b' on=0']))
+            self.receive()
 
-    def is_available(self):
-        return self.available
+    def receive(self) -> None:
+        try:
+            self.out_socket.recv(flags=zmq.NOBLOCK)
+        except zmq.ZMQError:
+            pass

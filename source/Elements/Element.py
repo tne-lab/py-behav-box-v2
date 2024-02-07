@@ -1,5 +1,10 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING
+
+from typing import TYPE_CHECKING, Any
+
+from Components.Component import Component
+from Events.PybEvents import ComponentUpdateEvent
+
 if TYPE_CHECKING:
     from GUIs.GUI import GUI
 
@@ -54,16 +59,17 @@ class Element:
             self.SF = tg.SF
         else:
             self.SF = SF
+        self.gui = tg
         self.screen = tg.task_gui
         self.x = int(self.SF * x)
         self.y = int(self.SF * y)
         self.rect = pygame.Rect(int(rect.x * self.SF), int(rect.y * self.SF), int(rect.width * self.SF), int(rect.height * self.SF))
         self.selected = False
 
-    def mouse_down(self, event: pygame.event.Event) -> None:
+    def mouse_down_(self, event: pygame.event.Event) -> None:
         pass
 
-    def mouse_up(self, event: pygame.event.Event) -> None:
+    def mouse_up_(self, event: pygame.event.Event) -> None:
         pass
 
     def handle_event(self, event: pygame.event.Event) -> bool:
@@ -75,11 +81,11 @@ class Element:
         if event.type == pygame.MOUSEBUTTONDOWN:  # If a mouse button was clicked
             if event.button == 1 and self.rect.collidepoint(cur_x, cur_y):  # If a left mouse button within rectangle
                 self.selected = True  # Indicate that this Element was clicked
-                self.mouse_down(event)  # Callback for mouse down
+                self.mouse_down_(event)  # Callback for mouse down
                 return True  # Event handled
         elif event.type == pygame.MOUSEBUTTONUP:  # If a mouse button was released
             if event.button == 1 and self.rect.collidepoint(cur_x, cur_y) and self.selected:  # If a left mouse button within rectangle
-                self.mouse_up(event)  # Callback for mouse up
+                self.mouse_up_(event)  # Callback for mouse up
                 self.selected = False  # Indicate that this Element is no longer clicked
                 return True  # Event handled
             self.selected = False  # Indicate that this Element is no longer clicked
@@ -88,3 +94,10 @@ class Element:
     @abstractmethod
     def draw(self) -> None:
         raise NotImplementedError
+
+    @abstractmethod
+    def has_updated(self) -> bool:
+        raise NotImplementedError
+
+    def component_changed(self, component: Component, value: Any):
+        self.gui.ws.mainq.send_bytes(self.gui.ws.encoder.encode(ComponentUpdateEvent(self.gui.chamber, component.id, value, metadata={"value": value})))

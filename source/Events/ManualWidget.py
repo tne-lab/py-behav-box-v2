@@ -1,14 +1,26 @@
-from Events.GUIEventLogger import GUIEventLogger
-from Events.InputEvent import InputEvent
-from enum import Enum
-from PyQt5.QtWidgets import *
+from PyQt5.QtWidgets import QGroupBox, QHBoxLayout, QVBoxLayout, QLineEdit, QPushButton, QWidget
+
+from Events import PybEvents
+
+from Events.LoggerEvent import LoggerEvent
+from Events.Widget import Widget
 
 
-class ManualEventLogger(GUIEventLogger):
+class ManualWidget(Widget):
 
-    def __init__(self):
-        super().__init__()
+    class ManualEvent(PybEvents.Loggable, PybEvents.StatefulEvent):
+        name: str
+        value: int
+
+        def format(self) -> LoggerEvent:
+            return LoggerEvent(self, self.name, self.value, self.timestamp)
+
+    def __init__(self, name: str):
+        super().__init__(name)
+        self.layout = QVBoxLayout(self)
+        self.setLayout(self.layout)
         self.widget = QGroupBox('Manual Event')
+        self.layout.addWidget(self.widget)
         manual_layout = QHBoxLayout(self.widget)
         input_layout = QVBoxLayout(self.widget)
         self.widget.setLayout(manual_layout)
@@ -31,9 +43,4 @@ class ManualEventLogger(GUIEventLogger):
         manual_layout.addLayout(input_layout)
 
     def send_event(self) -> None:
-        temp_enum = Enum('TempEnum', {'MANUAL': int(self.code_input.text())})
-        self.cw.task.events.append(
-            InputEvent(self.cw.task, temp_enum.MANUAL, {"desc": self.manual_input.text()}))
-
-    def get_widget(self) -> QWidget:
-        return self.widget
+        self.cw.workstation.mainq.send_bytes(self.cw.workstation.encoder.encode(self.ManualEvent(int(self.cw.chamber_id.text()) - 1), self.manual_input.text(), int(self.code_input.text())))

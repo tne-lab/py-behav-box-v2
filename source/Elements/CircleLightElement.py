@@ -20,6 +20,9 @@ class CircleLightElement(Element):
         self.comp = comp
         self.on = comp.get_state()
 
+    def has_updated(self) -> bool:
+        return self.on != self.comp.get_state()
+
     def draw(self) -> None:
         cx = self.x + self.radius  # center x
         cy = self.y + self.radius  # center y
@@ -32,6 +35,5 @@ class CircleLightElement(Element):
         else:
             draw_light(self.screen, self.off_color, (0, 0, 0), self.rect, cx, cy, self.radius)
 
-    def mouse_up(self, event: pygame.event.Event) -> None:
-        self.on = not self.on
-        self.comp.toggle(self.on)
+    def mouse_up_(self, event: pygame.event.Event) -> None:
+        self.comp.toggle(not self.on)

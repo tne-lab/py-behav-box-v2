@@ -1,7 +1,8 @@
 import nidaqmx
-from nidaqmx import system, stream_writers
+from nidaqmx import stream_writers
 from nidaqmx.constants import (LineGrouping)
 import numpy as np
+from nidaqmx.system import system
 
 from Components.Component import Component
 from Sources.Source import Source
@@ -31,35 +32,29 @@ class NIDAQSource(Source):
         close_component(component_id)
             Closes the task for a specific Component
         read_component(component_id)
-            Requests the current value for the Component from the DAQ
+            Requests the current response for the Component from the DAQ
         write_component(component_id, msg)
-            Writes a value for the Component to the DAQ
+            Writes a response for the Component to the DAQ
     """
 
     def __init__(self, dev):
         super(NIDAQSource, self).__init__()
         self.dev = dev
-        try:
-            dev_obj = system.Device(dev)
-            dev_obj.reset_device()
-            self.available = True
-        except:
-            self.available = False
         self.tasks = {}
         self.streams = {}
         self.ao_task = None
         self.ao_stream = None
         self.ao_inds = {}
 
-    def register_component(self, _, component):
+    def initialize(self):
+        dev_obj = system.Device(self.dev)
+        dev_obj.reset_device()
+
+    def register_component(self, component, metadata):
         if component.get_type() == Component.Type.DIGITAL_OUTPUT:
             task = nidaqmx.Task()
-            task.do_channels.add_do_chan(self.dev + component.address, line_grouping=LineGrouping.CHAN_FOR_ALL_LINES)
-            task.start()
-            self.tasks[component.id] = task
-        elif component.get_type() == Component.Type.DIGITAL_INPUT:
-            task = nidaqmx.Task()
-            task.di_channels.add_di_chan(self.dev + component.address, line_grouping=LineGrouping.CHAN_FOR_ALL_LINES)
+            task.do_channels.add_do_chan(self.dev + component.address,
+                                         line_grouping=LineGrouping.CHAN_FOR_ALL_LINES)
             task.start()
             self.tasks[component.id] = task
         elif component.get_type() == Component.Type.ANALOG_OUTPUT:
@@ -67,51 +62,38 @@ class NIDAQSource(Source):
                 self.ao_task = nidaqmx.Task()
             self.ao_task.ao_channels.add_ao_voltage_chan(self.dev + component.address)
             self.ao_stream = stream_writers.AnalogMultiChannelWriter(self.ao_task.out_stream)
-            self.ao_inds[component.id] = len(self.ao_inds) - 1
-        # elif component.get_type() == Component.Type.ANALOG_INPUT:
-        #     task.ai_channels.add_ai_voltage_chan(self.dev + component.address)
-        #     self.streams[component.id] = stream_writers.AnalogSingleChannelReader(task.in_stream)
-        self.components[component.id] = component
+            self.ao_inds[component.id] = len(self.ao_inds)
 
     def close_source(self):
-        for c in self.tasks.values():
-            c.close()
+        if self.ao_task is not None:
+            self.ao_task.close()
+            self.ao_task = None
+            self.ao_stream = None
+        for task in self.tasks:
+            task.close()
+        self.tasks = {}
 
     def close_component(self, component_id):
         if self.components[component_id].get_type() == Component.Type.ANALOG_OUTPUT:
             if self.ao_task is not None:
+                self.ao_task.stop()
                 self.ao_task.close()
                 self.ao_task = None
                 self.ao_stream = None
-        elif self.available:
-            self.tasks[component_id].close()
-            del self.tasks[component_id]
-            del self.components[component_id]
-
-    def read_component(self, component_id):
-        if self.available:
-            # Do I need a stop here as well?
-            if self.components[component_id].get_type() == Component.Type.DIGITAL_INPUT:
-                return self.tasks[component_id].read()
-            elif self.components[component_id].get_type() == Component.Type.ANALOG_INPUT:
-                return self.streams[component_id].read_one_sample(0)
         else:
-            return None
+            self.tasks[component_id].stop()
+            self.tasks[component_id].close()
 
     def write_component(self, component_id, msg):
-        if self.available:
-            if self.components[component_id].get_type() == Component.Type.DIGITAL_OUTPUT:
-                self.tasks[component_id].write(msg)
-            elif self.components[component_id].get_type() == Component.Type.ANALOG_OUTPUT:
-                output = np.zeros((len(self.ao_inds), msg.shape[1]))
-                output[self.ao_inds[component_id], :] = np.squeeze(msg)
-                if self.ao_task.is_task_done():
-                    self.ao_task.stop()
-                self.ao_task.timing.cfg_samp_clk_timing(self.components[component_id].sr,
-                                                        sample_mode=nidaqmx.constants.AcquisitionType.FINITE,
-                                                        samps_per_chan=msg.shape[1])
-                self.ao_stream.write_many_sample(np.squeeze(output))
-                self.ao_task.start()
-
-    def is_available(self):
-        return self.available
+        if self.components[component_id].get_type() == Component.Type.DIGITAL_OUTPUT:
+            self.tasks[component_id].write(msg)
+        elif self.components[component_id].get_type() == Component.Type.ANALOG_OUTPUT:
+            output = np.zeros((len(self.ao_inds), msg.shape[1]))
+            output[self.ao_inds[component_id], :] = np.squeeze(msg)
+            if self.ao_task.is_task_done():
+                self.ao_task.stop()
+            self.ao_task.timing.cfg_samp_clk_timing(self.components[component_id].sr,
+                                                    sample_mode=nidaqmx.constants.AcquisitionType.FINITE,
+                                                    samps_per_chan=msg.shape[1])
+            self.ao_stream.write_many_sample(output)
+            self.ao_task.start()

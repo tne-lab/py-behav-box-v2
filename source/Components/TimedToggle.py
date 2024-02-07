@@ -1,8 +1,11 @@
 from __future__ import annotations
+
 from typing import TYPE_CHECKING
+
+from Tasks.TimeoutManager import Timeout
+
 if TYPE_CHECKING:
-    from Sources.Source import Source
-import threading
+    from Tasks.Task import Task
 from typing import Union
 
 from Components.Toggle import Toggle
@@ -35,28 +38,26 @@ class TimedToggle(Toggle):
         toggle(dur)
             Activates the toggle for dur seconds
     """
-    def __init__(self, source: Source, component_id: str, component_address: str):
-        super().__init__(source, component_id, component_address)
+    def __init__(self, task: Task, component_id: str, component_address: str):
+        super().__init__(task, component_id, component_address)
         self.count = 0
-        self.event = threading.Event()
 
     def toggle(self, dur: Union[float, bool]) -> None:
         self.count += 1
         if isinstance(dur, float):
             if not self.state:
-                toggle_thread = threading.Thread(target=lambda: self.toggle_(dur), args=())
-                toggle_thread.start()
+                self.write(True)
+                self.state = True
+                self.task.tp.tm.reset_timeout(Timeout(self.id, self.task.metadata["chamber"], dur, self.toggle_, ()))
         elif isinstance(dur, bool):
             if not dur:
-                self.event.set()
-                self.event.clear()
+                self.task.tp.tm.cancel_timeout(self.id)
+                self.write(False)
+                self.state = False
             elif not self.state:
-                self.source.write_component(self.id, True)
+                self.write(True)
                 self.state = True
 
-    def toggle_(self, dur: float) -> None:
-        self.source.write_component(self.id, True)
-        self.state = True
-        self.event.wait(dur)
-        self.source.write_component(self.id, False)
+    def toggle_(self) -> None:
+        self.write(False)
         self.state = False

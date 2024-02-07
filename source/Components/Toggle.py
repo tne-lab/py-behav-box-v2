@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 from Components.Output import Output
 
 if TYPE_CHECKING:
-    from Sources.Source import Source
+    from Tasks.Task import Task
 
 from Components.Component import Component
 
@@ -39,8 +39,8 @@ class Toggle(Output):
             Returns Component.Type.DIGITAL_OUTPUT
     """
 
-    def __init__(self, source: Source, component_id: str, component_address: str):
-        super().__init__(source, component_id, component_address)
+    def __init__(self, task: Task, component_id: str, component_address: str):
+        super().__init__(task, component_id, component_address)
         self.state = False
 
     def toggle(self, on: bool) -> None:

@@ -10,7 +10,7 @@ built around a hardware-agnostic and highly object-oriented design philosophy.
 Pybehave separates code for task design from specific hardware implementations to streamline development, accessibility, and
 data sharing. This approach, combined with a task-specific Graphical User Interfaces (GUIs), expedites and simplifies the creation and visualization of complex behavioral tasks.
 User created [task](tasks.md) definition files can interact with hardware-specific [source](sources.md) files both written in Python. Any and all local
-configuration can be handled outside of Python using [Address Files](protocols_addressfiles.md#addressfiles) and [Protocols](protocols_addressfiles.md#protocols) formatted as CSVs.
+configuration can be handled outside of Python using [Address Files](protocols_addressfiles.md#addressfiles) and [Protocols](protocols_addressfiles.md#protocols).
 
 All pybehave tasks are coordinated via a [Workstation](workstation.md) GUI.
 
@@ -43,14 +43,7 @@ Pybehave has the following folder structure:
 
 By default, pybehave uses a [general task repository](https://github.com/tne-lab/all-tasks) for the Translational Neuroengineering Lab. 
 If you plan to edit or add tasks, you should make a new repository with the same structure (Tasks and GUIs folders) and 
-include any existing tasks you might need. Change the `url`field of the *Local* submodule in `.gitmodules` to your repository
-and then run `git submodule sync` to reflect this change.
-
-To initialize the *Local* submodule and download the necessary Task and GUI definitions (regardless of the version used), run
-the following `git` commands:
-    
-    git submodule init
-    git submodule update --recursive --remote
+include any existing tasks you might need. The contents of this repository should be saved in the Local directory.
 
 ### Dependencies
 
@@ -71,7 +64,7 @@ The source code for pybehave is in principle cross-platform but has not been tho
 Pybehave is explicitly designed in a manner where files for local configuration are separate from the root directory. This
 ensures that users can easily update to the newest version of the platform without compromising their experimental files. 
 To update, simply pull the latest version from the upstream base pybehave code repository and the repository referenced by
-the *Local* submodule.
+the *Local* folder.
 
 ### Running a task
 

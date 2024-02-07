@@ -1,3 +1,5 @@
+from functools import partial
+
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 

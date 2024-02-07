@@ -18,7 +18,7 @@ as an [enum](https://docs.python.org/3/library/enum.html) in the base `Component
 All subclasses of `Component` must override the `get_type` method which should return one of the possible indicated types.
 Using the example of the `Toggle` component which solely outputs a simple digital on or off signal:
 
-    def get_type(self):
+    def get_type():
         return Component.Type.DIGITAL_OUTPUT
 
 ## Component states
@@ -30,20 +30,23 @@ complex objects for more flexible components like touch screens or analog inputs
 
 ## Component constructor
 
-All components are linked to a particular `source` via a `component_id` and `component_address`. These three variables are
-all passed to the component constructor along with optional `metadata` and configured using local [AddressFiles](protocols_addressfiles.md#addressfiles). The component
+All components are linked to a particular Source via a `component_id` and `component_address`. This linkage is mediated 
+by a Task object `task`. When Components are used outside of Tasks (for Sources or GUIs) the Task parameter can be None. These three variables are
+all passed to the component constructor along with `metadata` and configured using local [AddressFiles](protocols_addressfiles.md#addressfiles). 
+All metadata will be processed to create class attributes corresponding to the entries in the dictionary. The component
 constructor can be overridden if necessary to define variables for the component subclass (if necessary, these variables
-can be locally configured using `metadata` in *AddressFiles*). The example below shows how
+can be locally configured using `metadata` in *AddressFiles*). Depending on the Component, some metadata may be required or
+option (indicated in the package reference below). The example below shows how
 the default constructor could be overridden to keep track of a state variable:
 
-    def __init__(self, source, component_id, component_address):
-        super().__init__(source, component_id, component_address)
+    def __init__(self, task, component_id, component_address):
+        super().__init__(task, component_id, component_address)
         self.state = False
 
 ## Interacting with sources
 
-To query data from the component's source, use the `Component` `read` method. To output to the source use the `Component`
-write method with a single input of any type. The type of data returned by `read` or required by `write` is flexible and can depend on the
+To query data from the component's source, use the `Component` `get_state` method. To output to the Source use the `Component`
+`write` method with a single input of any type. The type of data returned by `get_state` or required by `write` is flexible and can depend on the
 `Source` class. Therefore, we recommend that these methods should be wrapped in component-specific versions like the `toggle`
 method for `Toggle` components:
 
@@ -51,9 +54,11 @@ method for `Toggle` components:
         self.write(on)
         self.state = on
 
-Rather than calling `write` or `read` directly, methods like `toggle` ensure states are properly updated and conventions for particular
+Rather than calling `write` or `get_state` directly, methods like `toggle` ensure states are properly updated and conventions for particular
 types of components kept to. This is especially helpful when subclassing components when implementation specific features may 
 be necessary (look at `BinaryInput` and `OEBinaryInput` for a more in depth example).
+When new data is received from a Source, the behavior for updating the state of a Source is handled by the `update` method.
+This method should return True if the value of the state was changed and False otherwise.
 
 ## Package reference
 
@@ -65,10 +70,10 @@ The `Component` class in the `Component` module is the super class for all compo
 
 #### \_\_init__
 
-    __init__(source : Source, component_id : str, component_address : str)
+    __init__(task : Task, component_id : str, component_address : str)
 
-Constructor for a new component connecting to *Source* `source` registered with `component_id` at `component_address`.
-Values for `source`, `component_id`, `component_address` should be provided by local [AddressFiles](protocols_addressfiles.md#addressfiles).
+Constructor for a new component connecting to *Task* `task` registered with `component_id` at `component_address`.
+Values for `task`, `component_id`, `component_address` should be provided by local [AddressFiles](protocols_addressfiles.md#addressfiles).
 Any attributes (metadata) necessary for the component should be defined here (ex. frame rates for videos).
 
 #### Type
@@ -104,17 +109,6 @@ all subclasses of `Component`.
 
 Returns the state the component currently is in.
 
-#### read
-    
-    read() -> Any
-
-Queries the current value of the component from the source. The data type returned by `read` will depend
-on the source.
-
-*Example usage:*
-
-    value = self.read()
-
 #### write
     
     write(msg : Any) -> None
@@ -124,6 +118,12 @@ Outputs a value via the source. The data type of `msg` will depend on the source
 *Example usage:*
 
     self.write(True)
+
+#### update
+
+    update(value: Any) -> bool
+
+Process new information from the Source to update the Component's state.
 
 #### close
 
@@ -144,10 +144,6 @@ Notifies the source that the component should be closed.
 
 General purpose/non-specific output class. 
 
-*Methods:*
-
-`set(value : Any) -> None` Updates the state of the component based on `value`.
-
 *Attributes:*
 
 `state : Any` Current state value
@@ -159,10 +155,6 @@ General purpose/non-specific output class.
 
 General purpose/non-specific input class.
 
-*Methods:*
-
-`check() -> Any` Queries and returns the current state of the component.
-
 *Attributes:*
 
 `state : Any` Current state value
@@ -173,12 +165,6 @@ General purpose/non-specific input class.
     Type: BOTH
 
 General purpose/non-specific class that supports inputs and outputs.
-
-*Methods:*
-
-`check() -> Any` Queries and returns the current state of the component.
-
-`set(value : Any) -> None` Updates the state of the component based on `value`.
 
 *Attributes:*
 
@@ -204,14 +190,7 @@ Toggles typically represent digital outputs like lights and motors and can be se
     class BinaryInput(Input)
     Type: DIGITAL_INPUT
 
-BinaryInputs represent inputs that can only be on or off like switches, IR sensors, or levers. The `check` method will
-indicate if the state has changed compared to the last time it was queried.
-
-*Methods:*
-
-`check() -> int` Checks for any changes in the state of the BinaryInput. Possible values are `NO_CHANGE` (0), `ENTERED` (1), or `EXIT` (2).
-
-`toggle(on : bool) -> None` It is possible to directly control the state of the input. This is intended to only be used with simulation.
+BinaryInputs represent inputs that can only be on or off like switches, IR sensors, or levers.
 
 *Attributes:*
 
@@ -238,10 +217,6 @@ AnalogInputs represent inputs that can take on a continuous range of values like
     Type: ANALOG_OUTPUT
 
 AnalogOutputs represent outputs that can take on a continuous range of values like intensity, frequency, and duration.
-
-*Methods:*
-
-`set(value : float) -> None` Updates the state of the component based on `value`.
 
 *Attributes:*
 
@@ -270,11 +245,11 @@ TimedToggles will only remain active for a set amount of time.
 OEBinaryInputs represent TTL broadcast events originating from [OpenEphys](https://open-ephys.github.io/gui-docs/User-Manual/Plugins/Event-Broadcaster.html).
 The class overrides the `check` method to handle the JSON data but has identical outputs to the standard BinaryInput.
 
-*Attributes:*
+*Optional Metadata:*
 
-`rising: bool` Indicator for whether to respond to rising events
+`rising: bool = True` Indicator for whether to respond to rising events
 
-`falling: bool` Indicator for whether to respond to falling events
+`falling: bool = False` Indicator for whether to respond to falling events
 
 #### TouchBinaryInput
 
@@ -325,12 +300,12 @@ corresponds to the number of channels. This format was inspired by programming f
 
 `start(pnum : int, stype: str) -> None` Starts the pulse train with ID `pnum`
 
-#### ParametricStim
+#### StimJim
 
-    class ParametricStim(Output)
+    class StimJim(Output)
     Type: Output
 
-ParametricStim encapsulates behavior for a component that would accept a list of instructions to generate a stimulation waveform.
+StimJim encapsulates behavior for a component that would accept a list of instructions to generate a stimulation waveform.
 The default configuration is readily compatible with the [StimJim](https://bitbucket.org/natecermak/stimjim/src/master/).
 
 *Methods:*

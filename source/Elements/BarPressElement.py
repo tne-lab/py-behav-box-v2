@@ -42,10 +42,11 @@ class BarPressElement(Element):
             pygame.draw.rect(self.screen, Colors.gray,
                              pygame.Rect(self.x + 2, self.y + 2 + 4 * self.h / 6, self.w - 4, self.h / 6), 0)
 
-    def mouse_up(self, event: pygame.event.Event) -> None:
-        self.pressed = False
-        self.comp.toggle(self.pressed)
+    def has_updated(self) -> bool:
+        return self.pressed != self.comp.get_state()
 
-    def mouse_down(self, _) -> None:
-        self.pressed = True
-        self.comp.toggle(self.pressed)
+    def mouse_up_(self, event: pygame.event.Event) -> None:
+        self.component_changed(self.comp, False)
+
+    def mouse_down_(self, _) -> None:
+        self.component_changed(self.comp, True)

@@ -1,6 +1,11 @@
 from __future__ import annotations
+
+import multiprocessing
+import os
 from typing import TYPE_CHECKING
 
+from Events.PybEvents import AddSourceEvent, RemoveSourceEvent
+from Utilities.create_task import create_task
 from Utilities.find_closing_paren import find_closing_paren
 
 if TYPE_CHECKING:
@@ -35,12 +40,20 @@ class SettingsDialog(QDialog):
         self.n_chamber = QLineEdit(str(workstation.n_chamber))
         chamber_box_layout.addWidget(self.n_chamber)
         self.layout.addWidget(chamber_box)
+        refresh_box = QGroupBox('GUI Options')
+        refresh_box_layout = QHBoxLayout(self)
+        refresh_box.setLayout(refresh_box_layout)
+        self.refresh_gui = QCheckBox("Refresh")
+        self.refresh_gui.setChecked(self.workstation.refresh_gui)
+        self.refresh_gui.stateChanged.connect(self.update_refresh_check)
+        refresh_box_layout.addWidget(self.refresh_gui)
+        self.layout.addWidget(refresh_box)
         source_box = QGroupBox('Sources')
         source_box_layout = QVBoxLayout(self)
         self.source_list = QListWidget()
         for sn in workstation.sources:
             ql = QListWidgetItem("{} ({})".format(sn, type(workstation.sources[sn]).__name__), self.source_list)
-            if workstation.sources[sn].is_available():
+            if workstation.sources[sn].available:
                 ql.setIcon(self.source_list.style().standardIcon(QStyle.SP_DialogApplyButton))
             else:
                 ql.setIcon(self.source_list.style().standardIcon(QStyle.SP_DialogCancelButton))
@@ -52,7 +65,7 @@ class SettingsDialog(QDialog):
         self.refresh_button.setText("⟳")
         self.refresh_button.setFixedWidth(30)
         self.refresh_button.setDisabled(True)
-        self.refresh_button.clicked.connect(self.refresh_source)
+        self.refresh_button.clicked.connect(lambda: create_task(self.refresh_source()))
         source_as_layout.addWidget(self.refresh_button)
         self.remove_button = QPushButton()
         self.remove_button.setText("−")
@@ -70,41 +83,51 @@ class SettingsDialog(QDialog):
         self.layout.addWidget(source_box)
         self.layout.addWidget(self.control_buttons)
         self.setLayout(self.layout)
+
+    def update_refresh_check(self):
+        self.workstation.refresh_gui = self.refresh_gui.isChecked()
+        desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
+        settings = QSettings(desktop + "/py-behav/pybehave.ini", QSettings.IniFormat)
+        settings.setValue("refresh_gui", self.workstation.refresh_gui)
     
     def accept(self) -> None:
-        settings = QSettings()
+        desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
+        settings = QSettings(desktop + "/py-behav/pybehave.ini", QSettings.IniFormat)
         settings.setValue("n_chamber", self.n_chamber.text())
         self.workstation.n_chamber = int(self.n_chamber.text())
         self.workstation.compute_chambergui()
         super(SettingsDialog, self).accept()
 
-    def on_source_clicked(self, _) -> None:
+    def on_source_clicked(self, clicked_item) -> None:
         self.remove_button.setDisabled(False)
-        self.refresh_button.setDisabled(False)
+        st_name = clicked_item.text().split(" (")[0]
+        if self.workstation.sources[st_name].available:
+            self.refresh_button.setDisabled(True)
+        else:
+            self.refresh_button.setDisabled(False)
 
     def refresh_source(self) -> None:
         st = self.source_list.currentItem().text()
         st_name = st.split(" (")[0]
         if len(self.workstation.sources[st_name].components) == 0:
-            settings = QSettings()
+            desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
+            settings = QSettings(desktop + "/py-behav/pybehave.ini", QSettings.IniFormat)
             source_string = settings.value("sources")
             s_type = type(self.workstation.sources[st_name]).__name__
             search_str = '\"'+st_name+'\": ' + s_type
             open_ind = source_string.index(search_str) + len(search_str)
             close_ind = find_closing_paren(source_string, open_ind) + 1
-            source_module = importlib.import_module("Sources." + s_type)
-            attribute = getattr(source_module, s_type)
-            globals()[s_type] = attribute
-            self.workstation.sources[st_name] = eval(type(self.workstation.sources[st_name]).__name__ + source_string[open_ind:close_ind])
-            if self.workstation.sources[st_name].is_available():
-                self.source_list.currentItem().setIcon(self.source_list.style().standardIcon(QStyle.SP_DialogApplyButton))
-            else:
-                self.source_list.currentItem().setIcon(self.source_list.style().standardIcon(QStyle.SP_DialogCancelButton))
+            self.workstation.sources[st_name] = s_type(**eval(source_string[open_ind:close_ind]))
+            tpq, sourceq = multiprocessing.Pipe()
+            self.workstation.sources[st_name].queue = sourceq
+            self.workstation.sources[st_name].start()
+            self.workstation.mainq.send_bytes(self.workstation.encoder.encode(AddSourceEvent(st_name, tpq)))
 
     def remove_source(self) -> None:
         st = self.source_list.currentItem().text()
         st_name = st.split(" (")[0]
-        settings = QSettings()
+        desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
+        settings = QSettings(desktop + "/py-behav/pybehave.ini", QSettings.IniFormat)
         source_string = settings.value("sources")
         si = source_string.find(st_name)
         if si - 3 > 0:
@@ -112,16 +135,22 @@ class SettingsDialog(QDialog):
         else:
             si -= 1
         se = source_string.find(")", si)
-        self.workstation.sources[st_name].close_source()
+        self.workstation.mainq.send_bytes(self.workstation.encoder.encode(RemoveSourceEvent(st_name)))
         del self.workstation.sources[st_name]
         self.source_list.takeItem(self.source_list.currentRow())
         self.remove_button.setDisabled(False)
-        settings = QSettings()
-        settings.setValue("sources", source_string[0:si] + source_string[se+1:])
+        settings.setValue("sources", source_string[:si] + source_string[se+2:])
 
     def add_source(self) -> None:
         self.asd = AddSourceDialog(self)
         self.asd.show()
+
+    def update_source_availability(self):
+        for i, sn in enumerate(self.workstation.sources):
+            if self.workstation.sources[sn].available:
+                self.source_list.item(i).setIcon(self.source_list.style().standardIcon(QStyle.SP_DialogApplyButton))
+            else:
+                self.source_list.item(i).setIcon(self.source_list.style().standardIcon(QStyle.SP_DialogCancelButton))
 
 
 class AddSourceDialog(QDialog):
@@ -150,9 +179,13 @@ class AddSourceDialog(QDialog):
         source_box.setLayout(source_box_layout)
         self.source = QComboBox()
         self.sources = []
+        self.local_sources = []
         for f in pkgutil.iter_modules(['Sources']):
             if not f.name == "Source":
                 self.sources.append(f.name)
+        for f in pkgutil.iter_modules(['Local.Sources']):
+            if not f.name.endswith('Source'):
+                self.local_sources.append(f.name)
         self.source.addItems(self.sources)
         source_box_layout.addWidget(self.source)
         self.layout.addWidget(source_box)
@@ -161,7 +194,11 @@ class AddSourceDialog(QDialog):
         self.params = []
 
     def set_params(self) -> None:
-        source_type = getattr(importlib.import_module("Sources." + self.source.currentText()), self.source.currentText())
+        if self.source.currentText() in self.sources:
+            source_type = getattr(importlib.import_module("Sources." + self.source.currentText()), self.source.currentText())
+        else:
+            source_type = getattr(importlib.import_module("Local.Sources." + self.source.currentText()),
+                                  self.source.currentText())
         all_params = inspect.getfullargspec(source_type.__init__)
         if len(all_params.args) > 1:
             self.spd = SourceParametersDialog(self, all_params)
@@ -170,16 +207,35 @@ class AddSourceDialog(QDialog):
             self.accept()
 
     def accept(self) -> None:
-        source_type = getattr(importlib.import_module("Sources." + self.source.currentText()),
-                              self.source.currentText())
-        settings = QSettings()
+        if self.source.currentText() in self.sources:
+            source_type = getattr(importlib.import_module("Sources." + self.source.currentText()),
+                                  self.source.currentText())
+        else:
+            source_type = getattr(importlib.import_module("Local.Sources." + self.source.currentText()),
+                                  self.source.currentText())
+        desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
+        settings = QSettings(desktop + "/py-behav/pybehave.ini", QSettings.IniFormat)
         source_string = settings.value("sources")
-        source_string = source_string[:-1] + ', "{}": {}({})'.format(self.name.text(), self.source.currentText(),
-                                                                     ','.join(f'"{w}"' for w in self.params)) + "}"
+        if source_string == '{}':
+            if len(self.params) > 0:
+                source_string = "{" + '"{}": \'{}({},)\''.format(self.name.text(), self.source.currentText(),
+                                                              ','.join(f'"{w}"' for w in self.params)) + "}"
+            else:
+                source_string = "{" + '"{}": \'{}()\''.format(self.name.text(), self.source.currentText()) + "}"
+        else:
+            if len(self.params) > 0:
+                source_string = source_string[:-1] + ', "{}": \'{}({},)'.format(self.name.text(), self.source.currentText(),
+                                                                               ','.join(f'"{w}"' for w in self.params)) + "\'}"
+            else:
+                source_string = source_string[:-1] + ', "{}": \'{}()\''.format(self.name.text(), self.source.currentText()) + "}"
         settings.setValue("sources", source_string)
         self.sd.workstation.sources[self.name.text()] = source_type(*self.params)
+        tpq, sourceq = multiprocessing.Pipe()
+        self.sd.workstation.sources[self.name.text()].queue = sourceq
+        self.sd.workstation.sources[self.name.text()].start()
+        self.sd.workstation.mainq.send_bytes(self.sd.workstation.encoder.encode(AddSourceEvent(self.name.text(), tpq)))
         ql = QListWidgetItem("{} ({})".format(self.name.text(), self.source.currentText()), self.sd.source_list)
-        if self.sd.workstation.sources[self.name.text()].is_available():
+        if self.sd.workstation.sources[self.name.text()].available:
             ql.setIcon(self.sd.source_list.style().standardIcon(QStyle.SP_DialogApplyButton))
         else:
             ql.setIcon(self.sd.source_list.style().standardIcon(QStyle.SP_DialogCancelButton))
