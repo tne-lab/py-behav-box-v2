@@ -26,8 +26,6 @@
 
 ### [Synchronizing with OpenEphys]()
 
-### [Working with Bayesian Optimization]()
-
 ### [Simulating Behavior]()
 
 ### [Creating a TaskSequence](tutorials/creating_task_sequence.md)

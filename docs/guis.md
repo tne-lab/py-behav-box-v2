@@ -98,6 +98,18 @@ Additionally calls the standard GUI methods on its `sub_gui` attribute.
 
     __init__(tg: GUI, x: int, y: int, rect: pygame.Rect, SF=None)
 
+*Inputs:*
+
+`tg` the GUI this Element is being created in
+
+`x` the x-coordinate of the top left corner of the element
+
+`y` the y-coordinate of the top left corner of the element
+
+`rect` the bounding rectangle of the element
+
+`SF` scale factor on the size of the component from the default
+
 #### draw
 
     draw() -> None
@@ -108,7 +120,12 @@ Called by the GUI to redraw the Element whenever it has visually updated.
 
     handle_event(event: pygame.event.Event) -> bool
 
-Internal method that will call `mouse_down_` or `mouse_up_` when the Element is clicked.
+Internal method that will call `mouse_down_` or `mouse_up_` when the Element is clicked. Returns True if the event was
+handled.
+
+*Inputs:*
+
+`event` pygame event that associated with this component
 
 #### mouse_down_
 
@@ -116,11 +133,19 @@ Internal method that will call `mouse_down_` or `mouse_up_` when the Element is 
 
 Called when the left mouse button is pressed.
 
+*Inputs:*
+
+`event` pygame event that associated with this component
+
 #### mouse_up_
 
     mouse_up_(event: pygame.event.Event) -> None
 
 Called when the left mouse button is released.
+
+*Inputs:*
+
+`event` pygame event that associated with this component
 
 ### Default elements
 
@@ -128,45 +153,181 @@ Called when the left mouse button is released.
 
     class BarPressElement(tg: GUI, x: int, y: int, w: int, h: int, comp: BinaryInput = None, SF: float = None)
 
+Element for representing a lever or bar in an operant chamber.
+
+*Inputs:*
+
+`w` the width of the Element
+
+`h` the height of the Element
+
+`comp` the BinaryInput associated with this Element
+
 #### ButtonElement
 
     class ButtonElement(tg: GUI, x: int, y: int, w: int, h: int, text: str, f_size: int = 12, SF: float = None)
+
+Element representing a text-button in the GUI for adding user interaction/controls.
+
+*Inputs:*
+
+`w` the width of the Element
+
+`h` the height of the Element
+
+`text` the text in the button
+
+`f_size` the font size of the button's text
+
+*Properties:*
+
+`mouse_down` function that will be called when the button is pressed
+
+`mouse_up` function that will be called when the button is released
 
 #### CircleLightElement
 
     class CircleLightElement(tg: GUI, x: int, y: int, radius: int, on_color: tuple[int, int, int] = Colors.lightgray, background_color: tuple[int, int, int] = Colors.darkgray, comp: Toggle = None, SF: float = None)
 
+Element representing a circle-shaped light.
+
+*Inputs:*
+
+`radius` the radius of the Element
+
+`on_color` RGB triplet representing an active light
+
+`background_color` RGB triplet representing an inactive light
+
+`comp` the Toggle component associated with this light
+
 #### FanElement
 
     class FanElement(tg: GUI, x: int, y: int, radius: int, comp: Toggle = None)
+
+Element representing a fan.
+
+*Inputs:*
+
+`radius` the radius of the Element
+
+`comp` the Toggle component associated with this fan
 
 #### FoodLightElement
 
     class FoodLightElement(tg: GUI, x: int, y: int, w: int, h: int, on_color: tuple[int, int, int] = Colors.lightgray, comp: Toggle = None, line_color: tuple[int, int, int] = Colors.black, SF: float = None)
 
+Element representing a light typically associated with a food trough.
+
+*Inputs:*
+
+`w` width of the Element
+
+`h` height of the Element
+
+`on_color` RGB triplet representing an active light
+
+`background_color` RGB triplet representing an inactive light
+
+`comp` the Toggle component associated with this light
+
+`line_color` RGB triplet representing the color of the lines in the Element
+
 #### IndicatorElement
 
     class IndicatorElement(tg: GUI, x: int, y: int, radius: int, on_color: tuple[int, int, int] = Colors.green, off_color: tuple[int, int, int] = Colors.red)
+
+Element representing a visual indicator in the GUI.
+
+*Inputs:*
+
+`radius` the radius of the Element
+
+`on_color` RGB triplet representing an active state
+
+`off_color` RGB triplet representing an inactive state
+
+*Properties:*
+
+`on` set to True/False to change state of indicator
 
 #### InfoBoxElement
 
     class InfoBoxElement(tg: GUI, x: int, y: int, w: int, h: int, label: str, label_pos: str, text: list[str], f_size: int = 14, SF: float = None)
 
+Element representing a textbox in the GUI.
+
+*Inputs:*
+
+`w` the width of the Element
+
+`h` the height of the Element
+
+`label` text label for the box
+
+`label_pos` position of the label relative to the box ('TOP','LEFT','RIGHT', or 'BOTTOM')
+
+`text` the text in the box, one element in the list per line in the box
+
+`f_size` the font size of the button's text
+
+*Methods:*
+
+`set_text(new_text: Union[str, List]) -> None` update the text shown in the box
+
 #### LabelElement
 
     class LabelElement(tg: GUI, x: int, y: int, w: int, h: int, text: str, f_size: int = 20, SF: float = None)
+
+Element representing a label in the GUI.
+
+*Inputs:*
+
+`w` the width of the Element
+
+`h` the height of the Element
+
+`text` the text for the label
+
+`f_size` the font size of the button's text
 
 #### NosePokeElement
 
     class NosePokeElement(tg: GUI, x: int, y: int, radius: int, comp: BinaryInput = None, SF: float = None)
 
+Element for representing a nosepoke in the operant chamber.
+
+*Inputs:*
+
+`radius` the radius of the Element
+
+`comp` the BinaryInput associated with this Element
+
 #### ShockElement
 
     class ShockElement(tg: GUI, x: int, y: int, radius: int, color: tuple[int, int, int] = (255, 255, 0), comp: Toggle = None)
 
+Element representing a shocker.
+
+*Inputs:*
+
+`radius` the radius of the Element
+
+`color` RGB triplet representing the color of the bolt
+
+`comp` the Toggle component associated with this shocker
+
 #### SoundElement
 
     class SoundElement(tg: GUI, x: int, y: int, radius: int, comp: Toggle = None)
+
+Element representing a speaker.
+
+*Inputs:*
+
+`radius` the radius of the Element
+
+`comp` the Toggle component associated with this speaker
 
 ### Helper functions
 
