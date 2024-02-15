@@ -19,12 +19,12 @@ We will be using the following imports in the process of developing this Task:
 
     from enum import Enum
     import random
-    from Components.BinaryInput import BinaryInput
-    from Components.Toggle import Toggle
-    from Components.TimedToggle import TimedToggle
-    from Components.Video import Video
-    from Events import PybEvents
-    from Tasks.Task import Task
+    from pybehave.Components.BinaryInput import BinaryInput
+    from pybehave.Components.Toggle import Toggle
+    from pybehave.Components.TimedToggle import TimedToggle
+    from pybehave.Components.Video import Video
+    from pybehave.Events import PybEvents
+    from pybehave.Tasks.Task import Task
 
 ## Subclassing
 

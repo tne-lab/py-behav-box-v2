@@ -148,7 +148,7 @@ Communicates with touchscreen objects represented via a connection to Whisker.
 
 *Unique Dependencies:*
 
-`win32gui` used to check if there is an actively running Whisker Server 
+`pywin32` used to check if there is an actively running Whisker Server 
 
 *Attributes:*
 
@@ -222,7 +222,7 @@ standard USB webcams.
 
 *Unique Dependencies:*
 
-`opencv` used to coordinate video acquisition, display, and serialization
+`opencv-python` used to coordinate video acquisition, display, and serialization
 
 `imutils` used to process the video stream
 

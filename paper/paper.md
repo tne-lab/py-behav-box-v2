@@ -41,6 +41,7 @@ and data sharing. This approach, combined with task-specific graphical user inte
 creation and visualization of complex behavioral tasks. User created task definition files can interact with 
 hardware-specific source files, both written in Python. Any and all local configuration can be handled separately from 
 the underlying task code. 
+
 # Statement of need
 
 Operant animal behavior training and monitoring is fundamental to scientific inquiry across fields [@krakauer_neuroscience_2017]. 
@@ -80,9 +81,9 @@ developer API, which allows users to extend the platform with tie-ins for custom
 To ensure flexibility while maintaining low-latency, `pybehave` is optimized through a combination of multiprocessing and 
 multithreading along with separation of its features (events, hardware sources, tasks, etc.) into a modular software 
 architecture. Additionally, `pybehave` uses two different GUI frameworks (QT and pygame) for user interfacing and task 
-visualization/stimulus display respectively \autoref{fig:framework}.
+visualization/stimulus display respectively (\autoref{fig:framework}).
 
-![Figure 1: Framework diagram showing the information exchange between the `pybehave` threads and processes. The workstation 
+![Framework diagram showing the information exchange between the `pybehave` threads and processes. The workstation 
 process handles the interface and task GUIs. When Tasks are added from the workstation, they are initialized in the task process. 
 Each Source with a connection to an external hardware or software system communicates with their `pybehave` equivalent in the 
 Task process. All events sent between processes are mediated via inter-process communication over Pipes.\label{fig:framework}](framework.png)

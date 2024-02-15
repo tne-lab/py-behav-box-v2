@@ -1,0 +1,56 @@
+[build-system]
+requires = [
+    "setuptools>=42",
+    "wheel"
+]
+build-backend = "setuptools.build_meta"
+
+
+[project]
+name="pybehave"
+version="1.0.16"
+authors=[
+    { name="Evan Dastin-van Rijn", email="dasti006@umn.edu"},
+    { name="Joel Nielsen", email="niels641@umn.edu"},
+    { name="Alik Widge", email="awidge@umn.edu"}
+]
+description="Pybehave"
+
+classifiers=[
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "numpy",
+    "msgspec",
+    "pygame",
+    "screeninfo",
+    "PyQt5",
+    "psutil"
+]
+
+[project.optional-dependencies]
+full = ["pyzmq", "pywin32", "opencv-python", "imutils", "qasync", "pyserial", "nidaqmx", "hikload", "matplotlib"]
+oe = ["pyzmq"]
+whisker = ["pywin32"]
+video = ["opencv-python", "imutils", "qasync"]
+serial = ["pyserial"]
+ni = ["nidaqmx"]
+hikvision = ["hikload"]
+bo = ["matplotlib"]
+
+[project.urls]
+"Homepage" = "https://github.com/tne-lab/py-behav-box-v2"
+"Bug Tracker" = "https://github.com/tne-lab/py-behav-box-v2/issues"
+"Documentation" = "https://py-behav-box-v2.readthedocs.io/en/latest/"
+
+[project.scripts]
+pybehave = "pybehave:pybehave"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include=["pybehave*"]
+exclude = ["paper*"]

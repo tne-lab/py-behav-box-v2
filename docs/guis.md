@@ -71,11 +71,11 @@ GUIs are given access to the Task event stream through the `handle_events` metho
 By default, the `draw` method will clear the GUI canvas with a gray color and call each GUI Element's `draw` method. This 
 functionality can be altered by overriding the method.
 
-#### get_elements
+#### initialize
 
-    get_elements()
+    initialize() -> List[Element]
 
-Returns the Elements in the GUI as a list. This method must be overridden by any GUI subclasses.
+Creates all the elements in the GUI and returns them as a list. This method must be overridden by any GUI subclasses.
 
 *Example override:*
 

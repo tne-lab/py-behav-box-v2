@@ -4,11 +4,11 @@
 
 ### [Running a task on hardware](tutorials/task_on_hardware.md)
 
-### [Basic analysis of pybehave data]()
+### [Creating a new Task](tutorials/creating_task.md)
+
+### [Basic analysis of pybehave data](tutorials/analysis.md)
 
 ## Extending Pybehave
-
-### [Creating a new Task](tutorials/creating_task.md)
 
 ### [Creating a new Component](tutorials/creating_component.md)
 
@@ -22,9 +22,9 @@
 
 ## Bitesize Tutorials
 
-### [Synchronizing with video data]()
+### [Synchronizing with video data](tutorials/video_sync.md)
 
-### [Synchronizing with OpenEphys]()
+### [Synchronizing with OpenEphys](tutorials/oe_sync.md)
 
 ### [Simulating Behavior]()
 
