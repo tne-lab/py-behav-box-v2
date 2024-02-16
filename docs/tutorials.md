@@ -14,18 +14,18 @@
 
 ### [Creating a new Source](tutorials/creating_source.md)
 
-### [Creating a new Element]()
+<!--- ### [Creating a new Element]() --->
 
-### [Creating a new EventLogger]()
+<!--- ### [Creating a new EventLogger]() --->
 
-### [Creating a new Widget]()
+<!--- ### [Creating a new Widget]() --->
 
 ## Bitesize Tutorials
 
-### [Synchronizing with video data](tutorials/video_sync.md)
+### [Synchronizing with video data](tutorials/video_sync.md) 
 
 ### [Synchronizing with OpenEphys](tutorials/oe_sync.md)
 
-### [Simulating Behavior]()
+<!--- ### [Simulating Behavior]() --->
 
 ### [Creating a TaskSequence](tutorials/creating_task_sequence.md)

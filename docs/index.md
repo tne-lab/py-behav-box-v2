@@ -61,7 +61,7 @@ From the standard install, pybehave can be started by running the `pybehave` com
 if you have installed pybehave into a conda environment, we've provided an example batch script for starting pybehave in the root 
 directory (py-behav.bat). This batch script can be copied to the Desktop and the first line should be modified to use the name
 of the environment where pybehave was installed. This batch file will also redirect all console outputs to a log file in the
-`py-behav/logging` directory.
+*py-behav/logging* directory.
 
 ### Local folder structure
 
@@ -80,7 +80,7 @@ Pybehave uses a folder saved on the Desktop to handle all task files and local c
             -Data               # Any data associated with runs of the task
         -TaskName2          
 
-We've included an example set of [task files](https://github.com/tne-lab/all-tasks) used by Translational Neuroengineering Lab. 
+We've included an example set of [task files](https://github.com/tne-lab/example-tasks) used by Translational Neuroengineering Lab. 
 If you plan to edit or add tasks, you should make a new repository with the same structure (Tasks and GUIs folders) and 
 include any existing tasks you might need. The contents of this repository should be saved in the Local directory.
 
