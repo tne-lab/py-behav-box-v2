@@ -518,6 +518,8 @@ the task began.
 EventLogger that transmits pybehave events as strings to OpenEphys to aid in synchronization.
 This logger should be paired with a NetworkEvents plugin in OpenEphys.
 
+*Required Extras:* `oe`
+
 *Attributes:*
 
 `address` the IP address of the device running OpenEphys. Use localhost if both pybehave and OpenEphys are running on the

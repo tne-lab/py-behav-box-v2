@@ -1,8 +1,8 @@
-# Home
+<p align="center">
+## pybehave
 
-![](img/full_gui.jpg)
-
-## Overview
+![](docs/img/full_gui.jpg)
+</p>
 
 Pybehave is an open source software interface and framework for controlling behavioral experiments in neuroscience and psychology
 built around a hardware-agnostic and highly object-oriented design philosophy.
