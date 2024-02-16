@@ -1,8 +1,23 @@
-<p align="center">
-## pybehave
+<h3 align="center">pybehave</h3>
 
-![](docs/img/full_gui.jpg)
+<div align="center">
+<a href="https://github.com/tne-lab/py-behav-box-v2">
+    <img src="docs/img/full_gui.jpg" alt="Logo">
+  </a>
+</div>
+
+<p align="center">
+A hardware-agnostic, Python-based framework for developing behavioral neuroscience experiments
+<br />
+<a href="https://py-behav-box-v2.readthedocs.io/en/latest/"><strong>Explore the docs »</strong></a>
+<br />
+<br />
+<a href="https://github.com/tne-lab/py-behav-box-v2/issues">Report Bug</a>
+·
+<a href="https://github.com/tne-lab/py-behav-box-v2/issues">Request Feature</a>
 </p>
+
+## Overview
 
 Pybehave is an open source software interface and framework for controlling behavioral experiments in neuroscience and psychology
 built around a hardware-agnostic and highly object-oriented design philosophy.
