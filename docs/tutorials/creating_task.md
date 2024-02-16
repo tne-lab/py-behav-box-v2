@@ -19,12 +19,12 @@ We will be using the following imports in the process of developing this Task:
 
     from enum import Enum
     import random
-    from Components.BinaryInput import BinaryInput
-    from Components.Toggle import Toggle
-    from Components.TimedToggle import TimedToggle
-    from Components.Video import Video
-    from Events import PybEvents
-    from Tasks.Task import Task
+    from pybehave.Components.BinaryInput import BinaryInput
+    from pybehave.Components.Toggle import Toggle
+    from pybehave.Components.TimedToggle import TimedToggle
+    from pybehave.Components.Video import Video
+    from pybehave.Events import PybEvents
+    from pybehave.Tasks.Task import Task
 
 ## Subclassing
 
@@ -164,3 +164,109 @@ and a TimeoutEvent to change to the REWARD_AVAILABLE state when the time has ela
             self.set_timeout("lockout", self.reward_lockout_min + random.random() * (self.reward_lockout_max - self.reward_lockout_min))
         elif isinstance(event, PybEvents.TimeoutEvent) and event.name == "lockout":
             self.change_state(self.States.REWARD_AVAILABLE)
+
+## Task GUI
+
+All pybehave Tasks require a companion GUI file. If you have no need for visualizing any elements of the task, this file only
+needs to contain a single class TaskNameGUI extending GUI that has an empty override for the `initialize` method. However, 
+generally having some visual means of keeping track of task is very useful for efficiently and accurately running an experiment.
+In this section of the tutorial, we'll walk through creating the GUI for the BarPress task.
+
+### Imports
+
+We will be using the following imports:
+
+    from types import MethodType
+    from enum import Enum
+    import math
+    
+    from pybehave.Elements.BarPressElement import BarPressElement
+    from pybehave.Elements.ButtonElement import ButtonElement
+    from pybehave.Elements.InfoBoxElement import InfoBoxElement
+    from pybehave.Events import PybEvents
+    from pybehave.GUIs.GUI import GUI
+
+### Subclassing
+
+All GUIs must extend the base GUI class which handles most of the lower-level behavior while exposing simpler methods to the user. 
+GUIs can also override other GUIs rather than the base class if there is a considerable degree of preserved behavior or visuals. 
+For this tutorial, we are entirely building a GUI from scratch so will be extending the base class:
+
+    class BarPressGUI(GUI):
+        """@DynamicAttrs"""
+
+### Events
+
+Sometimes GUIs are used to provide input from the experimenter running the task. To handle this type of behavior, add an Events
+enum with an entry for each type of user interaction you expect. For the BarPress task, the only example of this we could handle
+would be manually providing a reward:
+
+    class Events(Enum):
+        GUI_PELLET = 0
+
+The names given for each Event in this enum are used in the original Task file (refer to the `all_states` method from earlier.)
+
+### initialize
+
+The `intialize` method instantiates all the elements in the GUI. Elements are the visual units that represent events and components
+during the task. For our BarPress task, we will be adding a variety of Elements: a BarPressElement representing the lever,
+a ButtonElement to handle the experimenter manual feed input, an InfoBoxElement tracking the total press count, an InfoBoxElement
+tracking the total number of received rewards, an InfoBoxElement tracking the total time the task has been running, and an 
+InfoBoxElement tracking the time until the bar will be available next. Different Elements require varying inputs to position
+and configure them which can be seen in detail on the corresponding [documentation page](../guis.md). All the Elements created
+in this method should be returned as a list. The full method declaration and the resultant GUI are shown below:
+
+    def initialize(self):
+        self.lever = BarPressElement(self, 77, 25, 100, 90, comp=self.food_lever)
+        self.feed_button = ButtonElement(self, 129, 170, 50, 20, "FEED")
+        self.feed_button.mouse_up = MethodType(lambda _: self.log_gui_event(self.Events.GUI_PELLET), self.feed_button)
+        self.presses = InfoBoxElement(self, 69, 125, 50, 15, "PRESSES", 'BOTTOM', ['0'])
+        self.pellets = InfoBoxElement(self, 129, 125, 50, 15, "PELLETS", 'BOTTOM', ['0'])
+        self.time_in_task = InfoBoxElement(self, 372, 170, 50, 15, "TIME", 'BOTTOM', ['0'])
+        self.vic = InfoBoxElement(self, 64, 170, 50, 15, "VI COUNT", 'BOTTOM', ['0'])
+
+        return [self.lever, self.feed_button, self.presses, self.pellets, self.time_in_task, self.vic]
+
+![](../img/bar_press_gui.png)
+
+### handle_event
+
+Since the Task GUI runs in a separate process from the Task itself, it will have to handle events sent from the Task to visualize
+progression. The Task GUI has copies of all the component, constant, and variable attributes that were created in the actual Task file.
+States for Components are automatically updated via the event stream but variables must be manually changed according to Task
+behavior if they are needed for visualization. Every override of the `handle_event` method must begin by calling the super class
+method:
+
+    def handle_event(self, event: PybEvents.PybEvent) -> None:
+        super(BarPressGUI, self).handle_event(event)
+
+Some visualizations are state or event independent like the time that has elapsed since the task began:
+
+    self.time_in_task.set_text(str(round(self.time_elapsed / 60, 2)))
+
+However, most visualization in the GUi depend on a certain type of event or state. For example, to increment the pellet counter
+we would need to handle a ComponentUpdateEvent where the component ID corresponds to the pellet dispenser and it moves into the
+active state:
+
+    if isinstance(event, PybEvents.ComponentUpdateEvent) and event.comp_id == self.food.id and event.value:
+            self.food.count += 1
+            self.pellets.set_text(str(self.food.count))
+
+We can handle the lever press information in a similar manner:
+
+    elif isinstance(event, PybEvents.ComponentUpdateEvent) and event.comp_id == self.food_lever.id and event.value:
+            self.presses += 1
+            self.presses.set_text(str(self.presses))
+
+Sometimes metadata information from the Task might be needed/useful for visualization in the GUI. For example, to reflect the
+random lockout time, we would need to save some metadata received during a StateEnterEvent:
+
+    elif isinstance(event, PybEvents.StateEnterEvent) and event.name == "REWARD_UNAVAILABLE":
+            self.lockout = event.metadata['lockout']
+
+This variable can then be used to update the corresponding InfoBoxElement, whenever the Task is in the appropriate state:
+
+    if self.state == "REWARD_UNAVAILABLE":
+        self.vic.set_text([str(max([0, math.ceil(self.lockout - self.time_in_state)]))])
+    else:
+        self.vic.set_text("0")

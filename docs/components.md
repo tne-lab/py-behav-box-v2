@@ -105,7 +105,7 @@ all subclasses of `Component`.
 
 #### get_state
 
-    get_state() -> None
+    get_state() -> Any
 
 Returns the state the component currently is in.
 

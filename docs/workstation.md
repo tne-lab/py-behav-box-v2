@@ -155,3 +155,15 @@ which can be provided with a name/value pair by the GUI.
         name: str
         address: str
         port: str
+
+*Attributes:*
+
+`name: str` the identifier given to this Widget
+
+`address: str` the IP address for the computer running OpenEphys (localhost if on the same device)
+
+`port: str` the port for the connection to OpenEphys
+
+*Required Extras:* `oe`
+
+Widget providing control over the OpenEphys acquisition system

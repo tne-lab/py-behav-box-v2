@@ -1,0 +1,11 @@
+recursive-include pybehave/Workstation/icons *
+recursive-include pybehave/Sources/library *
+
+# Exclude any __pycache__ directories
+global-exclude __pycache__
+
+# Exclude .git directories and files
+global-exclude .git
+
+# Exclude macOS .DS_Store files
+global-exclude .DS_Store

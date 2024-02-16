@@ -124,9 +124,7 @@ Call to signal to other processes that the Source has lost connection to the har
 
 Communicates with digital input and output lines represented via a connection to Whisker. This Source is only compatible with Windows.
 
-*Unique Dependencies:*
-
-`win32gui` used to check if there is an actively running Whisker Server 
+*Required Extras:* `whisker`
 
 *Attributes:*
 
@@ -146,9 +144,7 @@ Communicates with digital input and output lines represented via a connection to
 
 Communicates with touchscreen objects represented via a connection to Whisker.
 
-*Unique Dependencies:*
-
-`win32gui` used to check if there is an actively running Whisker Server 
+*Required Extras:* `whisker`
 
 *Attributes:*
 
@@ -168,6 +164,8 @@ Communicates with touchscreen objects represented via a connection to Whisker.
 Source for coordinating connections to the networking system in OpenEphys. Make sure all events to/from OpenEphys are received/sent
 in JSON mode.
 
+*Required Extras:* `oe`
+
 *Attributes:*
 
 `address` IP address for the computer running OpenEphys. Use "localhost" if pybehave and OpenEphys are on the same machine.
@@ -183,9 +181,7 @@ in JSON mode.
 
 Source for coordinating connections to the Open Source Controller for Animal Research (OSCAR). Has functionality for digital and analog inputs and outputs.
 
-*Unique Dependencies:*
-
-`pyserial` used to communicate with the serial ports
+*Required Extras:* `serial`
 
 *Attributes:*
 
@@ -197,9 +193,7 @@ Source for coordinating connections to the Open Source Controller for Animal Res
 
 Source for coordinating connections to serial devices.
 
-*Unique Dependencies:*
-
-`pyserial` used to communicate with the serial ports
+*Required Extras:* `serial`
 
 *Required Metadata:*
 
@@ -220,13 +214,7 @@ Source for coordinating connections to serial devices.
 Source for coordinating video recording with Webcams. Generally intended for sole use with Video components. Currently supports
 standard USB webcams. 
 
-*Unique Dependencies:*
-
-`opencv` used to coordinate video acquisition, display, and serialization
-
-`imutils` used to process the video stream
-
-`qasync` used to visualize the video stream
+*Required Extras:* `opencv-python`
 
 *Attributes:*
 
@@ -261,9 +249,7 @@ Source for coordinating video recording with HikVision CCTV systems. Generally i
 Recordings will start when the Video component is started and downloaded in a separate thread when the video is stopped.
 By default, the source will draw a small black rectangle in the bottom left of the video to assist with synchronization.
 
-*Unique Dependencies:*
-
-`hikload` used to interface with the Hikvision ISAPI
+*Required Extras:* `hikvision`
 
 *Attributes:*
 
@@ -281,9 +267,7 @@ By default, the source will draw a small black rectangle in the bottom left of t
 Source for coordinating connections to National Instruments hardware. Has functionality for digital and analog outputs.
 Input functionality is currently not implemented.
 
-*Unique Dependencies:*
-
-`nidaqmx` used to interface with the NIDAQ API
+*Required Extras:* `ni`
 
 *Attributes:*
 
@@ -299,3 +283,5 @@ Input functionality is currently not implemented.
 
 Source for coordinating selection of arbitrary parameters (like stimulation or task variables) according to an outcome of interest 
 using Bayesian optimization with gaussian process regression. Typically used with the general purpose `Both` component class.
+
+*Required Extras:* `bo`
