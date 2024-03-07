@@ -6,7 +6,7 @@ tags:
   - Operant tasks
 authors:
   - name: Evan M. Dastin-van Rijn
-    orcid: 0000-0000-0000-0000
+    orcid: 0000-0002-1428-0723
     affiliation: 1
     corresponding: true
   - name: Joel Nielsen
