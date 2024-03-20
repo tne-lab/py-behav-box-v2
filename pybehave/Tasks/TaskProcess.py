@@ -14,6 +14,7 @@ import psutil
 
 from pybehave.Events import PybEvents
 from pybehave.Events.FileEventLogger import FileEventLogger
+from pybehave.Events.Validator import ValidatorProcess
 from pybehave.Tasks.TaskSequence import TaskSequence
 from pybehave.Tasks.TimeoutManager import TimeoutManager
 
@@ -39,6 +40,8 @@ class TaskProcess(Process):
         self.source_buffers = {}
         self.connections = []
         self.should_exit = False
+        self.vq = None
+        self.validator = None
 
     def run(self):
         p = psutil.Process(os.getpid())
@@ -51,6 +54,10 @@ class TaskProcess(Process):
         self.connections = [self.mainq, self.tmq_in, *self.sourceq.values()]
         self.encoder = msgspec.msgpack.Encoder(enc_hook=PybEvents.enc_hook)
         self.decoder = msgspec.msgpack.Decoder(type=PybEvents.subclass_union(PybEvents.PybEvent), dec_hook=PybEvents.dec_hook)
+
+        self.vq, vpq = multiprocessing.Pipe()
+        self.validator = ValidatorProcess(vpq)
+        self.validator.start()
 
         for source in self.sourceq:
             self.source_buffers[source] = []
@@ -213,8 +220,13 @@ class TaskProcess(Process):
         for logger in self.task_event_loggers[event.chamber].values():
             logger.log_events(self.logger_q)
         task.stop__()
+        validator_events = []
         for logger in self.task_event_loggers[event.chamber].values():
             logger.stop()
+            if isinstance(logger, FileEventLogger):
+                validator_events.append(PybEvents.ValidatorEvent(logger.log_file.name, type(logger).__name__))
+        if len(validator_events) > 0:
+            self.vq.send_bytes(self.encoder.encode(validator_events))
         self.logger_q.clear()
 
     def pause_task(self, event: PybEvents.PauseEvent):
@@ -309,5 +321,6 @@ class TaskProcess(Process):
     def exit(self, *args):
         for q in self.sourceq.values():
             q.send_bytes(self.encoder.encode([PybEvents.CloseSourceEvent()]))
+        self.vq.send_bytes(self.encoder.encode([PybEvents.CloseValidatorEvent()]))
         self.tm.quit()
         self.tm.join()

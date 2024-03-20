@@ -52,3 +52,8 @@ class FileEventLogger(EventLogger):
     def stop(self) -> None:
         if self.log_file is not None and not self.log_file.closed:
             self.log_file.close()
+
+    @staticmethod
+    @abstractmethod
+    def load_data(path):
+        raise NotImplementedError

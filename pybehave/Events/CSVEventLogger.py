@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import collections
+import os
 from typing import TYPE_CHECKING
+
+import pandas as pd
 
 if TYPE_CHECKING:
     from pybehave.Events.LoggerEvent import LoggerEvent
@@ -36,3 +39,26 @@ class CSVEventLogger(FileEventLogger):
             self.event_count += 1
             self.log_file.write(self.format_event(event, type(event.event).__name__))
         super().log_events(le)
+
+    @staticmethod
+    def load_data(path):
+        header = {}
+        skip_lines = 0
+
+        with open(path) as f:
+            for line in f:
+                skip_lines += 1
+                if line == '\n':
+                    break
+                elif line == 'SubjectConfiguration\n':
+                    header['subject_config'] = {}
+                else:
+                    pair = line.split(',', 1)
+                    if 'subject_config' in header:
+                        header['subject_config'][pair[0]] = pair[1][:-1]
+                    else:
+                        header[pair[0]] = pair[1][:-1]
+
+        header['timestamp'] = os.path.split(path)[-1].split('.')[0]
+        event_table = pd.read_csv(path, skiprows=skip_lines)
+        return event_table, header

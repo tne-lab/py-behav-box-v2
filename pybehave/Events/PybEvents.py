@@ -247,3 +247,12 @@ class StateExitEvent(Loggable, StatefulEvent):
 
     def format(self) -> LoggerEvent:
         return LoggerEvent(self, self.name, self.value, self.timestamp)
+
+
+class ValidatorEvent(PybEvent):
+    path: str
+    logger: str
+
+
+class CloseValidatorEvent(PybEvent):
+    pass
