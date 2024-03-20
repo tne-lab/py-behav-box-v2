@@ -10,7 +10,7 @@ built around a hardware-agnostic and highly object-oriented design philosophy.
 Pybehave separates code for task design from specific hardware implementations to streamline development, accessibility, and
 data sharing. This approach, combined with a task-specific Graphical User Interfaces (GUIs), expedites and simplifies the creation and visualization of complex behavioral tasks.
 User created [task](tasks.md) definition files can interact with hardware-specific [source](sources.md) files both written in Python. Any and all local
-configuration can be handled outside of Python using [Address Files](protocols_addressfiles.md#addressfiles) and [Protocols](protocols_addressfiles.md#protocols) formatted as CSVs.
+configuration can be handled outside of Python using [Address Files](protocols_addressfiles.md#addressfiles) and [Protocols](protocols_addressfiles.md#protocols).
 
 All pybehave tasks are coordinated via a [Workstation](workstation.md) GUI.
 
@@ -18,45 +18,71 @@ Pybehave software and documentation are available on [GitHub](https://github.com
 
 ## Getting started
 
-### Installation
+### Install with pip
 
-Get the latest version of pybehave by cloning the [code repository](https://github.com/tne-lab/py-behav-box-v2) to your computer with Git.
+We recommend installing pybehave in a virtual environment. Pybehave has been tested on Python 3.9, 3.10, and 3.11.
 
-Pybehave has the following folder structure:
+Install pybehave's default [PYPI distribution](https://pypi.org/project/pybehave/) with
 
-    -py-behav-box-v2
-        environment.yml     # Anaconda environment for dependendencies
-        py-behav.bat        # Batch script to launch the GUI
-        -source
-            -Components     # Abstractions of hardware components
-            -Elements       # Visual elements in GUI
-            -Events         # Classes for handling events
-            -GUIs           # GUI base files for tasks
-            -Sources        # Classes for handling hardware connections
-            -Tasks          # Task base files
-            -Utilities      # Various helper functions
-            -Workstation    # Classes for managing the pybehave interface
-            -Local          # Separate repository for Task and GUI definitions
-                -Tasks
-                -GUIs
+    pip install pybehave
 
-By default, pybehave uses a [general task repository](https://github.com/tne-lab/all-tasks) for the Translational Neuroengineering Lab. 
+This distribution does not include any of the dependencies for hardware specific functionality. To install the dependencies
+for all supported hardware use the following
+
+    pip install pybehave[full]
+
+Alternatively, a subset of the dependencies can be downloaded, for example
+
+    pip install pybehave[oe,video]
+
+A full list of the optional hardware-specific extras is below
+
+    oe              # Dependencies for the OpenEphys framework
+    whisker         # Dependencies for communication with WhiskerServer
+    video           # Dependencies for control of connected video systems
+    serial          # Dependencies for communication over serial
+    ni              # Dependencies for communication with NationalInstruments DAQs
+    hikvision       # Dependencies for communication with HikVision DVRs
+    bo              # Dependencies for a Bayesian Optimization framework
+
+### Run from source
+
+Alternatively, you can clone the repository and run from source.
+
+    git clone https://github.com/tnelab/py-behav-box-v2.git
+    cd py-behav-box-v2
+    pip install .
+
+Hardware-specific extras can be installed by adding square brackets after the '.' similarly to the above.
+
+### Starting pybehave
+
+From the standard install, pybehave can be started by running the `pybehave` command from the virtual environment. Alternatively,
+if you have installed pybehave into a conda environment, we've provided an example batch script for starting pybehave in the root 
+directory (py-behav.bat). This batch script can be copied to the Desktop and the first line should be modified to use the name
+of the environment where pybehave was installed. This batch file will also redirect all console outputs to a log file in the
+*py-behav/logging* directory.
+
+### Local folder structure
+
+Pybehave uses a folder saved on the Desktop to handle all task files and local configuration:
+
+    -py-behav
+        pybehave.ini            # Contains all settings for the GUI
+        -Local
+            -Tasks              # Task python files
+            -GUIs               # Task GUI files
+            -Sources            # User-created sources
+        -Configurations         # Structured CSVs for quickly loading tasks
+        -TaskName1              # All files associated with a Task called TaskName1
+            -AddressFiles       # AddressFiles for this task
+            -Protocols          # Protocols for this task
+            -Data               # Any data associated with runs of the task
+        -TaskName2          
+
+We've included an example set of [task files](https://github.com/tne-lab/example-tasks) used by Translational Neuroengineering Lab. 
 If you plan to edit or add tasks, you should make a new repository with the same structure (Tasks and GUIs folders) and 
-include any existing tasks you might need. Clone the new repository into a folder called *Local* in the *source* directory.
-
-### Dependencies
-
-Due to its hardware-agnostic design philosophy, pybehave has numerous dependencies to support many possible implementations.
-To simplify dependency management we recommend using [Anaconda](https://www.anaconda.com/).
-
-Once Anaconda is installed, search for and open Anaconda Navigator. Navigate to the Environments tab then press import. 
-With 'Local drive' selected, click the corresponding folder icon and select the `environment.yml` file in the root pybehave
-directory. Further details on using Anaconda Navigator to import environments can be found [here](https://docs.anaconda.com/anaconda/navigator/tutorials/manage-environments/#importing-an-environment).
-
-If using Windows, you should then be able to launch the GUI by double-clicking the `py-behav.bat` executable in the pybehave
-root directory. A shortcut can be made for the file on the desktop to simplify startup.
-
-The source code for pybehave is in principle cross-platform but has not been thoroughly tested.
+include any existing tasks you might need. The contents of this repository should be saved in the Local directory.
 
 ### Updating pybehave
 
@@ -67,7 +93,7 @@ the *Local* folder.
 
 ### Running a task
 
-Run the file `py-behav.bat` from the root directory or shortcut, and you will see a GUI window like that shown above.
+After opening pybehave, you will see a GUI window like that shown above.
 
 Select *File->Add Task* from the menu bar. Choose your [task](tasks.md) and a chamber number from the dropdowns or load a [Configuration](workstation.md#configurations) file.
 
@@ -82,4 +108,4 @@ The task can be paused or ended prematurely with the orange pause button or red 
 
 ## Troubleshooting
 
-If you encounter problems, take a look at the [issues](https://github.com/tne-lab/py-behav-box-v2/issues) section of the GitHub and leave a new one if your problem isn't resolved.
+If you encounter problems, take a look at the [issues](https://github.com/tne-lab/py-behav-box-v2/issues) section of the GitHub and leave a new one if your problem hasn't been previously addressed.

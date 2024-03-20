@@ -2,11 +2,11 @@
 
 ## Overview
 
-Behavioral tasks in pybehave are implemented as state machines, the basic elements of which are states and components. To create
-a task, the user develops a *task definition file* written in Python. Tasks are associated with a Git submodule contained in the *py-behav-box-v2/source/Local* directory
+Behavioral tasks in pybehave are implemented as state machines, the basic elements of which are states and events. To create
+a task, the user develops a *task definition file* written in Python. Tasks are associated with a separate repository contained in the *py-behav-box-v2/source/Local* directory
 which must have a nested *Tasks* folder. Task definitions are hardware-agnostic and solely program for task logic and timing, interacting with hardware or implementation specific
 [Sources](sources.md) and [Events](events.md). Pybehave tasks are objects that are all subclasses of the base `Task` class with the ability to 
-override functionality as necessary.
+override functionality as necessary. All Tasks run in a separate Python process from the Workstation and Sources.
 
 ## States
 
@@ -18,8 +18,8 @@ with each state having a name and a corresponding ID:
         RESPONSE = 1
         INTER_TRIAL_INTERVAL = 2
 
-Each State should have a corresponding method included in the task definition which handles the logic for that state and
-transitions. These methods are described in further detail below.
+Each State should have a corresponding method included in the task definition which handles how the state responds to
+relevant events. These methods are described in further detail below.
 
 ## Components
 
@@ -42,7 +42,7 @@ Toggles, and a TimedToggle.
 Components will be instantiated as attributes of the Task either as single objects or lists depending on the structure of each
 entry in the `get_components` method. The specific [Source](sources.md) for these components can be specified using local [Address Files](protocols_addressfiles.md#addressfiles).
 The indicated class type for each object only prescribes a super class; subclasses of the indicated type are also valid. If
-an AddressFile is not provided, components can be controlled directly from the task [GUI](guis.md).
+an AddressFile is not provided, components can still be controlled directly from the task [GUI](guis.md).
 Components can be accessed in task code as attributes of the task: `self.COMPONENT_NAME`.
 
 ## Constants
@@ -52,7 +52,7 @@ for multiple sequences of trial types, different timing as training progresses, 
 to create new task definitions for changes of this sort, they can instead be explicitly defined using the `get_constants` method
 and later modified using [Protocols](protocols_addressfiles.md#protocols). An example for the same operant task is shown below:
 
-    def get_constants(self):
+    def get_constants():
         return {
             'max_duration': 90,
             'inter_trial_interval': 7,
@@ -73,7 +73,7 @@ in this example. Constants can be accessed in task code as attributes of the tas
 Variables are used to track task features like trial counts, reward counts, or the value of particular inputs. The default values for variables
 should be configured using the `get_variables` method:
 
-    def get_variables(self):
+    def get_variables():
         return {
             'cur_trial': 0,
             'cur_rule': 0,
@@ -81,8 +81,7 @@ should be configured using the `get_variables` method:
         }
 
 It is likely you will see warnings about instance attribute definitions outside `__init__` when using variables; these can be
-safely ignored. Constant attributes will already be available when `get_variables` is called and can be used in the method.
-Variables can be accessed in task code as attributes of the task: `self.VARIABLE_NAME`.
+safely ignored. Variables can be accessed in task code as attributes of the task: `self.VARIABLE_NAME`.
 
 ## Initial State
 
@@ -100,72 +99,37 @@ purposes. An example of using `change_state` with metadata is shown below:
 
     self.change_state(self.States.RESPONSE, {"correct": True})
 
-## Time dependent behavior
-
-Time dependent behavior can be implemented by calling methods from the base `Task` class. All timing should use these methods
-to ensure no issues arise due to pausing and resuming the task. The `time_elapsed` method can be used to query the amount
-of time that has passed since the task started. The `time_in_state` method can be used to query the amount of time since the
-last state change. Both methods will not include any time spent paused.
-
-## Events
-
-Events are used to communicate information from the task to [*EventLogger*]() classes that can complete a variety of roles like
-saving task data, communicating with external programs, or sending digital codes for synchronization. Every task has an `events`
-attribute that can be appended to and later parsed by various *EventLoggers*.
-
-### Inputs
-
-Inputs are used to communicate event information from Components that provide input to the task.
-Like states, inputs are also represented as an enum with each input having a name and a corresponding ID. The example below 
-shows how to structure inputs for three possible components with distinction between when the component is entered versus exited:
-
-    class Inputs(Enum):
-        FRONT_ENTERED = 2
-        FRONT_EXIT = 3
-        MIDDLE_ENTERED = 4
-        MIDDLE_EXIT = 5
-        REAR_ENTERED = 6
-        REAR_EXIT = 7
-
-An example of how to log such an Input event is shown below:
-
-    self.events.append(InputEvent(self, self.Inputs.FRONT_ENTERED))
-
 ## Task lifetime
 
 Every task begins with an initialization via `init` that will contain any code that should be run when the task is first loaded
 but before starting. When the task is started the `start` method is called. Unless stopped using `stop`
-or paused using `pause`, the task will continuously call the `handle_input` method followed by the current task state method
-until it reaches the completion criteria defined by the method `is_complete`. All of these methods can be overridden by the 
-task to control behavior over its lifetime.
+or paused using `pause`, the task will continuously call the `all_states` method followed by the current task state method
+until it reaches the completion criteria defined by the method `is_complete` or the complete attribute is set to True. 
+All of these methods can be overridden by the task to control behavior over its lifetime.
 
 
-### start, stop, resume, and pause
+### init, start, stop, resume, and pause
 
-Code can be executed when the task starts or stops to ensure certain hardware is enabled/disabled or initialize features 
-of the task. Four methods exist for this purpose: `start`, `stop`, `resume`, and `pause`. There is no requirement to override
-these methods unless particular behavior is required at these moments. No additional code needs to be written to handle task 
+Code can be executed when the task is loaded, starts, or stops to ensure certain hardware is enabled/disabled or initialize features 
+of the task. Five methods exist for this purpose: `init`, `start`, `stop`, `resume`, and `pause`. There is no requirement to override
+these methods unless particular behavior is necessary at these moments. No additional code needs to be written to handle task 
 timing when using the `resume`, and `pause` methods.
 
-### handle_input
+### all_states
 
-The `handle_input` method is responsible for querying the values of all input components. These values can be stored in a
-variable for future use, logged as events, or responded to directly. An example method which logs events and updates variables
-is shown below:
-
-    def handle_input(self):
-        food_lever = self.food_lever.check()
-        self.pressed = False
-        if food_lever == BinaryInput.ENTERED:
-            self.events.append(InputEvent(self, self.Inputs.LEVER_PRESSED))
-            self.pressed = True
-            self.presses += 1
-        elif food_lever == BinaryInput.EXIT:
-            self.events.append(InputEvent(self, self.Inputs.LEVER_DEPRESSED))
+The `all_states` method is responsible for handling any event-related behavior that is independent of a particular state.
+This can be useful for logging task completion after a certain timeout is reached, handling user input in the GUI, or general
+task features that are identical across states.
+An example implementation is shown below that handles a completion timeout:
+    
+    def all_states(self, event: PybEvents.PybEvent) -> bool:
+        if isinstance(event, PybEvents.TimeoutEvent) and event.name == "task_complete":
+            self.complete = True
+            return True
 
 ### State methods
 
-State methods are repeatedly called while the task is in the corresponding state. All logic for that particular state
+State methods are called when an event is received while the task is in the corresponding state. All logic for that particular state
 should be handled by the state method along with transitions to subsequent states. The example below shows how a state
 method could be used to reward following a bar press and transition to a lockout state:
 
@@ -177,17 +141,22 @@ method could be used to reward following a bar press and transition to a lockout
                             self.reward_lockout_max - self.reward_lockout_min)
                 self.change_state(self.States.REWARD_UNAVAILABLE)
 
+## Time dependent behavior
+
+Time dependent behavior can be implemented by calling methods from the base `Task` class. All timing should use these methods
+to ensure no issues arise due to pausing and resuming the task. The `time_elapsed` method can be used to query the amount
+of time that has passed since the task started. The `time_in_state` method can be used to query the amount of time since the
+last state change. Both methods will not include any time spent paused. To have an event queued after a certain amount of time,
+users can call one of a variety of timeout related methods described in more detail [below]():
+
 ### is_complete
 
-The `is_complete` method returns a boolean indicating if the task has finished. This method must be overridden
-and will be called alongside `main_loop` to determine if the task is complete.
-
-    def is_complete(self):
-        return self.time_elapsed() > self.duration * 60.0
+The `is_complete` method returns a boolean indicating if the task has finished. This method will be called after events 
+are handled to determine if the task has completed.
 
 ## Task GUIs
 
-All pybehave tasks have GUIs written using [pygame](https://www.pygame.org/) functions that can monitor task components and variables or control 
+All pybehave tasks have GUIs written using [pygame](https://www.pygame.org/) functions that can reflect the state of task components and variables or control 
 task features if necessary. Task GUIs are written as Python files in the *source/GUIs* folder and must be named TASK_NAMEGUI.py.
 Further details on GUI development are available on the GUI [page](guis.md).
 
@@ -195,6 +164,100 @@ Further details on GUI development are available on the GUI [page](guis.md).
 
 Tasks can also be subclassed if a new Task has a high degree of overlap with an existing one. Each of the methods mentioned
 above can be overriden and augmented as needed.
+
+## Task Sequences
+
+TaskSequences provide a way to run multiple tasks consecutively without loading each one individually. This is helpful in the case where multiple different tasks should be run back-to-back with no delay in between. The TaskSequence class is a subclass of Task, so many of the characteristics are similar, although they have a slightly different meaning. Creating TaskSequences requires no changes to the underlying Tasks that are being run. See the [tutorial](tutorials/creating_task_sequence.md) for an example of creating a TaskSequence
+
+### Differences from Tasks
+
+#### States
+
+In TaskSequences, each member of the States enum represents an instance of a Task. The enum entries can be named anything and do not need to correspond to the names of the Tasks they represent. Thus if the same Task should be run multiple times within the sequence, we can differentiate them by giving the State entries different names. 
+
+    class States(Enum):
+        PRE_RAW = 0
+        BAR_PRESS = 1
+        POST_RAW = 2
+
+Similar to Tasks, each of these States should have a corresponding method which dictates how events are handled within this state.
+
+
+#### Event handling and switching tasks
+Event handling in TaskSequences is similar to Tasks in that the sequence `all_states` method will be called with the event first. If the event isn't handled here, then the funcion corresponding to the sequence's current state method will be called. 
+
+One critical event that should be handled by TaskSequences is the `TaskCompleteEvent`. This event indicates that the current Task has completed, and the sequence should move on to the next Task.
+
+Rather than calling the `change_state` method like a normal Task, a TaskSequence should call the `switch_task` method.
+
+    def switch_task(self, task: Type[Task], seq_state: Enum, protocol: str, metadata: Any = None) -> None:
+
+This method takes the new Task type, the TaskSequence state to change to, the protocol file for the new task, and optionally any metadata. An example use is as follows:
+
+    def PRE_RAW(self, event):
+        if isinstance(event, PybEvents.TaskCompleteEvent):
+            self.switch_task(BarPress, self.States.BAR_PRESS, self.bar_press_protocol, event.metadata)
+            return True
+        return False
+
+
+#### Constants
+Protocol files for the underlying Tasks as well as other sequence-level constants can be defined within the `get_constants` method. To use the default values for a Task's constants, `None` can be provided for the protocol file. For example:
+
+    def get_constants():
+        return {
+            'pre_raw_protocol': "/path/to/pre_raw/protocol",
+            'bar_press_protocol': "/path/to/bar_press/protocol",
+            'post_raw_protocol': None
+        }
+
+In this case, the first run of the Raw task will use a specific protocol while the second will be run with the default values. 
+
+Similar to Tasks, the default values for sequence-level constants can be overridden by providing a protocol file for the TaskSequence itself through the GUI. In other words, a protocol file at the TaskSequence level can be used to load various protocol files for each of the individual Tasks being run.
+
+### Additional Methods
+There are a few methods that must be implemented in TaskSequences that aren't present in normal Tasks.
+
+#### get_tasks
+
+Every TaskSequence must implement the `get_tasks` method which returns a list of all the Task classes that are contained within the sequence. For example, let's say the BarPress and Raw tasks should be combined in a sequence, then the `get_tasks` method would look be as follows:
+
+    @staticmethod
+    def get_tasks():
+        return [BarPress, Raw]
+
+Note that each Task should only be included once in this list, regardless of how many times it runs within the sequence.
+
+#### Components
+Each of the Tasks within the sequence will already have its own Components declared within it, but Components can also be declared at the TaskSequence level meaning they can be interacted with throughout the entire sequence, regardless of which Task is running. To add such components, the `get_sequence_components` method can be overriden. 
+
+    @staticmethod
+    def get_sequence_components():
+        return {
+            'cam': [Video]
+        }
+
+#### Initial State and sequence
+
+Similar to Tasks, a TaskSequence must override the `init_state` method which returns one of the members of its States enum.
+
+Additionally, TaskSequences must override the `init_sequence` method which returns a tuple containing the first Task and the file location of the first protocol.
+
+    def init_sequence(self) -> tuple[Type[Task], str]
+
+For example:
+
+    def init_sequence(self):
+        return Raw, self.pre_raw_protocol
+
+
+### TaskSequence GUIs
+
+SequenceGUIs are programmed in the same way as [Task GUIs](/guis). Elements in the SequenceGUI will be overlaid on top of the GUI for the current task throughout the entire duration of the sequence.
+
+### Task similarities
+[Variables](tasks.md#variables), [timing dependent behavior](tasks.md#time-dependent-behavior) and [task lifetime methods](tasks.md#task-lifetime) for TaskSequences are identical to Tasks.
+
 
 ## Class reference
 
@@ -230,7 +293,8 @@ Returns a dictionary describing all the constants used by the task. Constants ca
 
 *Example override:*
 
-    def get_constants(self):
+    @staticmethod
+    def get_constants():
         return {
             'duration': 40,             # Task duration
             'reward_lockout_min': 25,   # Minimum time to lockout reward
@@ -245,7 +309,8 @@ Returns a dictionary describing all the variables used by the task. Variables ca
 
 *Example override:*
 
-    def get_variables(self):
+    @staticmethod
+    def get_variables():
         return {
             'lockout': 0,   # Time to lockout reward for
             'presses': 0    # Number of times the bar has been pressed
@@ -308,6 +373,12 @@ Override to return the state the task should begin in (from the `States` enum).
 Call to change the state the task is currently in. Metadata can be provided which will be passed to the EventLogger
 with the event information.
 
+*Parameters:*
+
+`state` the state in the Task States enum that should be entered.
+
+`metadata` a dictionary containing any metadata that should be associated with the state change event.
+
 #### time_elapsed
 
     time_elapsed() -> float
@@ -319,3 +390,103 @@ Returns the time that has passed in seconds (and fractions of a second) since th
     time_in_state() -> float
 
 Returns the time that has passed in seconds (and fractions of a second) since the current state began.
+
+### Timeout methods
+
+The methods below are associated with adding events to the stream related to timing.
+
+#### set_timeout
+
+    set_timeout(name: str, timeout: float, end_with_state=True, metadata: Dict = None) -> None
+
+Begins a timer that will add a TimeoutEvent to the event stream after a prescribed duration.
+
+*Parameters:*
+
+`name` a string representing the name to be associated with the timeout.
+
+`timeout` duration of the timeout in seconds.
+
+`end_with_state` flag indicating whether the timeout should be removed when the state it was created in ends.
+
+`metadata` a dictionary containing any metadata that should be associated with the TimeoutEvent.
+
+#### cancel_timeout
+
+    cancel_timeout(name: str) -> None
+
+Ends the indicated timeout early without adding an event to the stream.
+
+*Parameters:*
+
+`name` the name for the timeout that should be cancelled.
+
+#### pause_timeout
+
+    pause_timeout(name: str) -> None
+
+Pauses the indicated timeout.
+
+*Parameters:*
+
+`name` the name for the timeout that should be paused.
+
+#### resume_timeout
+
+    resume_timeout(name: str) -> None
+
+Resumes a paused timeout.
+
+*Parameters:*
+
+`name` the name for the timeout that should be resumed.
+
+#### extend_timeout
+
+    extend_timeout(name: str, timeout: float) -> None
+
+Adds a prescribed amount of time to a running timeout.
+
+*Parameters:*
+
+`name` the name for the timeout that should be extended.
+
+`timeout` a duration in seconds to be added to the timeout.
+
+### TaskSequence Methods
+
+#### get_tasks
+
+    get_tasks() -> List[Type[Task]]
+
+Returns a list of all the Task classes used in the sequence.
+
+*Example override:*
+
+    @staticmethod
+    def get_tasks():
+        return [Raw, BarPress]
+
+#### init_sequence
+
+    init_sequence(self) -> tuple(Type[Task], str)
+
+Returns a tuple containing the type of the first Task and the protocol file to be used for that Task.
+
+*Example override:*
+
+    def init_sequence(self):
+        return Raw, self.pre_raw_protocol
+
+#### get_sequence_components
+
+    get_sequence_components() -> Dict[str, List[Type[Component]]]
+
+Returns a dictionary describing all the components used by the sequence. Each component name is linked to a list of Component types.
+
+*Example override:*
+
+    def get_sequence_components():
+        return {
+            'cam': [Video]
+        }
