@@ -56,16 +56,21 @@ that links the hardware connection on the ECB to the corresponding controller ad
 to the HouseLight slot on the ECB connected to output A, this would require a controller address of '8'. Putting the parts 
 together, the full address for this component would be
 
-    0_8
+    '0_8'
 
 If instead a component was wired to the GPIO terminals, the address would correspond to the pin used (0-3, left-right. For
 example, if the component was connected to the third column of the GPIO terminal the full address would be
 
-    0_A2
+    '0_A2'
 
 Similarly, if a component was wired to the analog output terminals on the third column, the full address would be
 
-    0_O2
+    '0_O2'
+
+The OSControllerSource does support having multiple outputs for the same component, so the following address would be
+valid if the same component corresponded to controller addresses 5, 6, and 7 for example.
+
+    ['0_5', '0_6', '0_7']
 
 ## Citing OSCAR
 
