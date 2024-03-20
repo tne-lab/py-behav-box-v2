@@ -206,6 +206,11 @@ class AddSourceDialog(QDialog):
         else:
             self.accept()
 
+    def escape(self, s: str) -> str:
+        s = s.replace('\'', '\\\\\\\'')
+        s = s.replace('\"', '\\\\\\\"')
+        return s
+
     def accept(self) -> None:
         if self.source.currentText() in self.sources:
             source_type = getattr(importlib.import_module("pybehave.Sources." + self.source.currentText()),
@@ -219,13 +224,13 @@ class AddSourceDialog(QDialog):
         if source_string == '{}':
             if len(self.params) > 0:
                 source_string = "{" + '"{}": \'{}({},)\''.format(self.name.text(), self.source.currentText(),
-                                                              ','.join(f'"{w}"' for w in self.params)) + "}"
+                                                              ','.join(f'"{self.escape(w)}"' for w in self.params)) + "}"
             else:
                 source_string = "{" + '"{}": \'{}()\''.format(self.name.text(), self.source.currentText()) + "}"
         else:
             if len(self.params) > 0:
                 source_string = source_string[:-1] + ', "{}": \'{}({},)'.format(self.name.text(), self.source.currentText(),
-                                                                               ','.join(f'"{w}"' for w in self.params)) + "\'}"
+                                                                               ','.join(f'"{self.escape(w)}"' for w in self.params)) + "\'}"
             else:
                 source_string = source_string[:-1] + ', "{}": \'{}()\''.format(self.name.text(), self.source.currentText()) + "}"
         settings.setValue("sources", source_string)
