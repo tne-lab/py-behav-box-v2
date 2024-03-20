@@ -176,7 +176,6 @@ In this section of the tutorial, we'll walk through creating the GUI for the Bar
 
 We will be using the following imports:
 
-    from types import MethodType
     from enum import Enum
     import math
     
@@ -219,7 +218,7 @@ in this method should be returned as a list. The full method declaration and the
     def initialize(self):
         self.lever = BarPressElement(self, 77, 25, 100, 90, comp=self.food_lever)
         self.feed_button = ButtonElement(self, 129, 170, 50, 20, "FEED")
-        self.feed_button.mouse_up = MethodType(lambda _: self.log_gui_event(self.Events.GUI_PELLET), self.feed_button)
+        self.feed_button.mouse_up = lambda _: self.log_gui_event(self.Events.GUI_PELLET)
         self.presses = InfoBoxElement(self, 69, 125, 50, 15, "PRESSES", 'BOTTOM', ['0'])
         self.pellets = InfoBoxElement(self, 129, 125, 50, 15, "PELLETS", 'BOTTOM', ['0'])
         self.time_in_task = InfoBoxElement(self, 372, 170, 50, 15, "TIME", 'BOTTOM', ['0'])

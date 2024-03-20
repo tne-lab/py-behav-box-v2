@@ -20,11 +20,15 @@
 
 <!--- ### [Creating a new Widget]() --->
 
-## Bitesize Tutorials
+## Application-specific Tutorials
+
+### [Setting up OSCAR with pybehave](tutorials/oscar.md)
 
 ### [Synchronizing with video data](tutorials/video_sync.md) 
 
 ### [Synchronizing with OpenEphys](tutorials/oe_sync.md)
+
+## Bitesize Tutorials
 
 <!--- ### [Simulating Behavior]() --->
 
