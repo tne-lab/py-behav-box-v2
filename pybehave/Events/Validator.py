@@ -56,10 +56,19 @@ class ValidatorProcess(Process):
             for event in events:
                 if isinstance(event, PybEvents.ValidatorEvent):
                     try:
+                        # Import the logger related to the event
                         logger_class = getattr(importlib.import_module("pybehave.Events." + event.logger), event.logger)
+                        # Load the data previously saved by the logger
                         event_table, header = logger_class.load_data(event.path)
+                        # Import the task associated with the data
+                        task = getattr(importlib.import_module("Local.Tasks." + header['Task']), header['Task'])
+                        # Generate the dictionary of constants for the task
+                        constants = task.get_constants()
+                        # Import the validator associated with this task
                         validator = getattr(importlib.import_module("Local.Validators." + header['Task'] + 'Validator'), header['Task'] + 'Validator')
+                        # Validate the data saved for the task
                         status, measures, test_results = validator.validate(event_table, header)
+                        # Create the validation file
                         folder, file_name = os.path.split(event.path)
                         with open(folder + '/' + file_name.split('.')[0] + '_validation.txt', 'w') as f:
                             f.write('Status: ' + status.value + '\n\n')

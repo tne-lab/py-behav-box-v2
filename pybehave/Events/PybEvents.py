@@ -252,6 +252,7 @@ class StateExitEvent(Loggable, StatefulEvent):
 class ValidatorEvent(PybEvent):
     path: str
     logger: str
+    protocol: str
 
 
 class CloseValidatorEvent(PybEvent):

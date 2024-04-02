@@ -27,7 +27,8 @@ dependencies = [
     "pygame",
     "screeninfo",
     "PyQt5",
-    "psutil"
+    "psutil",
+    "pandas"
 ]
 
 [project.optional-dependencies]
