@@ -1,5 +1,6 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict
+
 if TYPE_CHECKING:
     from pybehave.Tasks.Task import Task
 
@@ -29,3 +30,7 @@ class OEBinaryInput(BinaryInput):
                 self.state = False
                 return True
         return False
+
+    @staticmethod
+    def metadata_defaults() -> Dict:
+        return {"rising": True, "falling": False}

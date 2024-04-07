@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, List
 
 from pybehave.Events.Widget import Widget
 from pybehave.Utilities.Exceptions import AddTaskError
+from pybehave.Workstation.AddressFileCreationDialog import AddressFileCreationDialog
 
 if TYPE_CHECKING:
     from pybehave.Workstation.Workstation import Workstation
@@ -26,6 +27,7 @@ class WorkstationGUI(QWidget):
         QWidget.__init__(self)
         self.sd = None
         self.td = None
+        self.afcd = None
         self.emsg = None
         self.ignore_errors = False
         self.n_active = 0
@@ -54,6 +56,8 @@ class WorkstationGUI(QWidget):
         add_task.triggered.connect(self.task_dialog)  # Call task_dialog method when clicked
         settings = action_file.addAction("Settings")  # Action for adjusting py-behav settings
         settings.triggered.connect(self.settings_dialog)  # Call settings_dialog method when clicked
+        new_address_file = action_file.addAction("New AddressFile")
+        new_address_file.triggered.connect(self.address_file_dialog)
         action_file.addSeparator()
         quit_gui = action_file.addAction("Quit")  # Quits py-behav
         quit_gui.triggered.connect(self.close)
@@ -90,6 +94,11 @@ class WorkstationGUI(QWidget):
         # Opens the AddTaskDialog for adding a new task to a chamber
         self.td = AddTaskDialog(self)
         self.td.show()
+
+    def address_file_dialog(self) -> None:
+        # Opens the AddressFile creator
+        self.afcd = AddressFileCreationDialog(self, "SetShift")
+        self.afcd.show()
 
     def add_task(self, chamber_index: str, task_index: int, subject: str = "default", afp: str = "", pfp: str = "", prompt: str = "", event_loggers: str = "", widgets: List[Widget] = None, widget_params: List[List[str]] = None) -> None:
         """

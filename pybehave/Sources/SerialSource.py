@@ -1,4 +1,5 @@
 import threading
+from typing import Dict
 
 import serial
 
@@ -58,3 +59,7 @@ class SerialSource(Source):
         else:
             term = ""
         self.connections[self.components[component_id].address].write(bytes(str(msg) + term, 'utf-8'))
+
+    @staticmethod
+    def metadata_defaults(comp_type: Component.Type = None) -> Dict:
+        return {"baudrate": 9600, "terminator": ""}
