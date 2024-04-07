@@ -12,23 +12,12 @@ from PyQt5.QtCore import QSize
 from PyQt5.QtWidgets import QDialog, QDialogButtonBox, QVBoxLayout, QTableWidget, QPushButton, QHBoxLayout, \
     QTableWidgetItem, QComboBox, QMessageBox, QFileDialog
 
+from pybehave.Workstation.ComboBox import ComboBox
+
 if TYPE_CHECKING:
     from pybehave.Workstation.WorkstationGUI import WorkstationGUI
 
 import pybehave.Components
-
-
-class ComboBox(QComboBox):
-    new_signal = QtCore.pyqtSignal(str, str)
-
-    def __init__(self, parent=None):
-        super(ComboBox, self).__init__(parent)
-        self.lastSelected = None
-        self.activated[str].connect(self.onActivated)
-
-    def onActivated(self, text):
-        self.new_signal.emit(self.lastSelected, text)
-        self.lastSelected = text
 
 
 class NoBlankSpaceAtBottomEvenlySplitTableView(QTableWidget):
@@ -54,7 +43,7 @@ def get_all_subclasses(cls):
 
 
 class AddressFileCreationDialog(QDialog):
-    def __init__(self, wsg: WorkstationGUI, task: str):
+    def __init__(self, wsg: WorkstationGUI, task: str, file_path: str = None):
         super().__init__()
 
         self.wsg = wsg
@@ -74,7 +63,8 @@ class AddressFileCreationDialog(QDialog):
             if f.name[0].isupper():
                 importlib.import_module("pybehave.Components." + f.name, f.name)
 
-        self.setWindowTitle(task + " AddressFile")
+        if file_path is None:
+            self.setWindowTitle("New " + task + " AddressFile")
         self.setMinimumSize(500, 700)
         control = QDialogButtonBox.Save | QDialogButtonBox.Cancel
 

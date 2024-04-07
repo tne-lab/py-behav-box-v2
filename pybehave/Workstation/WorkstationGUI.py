@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING, List
 from pybehave.Events.Widget import Widget
 from pybehave.Utilities.Exceptions import AddTaskError
 from pybehave.Workstation.AddressFileCreationDialog import AddressFileCreationDialog
+from pybehave.Workstation.ProtocolCreationDialog import ProtocolCreationDialog
+from pybehave.Workstation.SelectTaskDialog import SelectTaskDialog
 
 if TYPE_CHECKING:
     from pybehave.Workstation.Workstation import Workstation
@@ -28,6 +30,8 @@ class WorkstationGUI(QWidget):
         self.sd = None
         self.td = None
         self.afcd = None
+        self.std = None
+        self.pcd = None
         self.emsg = None
         self.ignore_errors = False
         self.n_active = 0
@@ -56,8 +60,14 @@ class WorkstationGUI(QWidget):
         add_task.triggered.connect(self.task_dialog)  # Call task_dialog method when clicked
         settings = action_file.addAction("Settings")  # Action for adjusting py-behav settings
         settings.triggered.connect(self.settings_dialog)  # Call settings_dialog method when clicked
-        new_address_file = action_file.addAction("New AddressFile")
-        new_address_file.triggered.connect(self.address_file_dialog)
+        address_files = action_file.addMenu("AddressFiles")
+        new_address_file = address_files.addAction("New")
+        new_address_file.triggered.connect(lambda: self.select_task_dialog(True))
+        edit_address_file = address_files.addAction("Edit")
+        protocols = action_file.addMenu("Protocols")
+        new_protocol = protocols.addAction("New")
+        new_protocol.triggered.connect(lambda: self.select_task_dialog(False))
+        edit_protocol = protocols.addAction("Edit")
         action_file.addSeparator()
         quit_gui = action_file.addAction("Quit")  # Quits py-behav
         quit_gui.triggered.connect(self.close)
@@ -95,10 +105,20 @@ class WorkstationGUI(QWidget):
         self.td = AddTaskDialog(self)
         self.td.show()
 
-    def address_file_dialog(self) -> None:
+    def select_task_dialog(self, is_addressfile):
+        # Opens a dialog to select the task to use for creating/editing an AddressFile or Protocol
+        self.std = SelectTaskDialog(self, is_addressfile)
+        self.std.show()
+
+    def address_file_dialog(self, task: str, file_path: str = None) -> None:
         # Opens the AddressFile creator
-        self.afcd = AddressFileCreationDialog(self, "SetShift")
+        self.afcd = AddressFileCreationDialog(self, task, file_path)
         self.afcd.show()
+
+    def protocol_dialog(self, task: str, file_path: str = None) -> None:
+        # Opens the Protocol creator
+        self.pcd = ProtocolCreationDialog(self, task, file_path)
+        self.pcd.show()
 
     def add_task(self, chamber_index: str, task_index: int, subject: str = "default", afp: str = "", pfp: str = "", prompt: str = "", event_loggers: str = "", widgets: List[Widget] = None, widget_params: List[List[str]] = None) -> None:
         """
