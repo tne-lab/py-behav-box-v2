@@ -10,9 +10,10 @@ from typing import TYPE_CHECKING
 from PyQt5 import QtCore
 from PyQt5.QtCore import QSize
 from PyQt5.QtWidgets import QDialog, QDialogButtonBox, QVBoxLayout, QTableWidget, QPushButton, QHBoxLayout, \
-    QTableWidgetItem, QComboBox, QMessageBox, QFileDialog
+    QTableWidgetItem, QMessageBox, QFileDialog
 
 from pybehave.Workstation.ComboBox import ComboBox
+from pybehave.Workstation.FileCreationTable import FileCreationTable
 
 if TYPE_CHECKING:
     from pybehave.Workstation.WorkstationGUI import WorkstationGUI
@@ -72,17 +73,31 @@ class AddressFileCreationDialog(QDialog):
         self.control_buttons = QDialogButtonBox(control)
         self.control_buttons.accepted.connect(self.save)
         self.control_buttons.rejected.connect(self.reject)
+        self.row_buttons = QDialogButtonBox()
         self.add_button = QPushButton("+")
         self.add_button.clicked.connect(self.add_row)
-        button_layout.addWidget(self.add_button, alignment=QtCore.Qt.AlignLeft)
+        self.remove_button = QPushButton("−")
+        self.remove_button.clicked.connect(self.remove_row)
+        self.remove_button.setEnabled(False)
+        self.row_buttons.addButton(self.add_button, QDialogButtonBox.ActionRole)
+        self.row_buttons.addButton(self.remove_button, QDialogButtonBox.ActionRole)
+        button_layout.addWidget(self.row_buttons, alignment=QtCore.Qt.AlignLeft)
         button_layout.addWidget(self.control_buttons, alignment=QtCore.Qt.AlignRight)
 
         self.layout = QVBoxLayout()
-        self.table = QTableWidget()
+        self.table = FileCreationTable()
 
         self.table.setColumnCount(6)
         self.table.setHorizontalHeaderLabels(["Component", "Type", "Source", "Address", "Index", "Metadata"])
         self.table.verticalHeader().setVisible(False)
+        self.table.deselected_signal.connect(lambda: self.remove_button.setDisabled(True))
+        self.current_row = None
+
+        def update_row():
+            self.remove_button.setDisabled(False)
+            self.current_row = self.table.currentRow()
+
+        self.table.clicked.connect(update_row)
 
         self.layout.addWidget(self.table)
         self.layout.addLayout(button_layout)
@@ -176,6 +191,23 @@ class AddressFileCreationDialog(QDialog):
 
         if not self.available_components:
             self.add_button.setEnabled(False)
+
+    def remove_row(self):
+        component = self.addresses[self.current_row][0]
+        if component.currentText() not in self.available_components:
+            if self.addresses[self.current_row][4] is None:
+                self.available_components[component.currentText()] = None
+            else:
+                self.available_components[component.currentText()] = [self.addresses[self.current_row][4].currentText()]
+        else:
+            bisect.insort(self.available_components[component.currentText()], self.addresses[self.current_row][4].currentText())
+        for i in range(self.table.rowCount()):
+            if i != self.current_row and self.addresses[i][0].currentText() == component.currentText():
+                self.replace_indices(i, component.currentText())
+        del self.addresses[self.current_row]
+        self.table.removeRow(self.current_row)
+        self.current_row = -1
+        self.remove_button.setDisabled(True)
 
     def component_changed(self, add_ind):
         # Remove the new value from the other combo boxes

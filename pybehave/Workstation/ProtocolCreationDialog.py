@@ -1,14 +1,16 @@
 from __future__ import annotations
 
+import bisect
 import importlib
 import os
 from typing import TYPE_CHECKING
 
 from PyQt5 import QtCore
-from PyQt5.QtWidgets import QDialog, QDialogButtonBox, QVBoxLayout, QTableWidget, QPushButton, QHBoxLayout, \
+from PyQt5.QtWidgets import QDialog, QDialogButtonBox, QVBoxLayout, QPushButton, QHBoxLayout, \
     QTableWidgetItem, QFileDialog
 
 from pybehave.Workstation.ComboBox import ComboBox
+from pybehave.Workstation.FileCreationTable import FileCreationTable
 
 if TYPE_CHECKING:
     from pybehave.Workstation.WorkstationGUI import WorkstationGUI
@@ -35,17 +37,31 @@ class ProtocolCreationDialog(QDialog):
         self.control_buttons = QDialogButtonBox(control)
         self.control_buttons.accepted.connect(self.save)
         self.control_buttons.rejected.connect(self.reject)
+        self.row_buttons = QDialogButtonBox()
         self.add_button = QPushButton("+")
         self.add_button.clicked.connect(self.add_row)
-        button_layout.addWidget(self.add_button, alignment=QtCore.Qt.AlignLeft)
+        self.remove_button = QPushButton("−")
+        self.remove_button.clicked.connect(self.remove_row)
+        self.remove_button.setEnabled(False)
+        self.row_buttons.addButton(self.add_button, QDialogButtonBox.ActionRole)
+        self.row_buttons.addButton(self.remove_button, QDialogButtonBox.ActionRole)
+        button_layout.addWidget(self.row_buttons, alignment=QtCore.Qt.AlignLeft)
         button_layout.addWidget(self.control_buttons, alignment=QtCore.Qt.AlignRight)
 
         self.layout = QVBoxLayout()
-        self.table = QTableWidget()
+        self.table = FileCreationTable()
 
         self.table.setColumnCount(2)
         self.table.setHorizontalHeaderLabels(["Constant", "Value"])
         self.table.verticalHeader().setVisible(False)
+        self.table.deselected_signal.connect(lambda: self.remove_button.setDisabled(True))
+        self.current_row = None
+
+        def update_row():
+            self.remove_button.setDisabled(False)
+            self.current_row = self.table.currentRow()
+
+        self.table.clicked.connect(update_row)
 
         self.layout.addWidget(self.table)
         self.layout.addLayout(button_layout)
@@ -106,6 +122,18 @@ class ProtocolCreationDialog(QDialog):
         if not self.available_constants:
             self.add_button.setEnabled(False)
 
+    def remove_row(self):
+        constant = self.constants[self.current_row][0]
+        keys = list(self.constant_dict.keys())
+        bisect.insort(self.available_constants, constant.currentText(), key=lambda x: keys.index(x))
+        for i in range(self.table.rowCount()):  # Should ideally be insorted
+            if i != self.current_row:
+                self.constants[i][0].addItem(constant.currentText())
+        del self.constants[self.current_row]
+        self.table.removeRow(self.current_row)
+        self.current_row = -1
+        self.remove_button.setDisabled(True)
+
     def constant_changed(self, add_ind):
         # Remove the new value from the other combo boxes
         constant = self.constants[add_ind][0]
@@ -116,8 +144,9 @@ class ProtocolCreationDialog(QDialog):
 
         # Add the previous value back into the other combo boxes
         if constant.lastSelected is not None:
-            self.available_constants.append(constant.lastSelected)
-            for i in range(self.table.rowCount()):
+            keys = list(self.constant_dict.keys())
+            bisect.insort(self.available_constants, constant.lastSelected, key=lambda x: keys.index(x))
+            for i in range(self.table.rowCount()):  # Should ideally be insorted
                 if i != add_ind:
                     self.constants[i][0].addItem(constant.lastSelected)
 
