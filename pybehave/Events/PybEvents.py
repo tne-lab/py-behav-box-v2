@@ -199,7 +199,7 @@ class ConstantRemoveEvent(TaskEvent):
 class ComponentRegisterEvent(PybEvent):
     comp_type: str
     cid: str
-    address: typing.Union[str, typing.List[str]]
+    address: typing.Union[typing.Union[str, int, float], typing.List[typing.Union[str, int, float]]]
 
 
 class ComponentCloseEvent(PybEvent):

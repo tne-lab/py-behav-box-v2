@@ -58,7 +58,7 @@ class ProtocolCreationDialog(QDialog):
     def save(self):
         protocol = "protocol = {"
         for constant in self.constants:
-            protocol += f"\'{constant[0].currentText()}\': {str(constant[1].text())}\n"
+            protocol += f"\'{constant[0].currentText()}\': {str(constant[1].text())},\n"
         protocol += '}'
 
         desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
