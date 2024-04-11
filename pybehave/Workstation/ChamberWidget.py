@@ -324,6 +324,7 @@ class ChamberWidget(QGroupBox):
         self.fd.setFileMode(QFileDialog.AnyFile)
         self.fd.setViewMode(QFileDialog.List)
         self.fd.setAcceptMode(QFileDialog.AcceptSave)
+        self.fd.setNameFilter('CSV Files (*.csv)')
         self.fd.setDirectory("{}/py-behav/Configurations/".format(desktop))
         self.fd.selectFile(
             '{}-{}-{}.csv'.format(self.chamber_id.text(), self.subject.text(), self.task_name.currentText()))

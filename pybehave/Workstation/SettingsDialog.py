@@ -181,10 +181,10 @@ class AddSourceDialog(QDialog):
         self.sources = []
         self.local_sources = []
         for f in pkgutil.iter_modules(pybehave.Sources.__path__):
-            if not f.name == "Source":
+            if not f.name == "Source" and not f.name == 'ThreadSource':
                 self.sources.append(f.name)
         for f in pkgutil.iter_modules(['Local.Sources']):
-            if not f.name.endswith('Source'):
+            if f.name.endswith('Source'):
                 self.local_sources.append(f.name)
         self.source.addItems(self.sources)
         source_box_layout.addWidget(self.source)

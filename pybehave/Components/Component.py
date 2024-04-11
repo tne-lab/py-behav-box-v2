@@ -86,3 +86,8 @@ class Component:
         if self.task is not None:
             self.task.close_component(self.id)
 
+    @staticmethod
+    def metadata_defaults() -> Dict:
+        """Call to get the metadata names and default values required by this component."""
+        return {}
+

@@ -5,7 +5,7 @@ import threading
 from abc import ABC, abstractmethod
 from asyncio import Future
 import time
-from typing import Any
+from typing import Any, Dict
 
 import cv2
 import imutils
@@ -14,6 +14,7 @@ import qasync
 from PyQt5.QtGui import QImage, QPixmap
 from PyQt5.QtWidgets import *
 
+from pybehave.Components.Component import Component
 from pybehave.Events import PybEvents
 from pybehave.Sources.ThreadSource import ThreadSource
 from pybehave.Sources.library.tisgrabber import tisgrabber
@@ -220,6 +221,10 @@ class VideoSource(ThreadSource):
         self.cameras[component_id].get_video_frame().deleteLater()
         del self.cameras[component_id]
         del self.fr[component_id]
+
+    @staticmethod
+    def metadata_defaults(comp_type: Component.Type = None) -> Dict:
+        return {"fr": 30, "row": 0, "col": 0, "row_span": 0, "col_span": 0}
 
 
 class WebcamProvider(VideoProvider):

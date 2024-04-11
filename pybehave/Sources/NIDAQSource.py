@@ -1,3 +1,5 @@
+from typing import Dict
+
 import nidaqmx
 from nidaqmx import stream_writers
 from nidaqmx.constants import (LineGrouping)
@@ -97,3 +99,10 @@ class NIDAQSource(Source):
                                                     samps_per_chan=msg.shape[1])
             self.ao_stream.write_many_sample(output)
             self.ao_task.start()
+
+    @staticmethod
+    def metadata_defaults(comp_type: Component.Type = None) -> Dict:
+        if comp_type == Component.Type.ANALOG_OUTPUT:
+            return {"sr": 30000}
+        else:
+            return {}
