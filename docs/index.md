@@ -106,6 +106,7 @@ Press the green play button to start the task.
 
 The task can be paused or ended prematurely with the orange pause button or red stop button respectively.
 
-## Troubleshooting
+## Contributing, Questions, Issues, and Feedback
 
-If you encounter problems, take a look at the [issues](https://github.com/tne-lab/py-behav-box-v2/issues) section of the GitHub and leave a new one if your problem hasn't been previously addressed.
+Users interested in expanding functionalities in pybehave are welcome to do so. Issues reports are encouraged through GitHub's [issue tracker](https://github.com/tne-lab/py-behav-box-v2/issues). 
+See details on how to contribute and report issues in [CONTRIBUTING.md](https://github.com/tne-lab/py-behav-box-v2/blob/master/CONTRIBUTING.md).
