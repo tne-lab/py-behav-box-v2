@@ -5,15 +5,18 @@ import copy
 import importlib
 import os
 import pkgutil
+import runpy
 from typing import TYPE_CHECKING
 
 from PyQt5 import QtCore
-from PyQt5.QtCore import QSize
+from PyQt5.QtCore import QSize, QTimer
 from PyQt5.QtWidgets import QDialog, QDialogButtonBox, QVBoxLayout, QTableWidget, QPushButton, QHBoxLayout, \
     QTableWidgetItem, QMessageBox, QFileDialog
 
+from pybehave.Utilities.AddressFile import AddressFile
 from pybehave.Workstation.ComboBox import ComboBox
 from pybehave.Workstation.FileCreationTable import FileCreationTable
+import pybehave.Utilities.Exceptions as pyberror
 
 if TYPE_CHECKING:
     from pybehave.Workstation.WorkstationGUI import WorkstationGUI
@@ -48,6 +51,7 @@ class AddressFileCreationDialog(QDialog):
         super().__init__()
 
         self.wsg = wsg
+        self.file_path = file_path
 
         task_module = importlib.import_module("Local.Tasks." + task)
         self.task = getattr(task_module, task)
@@ -66,6 +70,8 @@ class AddressFileCreationDialog(QDialog):
 
         if file_path is None:
             self.setWindowTitle("New " + task + " AddressFile")
+        else:
+            self.setWindowTitle("Edit " + task + " AddressFile")
         self.setMinimumSize(500, 700)
         control = QDialogButtonBox.Save | QDialogButtonBox.Cancel
 
@@ -107,6 +113,31 @@ class AddressFileCreationDialog(QDialog):
 
         self.error = None
         self.save_dialog = None
+        QTimer.singleShot(1, self.load_address_file)
+
+    def load_address_file(self):
+        if self.file_path is not None:
+            try:
+                file_globals = runpy.run_path(self.file_path, {"AddressFile": AddressFile})
+            except:
+                raise pyberror.MalformedAddressFileError
+            for cid in file_globals['addresses'].addresses:
+                if cid in self.components:
+                    comps = file_globals['addresses'].addresses[cid]
+                    for i, comp in enumerate(comps):
+                        if comp is not None:
+                            self.add_row()
+                            self.addresses[-1][0].setCurrentText(cid)
+                            self.addresses[-1][1].setCurrentText(comp.component_type)
+                            self.addresses[-1][2].setCurrentText(comp.source_name)
+                            self.addresses[-1][3].setText(str(comp.component_address) if not isinstance(comp.component_address, str) else f"\"{comp.component_address}\"")
+                            if len(comps) > 1:
+                                self.addresses[-1][4].setCurrentText(str(i))
+                                self.update_indices(self.table.rowCount() - 1)
+                            if self.addresses[-1][5] is not None:
+                                for j in range(self.addresses[-1][5].columnCount()):
+                                    val = comp.metadata[self.addresses[-1][5].horizontalHeaderItem(j).text()]
+                                    self.addresses[-1][5].item(0, j).setText(str(val) if not isinstance(val, str) else f"\"{val}\"")
 
     def save(self):
         if any(len(a[3].text()) == 0 for a in self.addresses):
@@ -139,7 +170,7 @@ class AddressFileCreationDialog(QDialog):
         desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
         # Create the AddressFile folder if it does not already exist
         if not os.path.exists("{}/py-behav/{}/AddressFiles".format(desktop, self.task.__name__)):
-            os.makedirs("{}/py-behav/Configurations/".format(desktop))
+            os.makedirs("{}/py-behav/{}/AddressFiles".format(desktop, self.task.__name__))
         self.save_dialog = QFileDialog(self)
         self.save_dialog.setFileMode(QFileDialog.AnyFile)
         self.save_dialog.setViewMode(QFileDialog.List)

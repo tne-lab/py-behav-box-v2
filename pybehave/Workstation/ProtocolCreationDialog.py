@@ -3,14 +3,17 @@ from __future__ import annotations
 import bisect
 import importlib
 import os
+import runpy
 from typing import TYPE_CHECKING
 
 from PyQt5 import QtCore
+from PyQt5.QtCore import QTimer
 from PyQt5.QtWidgets import QDialog, QDialogButtonBox, QVBoxLayout, QPushButton, QHBoxLayout, \
     QTableWidgetItem, QFileDialog
 
 from pybehave.Workstation.ComboBox import ComboBox
 from pybehave.Workstation.FileCreationTable import FileCreationTable
+import pybehave.Utilities.Exceptions as pyberror
 
 if TYPE_CHECKING:
     from pybehave.Workstation.WorkstationGUI import WorkstationGUI
@@ -21,6 +24,7 @@ class ProtocolCreationDialog(QDialog):
         super().__init__()
 
         self.wsg = wsg
+        self.file_path = file_path
 
         task_module = importlib.import_module("Local.Tasks." + task)
         self.task = getattr(task_module, task)
@@ -30,6 +34,8 @@ class ProtocolCreationDialog(QDialog):
 
         if file_path is None:
             self.setWindowTitle("New " + task + " Protocol")
+        else:
+            self.setWindowTitle("Edit " + task + " Protocol")
         self.setMinimumSize(500, 700)
         control = QDialogButtonBox.Save | QDialogButtonBox.Cancel
 
@@ -70,6 +76,20 @@ class ProtocolCreationDialog(QDialog):
         self.constants = []
 
         self.save_dialog = None
+        QTimer.singleShot(1, self.load_protocol_file)
+
+    def load_protocol_file(self):
+        if self.file_path is not None:
+            try:
+                file_globals = runpy.run_path(self.file_path)
+            except:
+                raise pyberror.MalformedProtocolError
+            for cons in file_globals['protocol']:
+                if cons in self.constant_dict:
+                    self.add_row()
+                    self.constants[-1][0].setCurrentText(cons)
+                    val = file_globals['protocol'][cons]
+                    self.constants[-1][1].setText(f'\"{val}\"' if isinstance(val, str) else str(val))
 
     def save(self):
         protocol = "protocol = {"
@@ -80,7 +100,7 @@ class ProtocolCreationDialog(QDialog):
         desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
         # Create the Protocol folder if it does not already exist
         if not os.path.exists("{}/py-behav/{}/Protocols".format(desktop, self.task.__name__)):
-            os.makedirs("{}/py-behav/Configurations/".format(desktop))
+            os.makedirs("{}/py-behav/{}/Protocols".format(desktop, self.task.__name__))
         self.save_dialog = QFileDialog(self)
         self.save_dialog.setFileMode(QFileDialog.AnyFile)
         self.save_dialog.setViewMode(QFileDialog.List)

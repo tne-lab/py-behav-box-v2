@@ -64,10 +64,12 @@ class WorkstationGUI(QWidget):
         new_address_file = address_files.addAction("New")
         new_address_file.triggered.connect(lambda: self.select_task_dialog(True))
         edit_address_file = address_files.addAction("Edit")
+        edit_address_file.triggered.connect(lambda: self.select_task_dialog(True, True))
         protocols = action_file.addMenu("Protocols")
         new_protocol = protocols.addAction("New")
         new_protocol.triggered.connect(lambda: self.select_task_dialog(False))
         edit_protocol = protocols.addAction("Edit")
+        edit_protocol.triggered.connect(lambda: self.select_task_dialog(False, True))
         action_file.addSeparator()
         quit_gui = action_file.addAction("Quit")  # Quits py-behav
         quit_gui.triggered.connect(self.close)
@@ -105,9 +107,9 @@ class WorkstationGUI(QWidget):
         self.td = AddTaskDialog(self)
         self.td.show()
 
-    def select_task_dialog(self, is_addressfile):
+    def select_task_dialog(self, is_addressfile, edit: bool = False):
         # Opens a dialog to select the task to use for creating/editing an AddressFile or Protocol
-        self.std = SelectTaskDialog(self, is_addressfile)
+        self.std = SelectTaskDialog(self, is_addressfile, edit)
         self.std.show()
 
     def address_file_dialog(self, task: str, file_path: str = None) -> None:

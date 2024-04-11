@@ -18,7 +18,7 @@ class AddressFile:
                 raise ComponentAlreadyRegisteredError
         else:
             self.addresses[component_id] = [None] * (list_index + 1)
-            self.addresses[list_index] = [Address(component_type, source_name, component_address, metadata)]
+            self.addresses[component_id][list_index] = Address(component_type, source_name, component_address, metadata)
 
 
 class Address:
