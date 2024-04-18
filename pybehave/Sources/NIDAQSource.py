@@ -4,7 +4,7 @@ import nidaqmx
 from nidaqmx import stream_writers
 from nidaqmx.constants import (LineGrouping)
 import numpy as np
-from nidaqmx.system import system
+import nidaqmx.system as system
 
 from pybehave.Components.Component import Component
 from pybehave.Sources.Source import Source
