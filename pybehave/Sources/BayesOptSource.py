@@ -1,3 +1,9 @@
+try:
+    from matplotlib import pyplot as plt
+except ModuleNotFoundError:
+    from pybehave.Utilities.Exceptions import MissingExtraError
+    raise MissingExtraError('bo')
+
 import glob
 import importlib
 import os
@@ -10,7 +16,6 @@ from abc import ABC, abstractmethod
 from typing import Dict, List
 
 import numpy as np
-from matplotlib import pyplot as plt
 
 from pybehave.Components.Component import Component
 from pybehave.Events import PybEvents

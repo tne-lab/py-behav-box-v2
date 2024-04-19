@@ -1,7 +1,12 @@
+try:
+    import zmq
+except ModuleNotFoundError:
+    from pybehave.Utilities.Exceptions import MissingExtraError
+    raise MissingExtraError('oe')
+
 import os
 from datetime import datetime
 
-import zmq
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QGroupBox, QHBoxLayout, QVBoxLayout, QLineEdit, QPushButton, QFileDialog
 

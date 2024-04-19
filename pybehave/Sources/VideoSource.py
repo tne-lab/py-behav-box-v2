@@ -1,3 +1,11 @@
+try:
+    import cv2
+    import imutils
+    import qasync
+except ModuleNotFoundError:
+    from pybehave.Utilities.Exceptions import MissingExtraError
+    raise MissingExtraError('video')
+
 import asyncio
 import concurrent.futures
 import ctypes
@@ -7,10 +15,7 @@ from asyncio import Future
 import time
 from typing import Any, Dict
 
-import cv2
-import imutils
 import numpy as np
-import qasync
 from PyQt5.QtGui import QImage, QPixmap
 from PyQt5.QtWidgets import *
 

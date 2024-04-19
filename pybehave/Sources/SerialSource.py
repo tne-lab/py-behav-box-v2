@@ -1,7 +1,11 @@
+try:
+    import serial
+except ModuleNotFoundError:
+    from pybehave.Utilities.Exceptions import MissingExtraError
+    raise MissingExtraError('serial')
+
 import threading
 from typing import Dict
-
-import serial
 
 from pybehave.Components.Component import Component
 from pybehave.Sources.Source import Source

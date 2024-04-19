@@ -1,10 +1,15 @@
+try:
+    import nidaqmx
+    from nidaqmx import stream_writers
+    from nidaqmx.constants import (LineGrouping)
+    import nidaqmx.system as system
+except ModuleNotFoundError:
+    from pybehave.Utilities.Exceptions import MissingExtraError
+    raise MissingExtraError('ni')
+
 from typing import Dict
 
-import nidaqmx
-from nidaqmx import stream_writers
-from nidaqmx.constants import (LineGrouping)
 import numpy as np
-import nidaqmx.system as system
 
 from pybehave.Components.Component import Component
 from pybehave.Sources.Source import Source

@@ -1,8 +1,12 @@
+try:
+    import serial
+except ModuleNotFoundError:
+    from pybehave.Utilities.Exceptions import MissingExtraError
+    raise MissingExtraError('serial')
+
 import ctypes
 import threading
 from contextlib import ExitStack
-
-import serial
 
 from pybehave.Components.Component import Component
 
