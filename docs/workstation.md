@@ -62,12 +62,12 @@ default but can be associated with any number of additional Widgets. Widgets are
 to the associated Task or its EventLoggers or controlling external hardware/software manually from the pybehave GUI. 
 While similar functionality can be implemented in Task GUIs, Widgets will have identical behavior regardless of the Task they are associated with.
 
-#### EventWidget
+#### Accessing events with EventWidget
 
 EventWidget is an abstract subclass of Widget that provides access to the Task event stream. This functionality should only be necessary if
 the Widget is intended for visualizing/displaying Task information or requires feedback from the Task
 
-#### SubjectConfigWidget
+#### Configuration with SubjectConfigWidget
 
 SubjectConfigWidget is a special purpose Widget that is integrated into the pybehave core. This Widget allows for overriding the
 value of any Task constant for a particular subject. This is useful if constants need to be set on a per-subject basis. 

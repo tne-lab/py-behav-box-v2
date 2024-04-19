@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import re
+import webbrowser
 from typing import TYPE_CHECKING
+
+from PyQt5.QtCore import QEvent
 
 from pybehave.Events.PybEvents import AddLoggerEvent, RemoveLoggerEvent
 import pybehave.Events
@@ -155,6 +158,17 @@ class AddExtrasDialog(QDialog):
         self.layout.addWidget(self.control_buttons)
         self.setLayout(self.layout)
 
+    def event(self, event):
+        if event.type() == QEvent.EnterWhatsThisMode:
+            QWhatsThis.leaveWhatsThisMode()
+            if self.logger:
+                webbrowser.open('https://py-behav-box-v2.readthedocs.io/en/latest/events/#eventloggers_1')
+            else:
+                webbrowser.open('https://py-behav-box-v2.readthedocs.io/en/latest/workstation/#widget')
+            return True
+        else:
+            return super().event(event)
+
     def accept(self) -> None:
         if not self.logger:
             widget_type = getattr(importlib.import_module("pybehave.Events." + self.extra.currentText()), self.extra.currentText())
@@ -219,6 +233,17 @@ class ExtrasParametersDialog(QDialog):
             self.params.append(param)
         self.layout.addWidget(self.control_buttons)
         self.setLayout(self.layout)
+
+    def event(self, event):
+        if event.type() == QEvent.EnterWhatsThisMode:
+            QWhatsThis.leaveWhatsThisMode()
+            if self.aed.logger:
+                webbrowser.open('https://py-behav-box-v2.readthedocs.io/en/latest/events/#' + self.aed.extra.currentText().lower())
+            else:
+                webbrowser.open('https://py-behav-box-v2.readthedocs.io/en/latest/workstation/#' + self.aed.extra.currentText().lower())
+            return True
+        else:
+            return super().event(event)
 
     def accept(self) -> None:
         for p in self.params:
