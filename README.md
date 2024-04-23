@@ -24,14 +24,18 @@ built around a hardware-agnostic and highly object-oriented design philosophy.
 
 Pybehave separates code for task design from specific hardware implementations to streamline development, accessibility, and
 data sharing. This approach, combined with a task-specific Graphical User Interfaces (GUIs), expedites and simplifies the creation and visualization of complex behavioral tasks.
-User created [task](tasks.md) definition files can interact with hardware-specific [source](sources.md) files both written in Python. Any and all local
-configuration can be handled outside of Python using [Address Files](protocols_addressfiles.md#addressfiles) and [Protocols](protocols_addressfiles.md#protocols).
+User created [task](docs/tasks.md) definition files can interact with hardware-specific [Source](docs/sources.md) files both written in Python. Any and all local
+configuration can be handled outside of Python using [Address Files](docs/protocols_addressfiles.md#addressfiles) and [Protocols](docs/protocols_addressfiles.md#protocols).
 
-All pybehave tasks are coordinated via a [Workstation](workstation.md) GUI.
+All pybehave tasks are coordinated via a [Workstation](docs/workstation.md) GUI.
 
 Pybehave software and documentation are available on [GitHub](https://github.com/tne-lab/py-behav-box-v2).
 
 ## Getting started
+
+While pybehave is in principle cross-platform, it has only been extensively tested on Windows. We are happy to support 
+other platforms so log any issues on GitHub if you have trouble installing. Additionally, some Sources are unlikely to work
+on all platforms.
 
 ### Install with pip
 
@@ -73,7 +77,7 @@ Hardware-specific extras can be installed by adding square brackets after the '.
 ### Starting pybehave
 
 From the standard install, pybehave can be started by running the `pybehave` command from the virtual environment. Alternatively,
-if you have installed pybehave into a conda environment, we've provided an example batch script for starting pybehave in the root 
+if you have installed pybehave into a conda environment on Windows, we've provided an example batch script for starting pybehave in the root 
 directory (py-behav.bat). This batch script can be copied to the Desktop and the first line should be modified to use the name
 of the environment where pybehave was installed. This batch file will also redirect all console outputs to a log file in the
 *py-behav/logging* directory.
@@ -110,11 +114,11 @@ the *Local* folder.
 
 After opening pybehave, you will see a GUI window like that shown above.
 
-Select *File->Add Task* from the menu bar. Choose your [task](tasks.md) and a chamber number from the dropdowns or load a [Configuration](workstation.md#configurations) file.
+Select *File->Add Task* from the menu bar. Choose your [task](docs/tasks.md) and a chamber number from the dropdowns or load a [Configuration](docs/workstation.md#configurations) file.
 
-Enter a subject ID in the *Subject* text box and choose an [Address File](protocols_addressfiles.md#addressfiles) or [Protocol](protocols_addressfiles.md#protocols) if necessary to set up the local configuration of the task.
+Enter a subject ID in the *Subject* text box and choose an [Address File](docs/protocols_addressfiles.md#addressfiles) or [Protocol](docs/protocols_addressfiles.md#protocols) if necessary to set up the local configuration of the task.
 
-Any [event](events.md) information such as data saving or external communication or pre-task prompts can be configured by right-clicking the chamber widget
+Any [event](docs/events.md) information such as data saving or external communication or pre-task prompts can be configured by right-clicking the chamber widget
 and selecting *Edit Configuration*. All data will be saved to the Desktop in the *py-behav/TASK_NAME/Data/SUBJECT/DATE* folder.
 
 Press the green play button to start the task.
