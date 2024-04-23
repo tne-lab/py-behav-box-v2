@@ -9,7 +9,7 @@ built around a hardware-agnostic and highly object-oriented design philosophy.
 
 Pybehave separates code for task design from specific hardware implementations to streamline development, accessibility, and
 data sharing. This approach, combined with a task-specific Graphical User Interfaces (GUIs), expedites and simplifies the creation and visualization of complex behavioral tasks.
-User created [task](tasks.md) definition files can interact with hardware-specific [source](sources.md) files both written in Python. Any and all local
+User created [task](tasks.md) definition files can interact with hardware-specific [Source](sources.md) files both written in Python. Any and all local
 configuration can be handled outside of Python using [Address Files](protocols_addressfiles.md#addressfiles) and [Protocols](protocols_addressfiles.md#protocols).
 
 All pybehave tasks are coordinated via a [Workstation](workstation.md) GUI.
@@ -17,6 +17,10 @@ All pybehave tasks are coordinated via a [Workstation](workstation.md) GUI.
 Pybehave software and documentation are available on [GitHub](https://github.com/tne-lab/py-behav-box-v2).
 
 ## Getting started
+
+While pybehave is in principle cross-platform, it has only been extensively tested on Windows. We are happy to support 
+other platforms so log any issues on GitHub if you have trouble installing. Additionally, some Sources are unlikely to work
+on all platforms.
 
 ### Install with pip
 
@@ -58,7 +62,7 @@ Hardware-specific extras can be installed by adding square brackets after the '.
 ### Starting pybehave
 
 From the standard install, pybehave can be started by running the `pybehave` command from the virtual environment. Alternatively,
-if you have installed pybehave into a conda environment, we've provided an example batch script for starting pybehave in the root 
+if you have installed pybehave into a conda environment on Windows, we've provided an example batch script for starting pybehave in the root 
 directory (py-behav.bat). This batch script can be copied to the Desktop and the first line should be modified to use the name
 of the environment where pybehave was installed. This batch file will also redirect all console outputs to a log file in the
 *py-behav/logging* directory.
