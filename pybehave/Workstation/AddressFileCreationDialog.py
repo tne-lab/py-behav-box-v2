@@ -127,7 +127,9 @@ class AddressFileCreationDialog(QDialog):
                     for i, comp in enumerate(comps):
                         if comp is not None:
                             self.add_row()
-                            self.addresses[-1][0].setCurrentText(cid)
+                            if cid != self.addresses[-1][0].currentText():
+                                self.addresses[-1][0].setCurrentText(cid)
+                                self.component_changed(len(self.addresses) - 1)
                             self.addresses[-1][1].setCurrentText(comp.component_type)
                             self.addresses[-1][2].setCurrentText(comp.source_name)
                             self.addresses[-1][3].setText(str(comp.component_address) if not isinstance(comp.component_address, str) else f"\"{comp.component_address}\"")
