@@ -34,7 +34,7 @@ your OSCAR interfaces.
 
 Addresses for OSCAR components are formatted as follows:
 
-    {OSCAR Index}_{A, O, or blank}{Controller Address}
+    "{OSCAR Index}_{A, O, or blank}{Controller Address}"
 
 The first part of the address corresponds to the index of the OSCAR this component is associated with. Each OSCAR is assigned
 an index based on the order of the COM IDs provided when creating the OSControllerSource. In the above example, the OSCAR 
@@ -56,16 +56,16 @@ that links the hardware connection on the ECB to the corresponding controller ad
 to the HouseLight slot on the ECB connected to output A, this would require a controller address of '8'. Putting the parts 
 together, the full address for this component would be
 
-    0_8
+    "0_8"
 
 If instead a component was wired to the GPIO terminals, the address would correspond to the pin used (0-3, left-right. For
 example, if the component was connected to the third column of the GPIO terminal the full address would be
 
-    0_A2
+    "0_A2"
 
 Similarly, if a component was wired to the analog output terminals on the third column, the full address would be
 
-    0_O2
+    "0_O2"
 
 ## Citing OSCAR
 
