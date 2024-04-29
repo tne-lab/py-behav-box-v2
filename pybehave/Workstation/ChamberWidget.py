@@ -312,6 +312,8 @@ class ChamberWidget(QGroupBox):
             clear_chamber.triggered.connect(lambda: self.wsg.workstation.remove_task(int(self.chamber_id.text()) - 1))
             edit_config = menu.addAction("Edit Configuration")  # Edits the Task configuration
             edit_config.triggered.connect(self.edit_configuration)
+            refresh = menu.addAction("Reload Task")
+            refresh.triggered.connect(self.refresh)
             menu.popup(QCursor.pos())
 
     def save_configuration(self) -> None:

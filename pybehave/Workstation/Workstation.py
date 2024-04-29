@@ -214,7 +214,9 @@ class Workstation:
                 events = self.decoder.decode(ready.recv_bytes())
                 for event in events:
                     if isinstance(event, PybEvents.AddTaskEvent):
-                        gui = getattr(importlib.import_module("Local.GUIs." + event.task_name + "GUI"), event.task_name + "GUI")
+                        module = importlib.import_module("Local.GUIs." + event.task_name + "GUI")
+                        module = importlib.reload(module)
+                        gui = getattr(module, event.task_name + "GUI")
                         # Position the GUI in pygame
                         col = event.chamber % self.n_col
                         row = math.floor(event.chamber / self.n_col)

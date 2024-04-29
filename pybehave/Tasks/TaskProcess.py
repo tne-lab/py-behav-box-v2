@@ -133,6 +133,7 @@ class TaskProcess(Process):
     def add_task(self, event: PybEvents.AddTaskEvent):
         try:
             task_module = importlib.import_module("Local.Tasks." + event.task_name)
+            task_module = importlib.reload(task_module)
             task = getattr(task_module, event.task_name)
             self.tasks[event.chamber] = task()
             self.tasks[event.chamber].initialize(self, event.metadata)  # Create the task
