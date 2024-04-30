@@ -6,6 +6,10 @@ theme:
 
 repo_url: https://github.com/tne-lab/py-behav-box-v2
 
+markdown_extensions:
+  - toc:
+      permalink: True
+
 nav:
 - Home: index.md
 - Tutorials: tutorials.md
