@@ -156,8 +156,9 @@ class VideoSource(ThreadSource):
         self.screen_width = int(self.screen_width)
         mw.setGeometry(0, 0, self.screen_width, self.screen_height)
         mw.show()
-        asyncio.set_event_loop(qasync.QEventLoop(self.app))
-        self.loop = asyncio.get_event_loop()
+        self.loop = qasync.QEventLoop(self.app)
+        asyncio.set_event_loop(self.loop)
+        asyncio.events._set_running_loop(self.loop)
         self.loop.run_forever()
 
     def register_component(self, component, metadata):
@@ -229,7 +230,7 @@ class VideoSource(ThreadSource):
 
     @staticmethod
     def metadata_defaults(comp_type: Component.Type = None) -> Dict:
-        return {"fr": 30, "row": 0, "col": 0, "row_span": 0, "col_span": 0}
+        return {"fr": 30, "row": 0, "col": 0, "row_span": 0, "col_span": 0, 'vid_type': 'webcam'}
 
 
 class WebcamProvider(VideoProvider):
