@@ -39,7 +39,8 @@ class SettingsDialog(QDialog):
         chamber_box = QGroupBox('Chamber Count')
         chamber_box_layout = QHBoxLayout(self)
         chamber_box.setLayout(chamber_box_layout)
-        self.n_chamber = QLineEdit(str(workstation.n_chamber))
+        self.n_chamber = QSpinBox()
+        self.n_chamber.setValue(workstation.n_chamber)
         chamber_box_layout.addWidget(self.n_chamber)
         self.layout.addWidget(chamber_box)
         refresh_box = QGroupBox('GUI Options')
@@ -96,8 +97,8 @@ class SettingsDialog(QDialog):
     def accept(self) -> None:
         desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
         settings = QSettings(desktop + "/py-behav/pybehave.ini", QSettings.IniFormat)
-        settings.setValue("n_chamber", self.n_chamber.text())
-        self.workstation.n_chamber = int(self.n_chamber.text())
+        settings.setValue("n_chamber", self.n_chamber.value())
+        self.workstation.n_chamber = int(self.n_chamber.value())
         self.workstation.compute_chambergui()
         super(SettingsDialog, self).accept()
 
