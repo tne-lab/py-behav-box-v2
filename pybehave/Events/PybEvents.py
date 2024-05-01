@@ -192,6 +192,14 @@ class ConstantsUpdateEvent(TaskEvent):
     constants: Dict
 
 
+class ConstantUpdateEvent(Loggable):
+    name: str
+    value: Any
+
+    def format(self) -> LoggerEvent:
+        return LoggerEvent(self, self.name, self.value, self.timestamp)
+
+
 class ConstantRemoveEvent(TaskEvent):
     constant: str
 

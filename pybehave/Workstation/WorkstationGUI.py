@@ -39,7 +39,7 @@ class WorkstationGUI(QWidget):
         desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
         settings = QSettings(desktop + "/py-behav/pybehave.ini", QSettings.IniFormat)
 
-        self.setWindowTitle("Pybehav")
+        self.setWindowTitle("Pybehave")
         self.setGeometry(0, 0, int(settings.value("pyqt/w")), int(settings.value("pyqt/h")))  # Position GUI
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)  # Remove GUI margins so it is flush with screen
@@ -56,7 +56,7 @@ class WorkstationGUI(QWidget):
         menubar = QMenuBar()
         main_layout.addWidget(menubar)
         action_file = menubar.addMenu("File")  # File section of menu
-        add_task = action_file.addAction("Add Task")  # Action for adding a new task to a chamber
+        add_task = action_file.addAction("Add Chamber")  # Action for adding a new task to a chamber
         add_task.triggered.connect(self.task_dialog)  # Call task_dialog method when clicked
         settings = action_file.addAction("Settings")  # Action for adjusting py-behav settings
         settings.triggered.connect(self.settings_dialog)  # Call settings_dialog method when clicked

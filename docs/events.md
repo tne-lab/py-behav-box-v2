@@ -435,6 +435,33 @@ Event associated with the request to close the hardware/software connection with
 
 `comp_id` the ID of the component
 
+### Subject Configuration Events
+
+### ConstantsUpdateEvent
+
+    class ConstantsUpdateEvent(TaskEvent):
+        constants: Dict
+
+Event associated with sending information from the [SubjectConfigWidget](workstation.md#configuration-with-subjectconfigwidget) to the Task. This event may send multiple updates
+at once which will be split into constant-specific ConstantUpdateEvents for constants that actually had their values changed.
+
+### ConstantUpdateEvent
+
+    class ConstantUpdateEvent(Loggable):
+        name: str
+        value: Any
+
+Event associated with changes to constants from the SubjectConfigWidget that occur while the Task is running. One of these
+events will be logged for each constant that had a change in value after receiving a ConstantsUpdateEvent.
+
+### ConstantRemoveEvent
+
+    class ConstantRemoveEvent(TaskEvent):
+        constant: str
+
+Event associated with removing a constant from the SubjectConfigWidget. Will reset the value of the constant to what is listed
+in the task's `get_constants` method. If this occurs while a task is running, a ConstantUpdateEvent will be logged.
+
 ### EventLoggers
 
 The classes detailed below are contained in the `Events` package and associated with event logging.

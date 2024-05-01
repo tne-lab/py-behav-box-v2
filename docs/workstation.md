@@ -71,7 +71,10 @@ the Widget is intended for visualizing/displaying Task information or requires f
 
 SubjectConfigWidget is a special purpose Widget that is integrated into the pybehave core. This Widget allows for overriding the
 value of any Task constant for a particular subject. This is useful if constants need to be set on a per-subject basis. 
-Values can also be made specific to the address file or protocol the subject is running on.
+Values can also be made specific to the address file or protocol the subject is running on. Constants can also be updated while a task is running and will log 
+ConstantUpdateEvents which can be analyzed offline or handled in Task code.
+
+![subject_config.png](img/subject_config.png)
 
 ## Workstation Settings
 

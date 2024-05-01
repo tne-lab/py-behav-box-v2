@@ -64,8 +64,12 @@ task's `get_constants` method).
 
 ![img.png](../img/constant_added.png)
 
+Values for a particular subject can be saved to load every time this subject runs the task by pressing the down-arrow button.
 Subject specific configuration can also be made to differ per Protocol or AddressFile but this feature is less useful for
-task testing and more for streamlining experiments.
+task testing and more for streamlining experiments. Constants can also be updated while a task is running and will log 
+ConstantUpdateEvents which can be analyzed offline or handled in Task code. Generally, this real-time feature is more intended
+for development than as an actual part of the task workflow since constants are meant to have fixed values. Instead, elements
+can be added to the GUI to update task variables if user input is required while the task is running.
 
 ## Simulating sources
 
