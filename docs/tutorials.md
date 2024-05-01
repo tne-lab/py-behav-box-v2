@@ -2,6 +2,8 @@
 
 ## Using Pybehave
 
+### [Testing a task without hardware](tutorials/task_no_hardware.md)
+
 ### [Running a task on hardware](tutorials/task_on_hardware.md)
 
 ### [Creating a new Task](tutorials/creating_task.md)
@@ -29,7 +31,5 @@
 ### [Synchronizing with OpenEphys](tutorials/oe_sync.md)
 
 ## Bitesize Tutorials
-
-<!--- ### [Simulating Behavior]() --->
 
 ### [Creating a TaskSequence](tutorials/creating_task_sequence.md)

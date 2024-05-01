@@ -23,7 +23,8 @@ Pybehave is an open source software interface and framework for controlling beha
 built around a hardware-agnostic and highly object-oriented design philosophy.
 
 Pybehave separates code for task design from specific hardware implementations to streamline development, accessibility, and
-data sharing. This approach, combined with a task-specific Graphical User Interfaces (GUIs), expedites and simplifies the creation and visualization of complex behavioral tasks.
+data sharing. This approach, combined with task-specific Graphical User Interfaces (GUIs) enabling user control
+without external hardware, expedites and simplifies the creation and visualization of complex behavioral tasks.
 User created [task](docs/tasks.md) definition files can interact with hardware-specific [Source](docs/sources.md) files both written in Python. Any and all local
 configuration can be handled outside of Python using [Address Files](docs/protocols_addressfiles.md#addressfiles) and [Protocols](docs/protocols_addressfiles.md#protocols).
 
@@ -117,6 +118,7 @@ After opening pybehave, you will see a GUI window like that shown above.
 Select *File->Add Task* from the menu bar. Choose your [task](docs/tasks.md) and a chamber number from the dropdowns or load a [Configuration](docs/workstation.md#configurations) file.
 
 Enter a subject ID in the *Subject* text box and choose an [Address File](docs/protocols_addressfiles.md#addressfiles) or [Protocol](docs/protocols_addressfiles.md#protocols) if necessary to set up the local configuration of the task.
+Alternatively, tasks can be tested without hardware by interacting with [elements](docs/guis.md#elements) in the task-specific [GUI](docs/guis.md).
 
 Any [event](docs/events.md) information such as data saving or external communication or pre-task prompts can be configured by right-clicking the chamber widget
 and selecting *Edit Configuration*. All data will be saved to the Desktop in the *py-behav/TASK_NAME/Data/SUBJECT/DATE* folder.

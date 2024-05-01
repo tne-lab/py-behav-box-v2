@@ -3,7 +3,7 @@
 ## Overview
 
 The Workstation GUI is responsible for controlling all user interactions with [Tasks](tasks.md). The interface presents all the necessary
-controls for running tasks, configuring [Sources](sources.md), [Widgets](events.md), and [EventLoggers](events.md), and visualizing behavior in real-time. Most configuration
+controls for running tasks, configuring [Sources](sources.md), [Widgets](guis.md), and [EventLoggers](events.md), and visualizing behavior in real-time. Most configuration
 is accessible from the menu bar while Tasks are controlled via *ChamberWidgets*.
 
 ![workstation.png](img/workstation.png)
