@@ -6,6 +6,10 @@ theme:
 
 repo_url: https://github.com/tne-lab/py-behav-box-v2
 
+markdown_extensions:
+  - toc:
+      permalink: True
+
 nav:
 - Home: index.md
 - Tutorials: tutorials.md
@@ -17,6 +21,5 @@ nav:
     - Logging events: events.md
     - Developing components: components.md
     - Connecting to hardware: sources.md
-    - TaskSequences: task_sequences.md
 
-copyright: Copyright &copy; 2021 - 2023 Translational Neuroengineering Laboratory
+copyright: Copyright &copy; 2021 - 2024 Translational Neuroengineering Laboratory

@@ -2,6 +2,8 @@
 
 ## Using Pybehave
 
+### [Testing a task without hardware](tutorials/task_no_hardware.md)
+
 ### [Running a task on hardware](tutorials/task_on_hardware.md)
 
 ### [Creating a new Task](tutorials/creating_task.md)
@@ -20,12 +22,14 @@
 
 <!--- ### [Creating a new Widget]() --->
 
-## Bitesize Tutorials
+## Application-specific Tutorials
+
+### [Setting up OSCAR with pybehave](tutorials/oscar.md)
 
 ### [Synchronizing with video data](tutorials/video_sync.md) 
 
 ### [Synchronizing with OpenEphys](tutorials/oe_sync.md)
 
-<!--- ### [Simulating Behavior]() --->
+## Bitesize Tutorials
 
 ### [Creating a TaskSequence](tutorials/creating_task_sequence.md)
