@@ -40,6 +40,7 @@ class SettingsDialog(QDialog):
         chamber_box_layout = QHBoxLayout(self)
         chamber_box.setLayout(chamber_box_layout)
         self.n_chamber = QSpinBox()
+        self.n_chamber.setMinimum(1)
         self.n_chamber.setValue(workstation.n_chamber)
         chamber_box_layout.addWidget(self.n_chamber)
         self.layout.addWidget(chamber_box)
