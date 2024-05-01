@@ -67,6 +67,11 @@ Similarly, if a component was wired to the analog output terminals on the third 
 
     "0_O2"
 
+The OSControllerSource does support having multiple outputs for the same component, so the following address would be
+valid if the same component corresponded to controller addresses 5, 6, and 7 for example.
+
+    ["0_5", "0_6", "0_7"]
+
 ## Citing OSCAR
 
 If you use OSCAR, please cite the preprint hosted on biorxiv:
