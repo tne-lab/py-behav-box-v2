@@ -312,9 +312,21 @@ class ChamberWidget(QGroupBox):
             clear_chamber.triggered.connect(lambda: self.wsg.workstation.remove_task(int(self.chamber_id.text()) - 1))
             edit_config = menu.addAction("Edit Configuration")  # Edits the Task configuration
             edit_config.triggered.connect(self.edit_configuration)
+            remove_address_file = menu.addAction("Remove AddressFile")
+            remove_address_file.triggered.connect(self.remove_address_file)
+            remove_protocol = menu.addAction("Remove Protocol")
+            remove_protocol.triggered.connect(self.remove_protocol)
             refresh = menu.addAction("Reload Task")
             refresh.triggered.connect(self.refresh)
             menu.popup(QCursor.pos())
+
+    def remove_address_file(self):
+        self.address_file_path.setText("")
+        self.refresh()
+
+    def remove_protocol(self):
+        self.protocol_path.setText("")
+        self.refresh()
 
     def save_configuration(self) -> None:
         desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
