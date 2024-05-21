@@ -4,6 +4,7 @@ import multiprocessing
 import sys
 import threading
 import time
+import traceback
 from multiprocessing.dummy.connection import Connection
 from typing import List
 
@@ -213,102 +214,110 @@ class Workstation:
             for ready in multiprocessing.connection.wait(conns):
                 events = self.decoder.decode(ready.recv_bytes())
                 for event in events:
-                    if isinstance(event, PybEvents.AddTaskEvent):
-                        module = importlib.import_module("Local.GUIs." + event.task_name + "GUI")
-                        module = importlib.reload(module)
-                        gui = getattr(module, event.task_name + "GUI")
-                        # Position the GUI in pygame
-                        col = event.chamber % self.n_col
-                        row = math.floor(event.chamber / self.n_col)
-                        # Create the GUI
-                        self.guis[event.chamber] = gui(event, self.task_gui.subsurface(col * self.w, row * self.h, self.w, self.h), self)
-                    elif isinstance(event, PybEvents.TaskEvent):
-                        if event.chamber in self.guis:
-                            for widget in self.wsg.chambers[event.chamber].widgets:
-                                if isinstance(widget, EventWidget):
-                                    widget.emitter.emit(event)
-                            self.guis[event.chamber].handle_event(event)
+                    try:
+                        if isinstance(event, PybEvents.AddTaskEvent):
+                            module = importlib.import_module("Local.GUIs." + event.task_name + "GUI")
+                            module = importlib.reload(module)
+                            gui = getattr(module, event.task_name + "GUI")
+                            # Position the GUI in pygame
                             col = event.chamber % self.n_col
                             row = math.floor(event.chamber / self.n_col)
-                            rect = pygame.Rect((col * self.w, row * self.h, self.w, self.h))
-                            if isinstance(event, PybEvents.InitEvent) or isinstance(event, PybEvents.StartEvent):
-                                if "sub_task" in event.metadata:
-                                    self.guis[event.chamber].switch_sub_gui(event)
-                                self.guis[event.chamber].complete = False
-                                self.guis[event.chamber].draw()
-                                self.gui_updates.append(rect)
-                            elif isinstance(event, PybEvents.OutputFileChangedEvent):
-                                self.guis[event.chamber].subject_name.text = event.subject
-                                pygame.draw.rect(self.guis[event.chamber].task_gui, Colors.darkgray, self.guis[event.chamber].subject_name.rect, 0)
-                                self.guis[event.chamber].subject_name.draw()
-                                self.gui_updates.append(self.guis[event.chamber].subject_name.rect.move(col * self.w, row * self.h))
-                            elif isinstance(event, PybEvents.TaskCompleteEvent):
-                                if not isinstance(self.guis[event.chamber], SequenceGUI) or "sequence_complete" in event.metadata:
-                                    self.guis[event.chamber].complete = True
+                            # Create the GUI
+                            self.guis[event.chamber] = gui(event, self.task_gui.subsurface(col * self.w, row * self.h, self.w, self.h), self)
+                        elif isinstance(event, PybEvents.TaskEvent):
+                            if event.chamber in self.guis:
+                                for widget in self.wsg.chambers[event.chamber].widgets:
+                                    if isinstance(widget, EventWidget):
+                                        widget.emitter.emit(event)
+                                self.guis[event.chamber].handle_event(event)
+                                col = event.chamber % self.n_col
+                                row = math.floor(event.chamber / self.n_col)
+                                rect = pygame.Rect((col * self.w, row * self.h, self.w, self.h))
+                                if isinstance(event, PybEvents.InitEvent) or isinstance(event, PybEvents.StartEvent):
+                                    if "sub_task" in event.metadata:
+                                        self.guis[event.chamber].switch_sub_gui(event)
+                                    self.guis[event.chamber].complete = False
                                     self.guis[event.chamber].draw()
                                     self.gui_updates.append(rect)
-                                    self.wsg.chambers[event.chamber].stop(False)
-                            elif isinstance(event, PybEvents.ClearEvent) and event.del_loggers:
-                                pygame.draw.rect(self.task_gui, Colors.black, rect)
-                                self.gui_updates.append(rect)
-                                self.wsg.remove_task(event.chamber + 1)
-                                del self.guis[event.chamber]
-                            else:
-                                if isinstance(self.guis[event.chamber], SequenceGUI):
-                                    elements = self.guis[event.chamber].get_all_elements()
+                                elif isinstance(event, PybEvents.OutputFileChangedEvent):
+                                    self.guis[event.chamber].subject_name.text = event.subject
+                                    pygame.draw.rect(self.guis[event.chamber].task_gui, Colors.darkgray, self.guis[event.chamber].subject_name.rect, 0)
+                                    self.guis[event.chamber].subject_name.draw()
+                                    self.gui_updates.append(self.guis[event.chamber].subject_name.rect.move(col * self.w, row * self.h))
+                                elif isinstance(event, PybEvents.TaskCompleteEvent):
+                                    if not isinstance(self.guis[event.chamber], SequenceGUI) or "sequence_complete" in event.metadata:
+                                        self.guis[event.chamber].complete = True
+                                        self.guis[event.chamber].draw()
+                                        self.gui_updates.append(rect)
+                                        self.wsg.chambers[event.chamber].stop(False)
+                                elif isinstance(event, PybEvents.ClearEvent) and event.del_loggers:
+                                    pygame.draw.rect(self.task_gui, Colors.black, rect)
+                                    self.gui_updates.append(rect)
+                                    self.wsg.remove_task(event.chamber + 1)
+                                    del self.guis[event.chamber]
                                 else:
-                                    elements = self.guis[event.chamber].elements
+                                    if isinstance(self.guis[event.chamber], SequenceGUI):
+                                        elements = self.guis[event.chamber].get_all_elements()
+                                    else:
+                                        elements = self.guis[event.chamber].elements
+                                    for element in elements:
+                                        if element.has_updated():
+                                            element.draw()
+                                            self.gui_updates.append(element.rect.move(col * self.w, row * self.h))
+                        elif isinstance(event, PybEvents.HeartbeatEvent) or isinstance(event, PybEvents.PygameEvent):
+                            for key in self.guis.keys():
+                                self.guis[key].handle_event(event)
+                                col = key % self.n_col
+                                row = math.floor(key / self.n_col)
+                                if isinstance(self.guis[key], SequenceGUI):
+                                    elements = self.guis[key].get_all_elements()
+                                else:
+                                    elements = self.guis[key].elements
                                 for element in elements:
                                     if element.has_updated():
                                         element.draw()
                                         self.gui_updates.append(element.rect.move(col * self.w, row * self.h))
-                    elif isinstance(event, PybEvents.HeartbeatEvent) or isinstance(event, PybEvents.PygameEvent):
-                        for key in self.guis.keys():
-                            self.guis[key].handle_event(event)
-                            col = key % self.n_col
-                            row = math.floor(key / self.n_col)
-                            if isinstance(self.guis[key], SequenceGUI):
-                                elements = self.guis[key].get_all_elements()
-                            else:
-                                elements = self.guis[key].elements
-                            for element in elements:
-                                if element.has_updated():
-                                    element.draw()
-                                    self.gui_updates.append(element.rect.move(col * self.w, row * self.h))
-                    elif isinstance(event, PybEvents.ErrorEvent):
-                        print(event.traceback)
-                        if "chamber" in event.metadata:
-                            chamber_suffix = "in chamber " + str(event.metadata["chamber"] + 1) + "<br>"
-                            if event.error == "ComponentRegisterError":
-                                error_message = "A Component failed to register " + chamber_suffix + event.traceback
-                            elif event.error == "SourceUnavailableError":
-                                error_message = "A requested Source is currently unavailable"
-                            elif event.error == "MalformedProtocolError":
-                                error_message = "Error raised when parsing Protocol file " + chamber_suffix + event.traceback
-                            elif event.error == "MalformedAddressFileError":
-                                error_message = "Error raised when parsing AddressFile " + chamber_suffix + event.traceback
-                            elif event.error == "InvalidComponentTypeError":
-                                error_message = "A Component in the AddressFile is an invalid type" + chamber_suffix
-                            elif "sid" in event.metadata:
-                                error_message = "Unhandled exception in source '" + event.metadata["sid"] + "'\n" + event.traceback
-                            else:
-                                error_message = "Unhandled exception " + chamber_suffix + event.traceback
-                            self.wsg.remove_task(event.metadata["chamber"])
-                        else:
-                            error_message = f"Unhandled exception in PyBehave processing code. <a href='https://github.com/tne-lab/py-behav-box-v2/issues/new?title=Unhandled%20Exception&body={event.traceback}'>Click here</a> to create a GitHub issue<br>" + event.traceback
-                        self.wsg.error.emit(error_message)
-                    elif isinstance(event, PybEvents.UnavailableSourceEvent):
-                        self.sources[event.sid].available = False
-                        if self.wsg.sd is not None and self.wsg.sd.isVisible():
-                            self.wsg.sd.update_source_availability()
-                    elif isinstance(event, PybEvents.ExitEvent):
-                        return
+                        elif isinstance(event, PybEvents.ErrorEvent):
+                            self.handle_error(event)
+                        elif isinstance(event, PybEvents.UnavailableSourceEvent):
+                            self.sources[event.sid].available = False
+                            if self.wsg.sd is not None and self.wsg.sd.isVisible():
+                                self.wsg.sd.update_source_availability()
+                        elif isinstance(event, PybEvents.ExitEvent):
+                            return
 
-                    if time.perf_counter() - self.last_frame > 1 / self.fr:
-                        if len(self.gui_updates) > 0:
-                            pygame.display.update(self.gui_updates)
-                            self.gui_updates = []
-                        self.last_frame = time.perf_counter()
+                        if time.perf_counter() - self.last_frame > 1 / self.fr:
+                            if len(self.gui_updates) > 0:
+                                pygame.display.update(self.gui_updates)
+                                self.gui_updates = []
+                            self.last_frame = time.perf_counter()
+                    except BaseException as e:
+                        metadata = {"chamber": event.chamber} if isinstance(event, PybEvents.TaskEvent) else {}
+                        tb = traceback.format_exc()
+                        self.handle_error(PybEvents.ErrorEvent(type(e).__name__, tb, metadata=metadata))
+
+    def handle_error(self, event: PybEvents.ErrorEvent):
+        print(event.traceback)
+        if "chamber" in event.metadata:
+            chamber_suffix = "in chamber " + str(event.metadata["chamber"] + 1) + "<br>"
+            if event.error == "ComponentRegisterError":
+                error_message = "A Component failed to register " + chamber_suffix + event.traceback
+            elif event.error == "SourceUnavailableError":
+                error_message = "A requested Source is currently unavailable"
+            elif event.error == "MalformedProtocolError":
+                error_message = "Error raised when parsing Protocol file " + chamber_suffix + event.traceback
+            elif event.error == "MalformedAddressFileError":
+                error_message = "Error raised when parsing AddressFile " + chamber_suffix + event.traceback
+            elif event.error == "InvalidComponentTypeError":
+                error_message = "A Component in the AddressFile is an invalid type" + chamber_suffix
+            elif "sid" in event.metadata:
+                error_message = "Unhandled exception in source '" + event.metadata["sid"] + "'\n" + event.traceback
+            else:
+                error_message = "Unhandled exception " + chamber_suffix + event.traceback
+            self.wsg.remove_task(event.metadata["chamber"])
+        else:
+            error_message = f"Unhandled exception in PyBehave processing code. <a href='https://github.com/tne-lab/py-behav-box-v2/issues/new?title=Unhandled%20Exception&body={event.traceback}'>Click here</a> to create a GitHub issue<br>" + event.traceback
+        self.wsg.error.emit(error_message)
 
     def exit(self, stop_tasks=False):
         """
