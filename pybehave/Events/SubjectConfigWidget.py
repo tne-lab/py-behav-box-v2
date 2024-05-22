@@ -2,7 +2,7 @@ import importlib
 import os
 
 from PyQt5 import QtCore
-from PyQt5.QtCore import QSettings, QTimer, pyqtSlot
+from PyQt5.QtCore import QSettings, QTimer, pyqtSlot, Qt
 from PyQt5.QtWidgets import QGroupBox, QHBoxLayout, QVBoxLayout, QPushButton, QWidget, QCheckBox, \
     QListWidget, QListWidgetItem, QComboBox
 
@@ -24,8 +24,9 @@ class SubjectConfigWidget(EventWidget):
         self.layout.addWidget(self.widget)
         self.setLayout(self.layout)
         self.config_layout = QVBoxLayout(self.widget)
-        self.controls_layout = QHBoxLayout(self.widget)
+        self.controls_layout = QVBoxLayout(self.widget)
         self.specific_layout = QVBoxLayout(self.widget)
+        self.top_layout = QHBoxLayout(self.widget)
         self.protocol_specific = QCheckBox("Protocol Specific")
         self.protocol_specific.stateChanged.connect(lambda _: self.load_keys())
         self.address_specific = QCheckBox("Address File Specific")
@@ -33,18 +34,21 @@ class SubjectConfigWidget(EventWidget):
         self.specific_layout.addWidget(self.protocol_specific)
         self.specific_layout.addWidget(self.address_specific)
         self.remove_button = QPushButton()
-        self.remove_button.setText("−")
-        self.remove_button.setFixedWidth(30)
+        self.remove_button.setText("Remove Constant")
         self.remove_button.setDisabled(True)
         self.remove_button.clicked.connect(self.remove_constant)
         self.add_button = QPushButton()
-        self.add_button.setText("+")
-        self.add_button.setFixedWidth(30)
+        self.add_button.setText("Add Constant")
         self.add_button.clicked.connect(self.add_constant)
-        self.controls_layout.addLayout(self.specific_layout)
-        self.controls_layout.addWidget(self.remove_button)
         self.controls_layout.addWidget(self.add_button)
-        self.config_layout.addLayout(self.controls_layout)
+        self.controls_layout.addWidget(self.remove_button)
+        self.save_button = QPushButton()
+        self.save_button.setText("Save Constants")
+        self.save_button.clicked.connect(self.save_values)
+        self.controls_layout.addWidget(self.save_button)
+        self.top_layout.addLayout(self.specific_layout)
+        self.top_layout.addLayout(self.controls_layout)
+        self.config_layout.addLayout(self.top_layout)
         constants_name_box = QGroupBox('Name')
         constants_name_layout = QVBoxLayout(self.widget)
         self.constants_name_list = QListWidget()
@@ -179,11 +183,14 @@ class SubjectConfigWidget(EventWidget):
     def on_commit_value(self):
         index = self.constants_value_list.currentRow()
         if len(self.constants_value_list.currentItem().text()) > 0:
-            self.settings.setValue(self.combos[index].currentText(), self.constants_value_list.currentItem().text())
             if len(self.constants_value_list.currentItem().text()) > 0:
                 self.cw.workstation.mainq.send_bytes(
                     self.cw.workstation.encoder.encode(PybEvents.ConstantsUpdateEvent(int(self.cw.chamber_id.text()) - 1,
                                                        {self.combos[index].currentText(): self.constants_value_list.currentItem().text()})))
+
+    def save_values(self):
+        for i in range(len(self.combos)):
+            self.settings.setValue(self.combos[i].currentText(), self.constants_value_list.item(i).text())
 
     def remove_option(self, option, index):
         for i, combo in enumerate(self.combos):

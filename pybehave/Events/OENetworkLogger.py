@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+try:
+    import zmq
+except ModuleNotFoundError:
+    from pybehave.Utilities.Exceptions import MissingExtraError
+    raise MissingExtraError('oe')
+
 import collections
 import threading
 from typing import TYPE_CHECKING
@@ -10,7 +16,6 @@ from pybehave.Events.PybEvents import Loggable
 if TYPE_CHECKING:
     from pybehave.Events.LoggerEvent import LoggerEvent
 
-import zmq
 import time
 
 

@@ -25,6 +25,17 @@ by the task's `get_constants` method with a new value to replace the pre-existin
 
 Protocols can be loaded from any directory, but we recommend saving them at *Desktop/py-behav-v2/TASK_NAME/Protocols*.
 
+### Protocol Creation GUI
+
+Instead of manually creating Protocols, Protocols can also be created using a GUI tool by going to File->Protocols->New/Edit.
+From here, you can select which Task you want to create a Protocol for. In the creation GUI, constants can be added or removed
+from the Protocol with the corresponding buttons in the bottom-left of the interface. When a constant is added, the GUI
+will default to selecting one of the available entries and autopopulate it with the default value from the `get_constants`
+method. The chosen constant can be changed in the corresponding Constant dropdown. If the constant's default value is an expression,
+the expression will be evaluated and set as the default value.
+
+![img/protocol_gui.png](img/protocol_gui.png)
+
 ## AddressFiles
 
 AddressFiles are executed at runtime to associate *Components* with particular *Sources*. Tasks can have any number of AddressFiles
@@ -51,3 +62,19 @@ is the hardware address the source should associate this component with. The fir
 indicates the component's list position if the ID is associated with a list of components. The second optional argument, `metadata`
 is a dictionary that can be used to override Component attributes (analogous to a Protocol for components). AddressFiles can be 
 loaded from any directory, but we recommend saving them at *Desktop/py-behav-v2/TASK_NAME/AddressFiles*.
+
+### AddressFile Creation GUI
+
+Instead of manually creating AddressFiles, AddressFiles can also be created using a GUI tool by going to File->AddressFiless->New/Edit.
+From here, you can select which Task you want to create an AddressFile for. In the creation GUI, components can be added or removed
+from the AddressFile with the corresponding buttons in the bottom-left of the interface. When a component is added, the GUI
+will default to selecting one of the available entries and autopopulate it according to the `get_components`
+method. The chosen component can be changed in the corresponding Component dropdown. The type of the component can be changed
+in the Type dropdown and will automatically be restricted to valid options. The Source linked to the component can be changed 
+in the Source dropdown and will include possible entries for all Sources configured in the system. The component address can
+be changed in the Address field; valid addresses must be strings, integers, floats, or list of the aforementioned options.
+If the component is part of a list, the component index in the list can be selected from the Index dropdown. Lastly, any metadata
+required for this component by the linked Source or the Component class itself will automatically be indicated in the Metdata
+field. Default values for metadata are indicated in the corresponding Source or Component class.
+
+![addressfile_gui.png](img/addressfile_gui.png)

@@ -1,8 +1,12 @@
+try:
+    import serial
+except ModuleNotFoundError:
+    from pybehave.Utilities.Exceptions import MissingExtraError
+    raise MissingExtraError('serial')
+
 import ctypes
 import threading
 from contextlib import ExitStack
-
-import serial
 
 from pybehave.Components.Component import Component
 
@@ -27,7 +31,7 @@ class OSControllerSource(ThreadSource):
         threads = []
         with OSCARContextManager(self.sps) as stack:
             for i, com in enumerate(self.coms):
-                self.sps.append(serial.Serial(port=com, baudrate=1000000, write_timeout=None, timeout=None, dsrdtr=True))
+                self.sps.append(serial.Serial(port=com, baudrate=1000000, write_timeout=None, timeout=1, dsrdtr=True))
                 stack.enter_context(self.sps[i].__enter__())
                 self.sps[i].dtr = True
                 self.sps[i].reset_input_buffer()
@@ -35,6 +39,8 @@ class OSControllerSource(ThreadSource):
                 threads.append(threading.Thread(target=self.serial_thread, args=[i]))
                 threads[i].start()
             self.close_event.wait()
+            for t in threads:
+                t.join()
             for sp in self.sps:
                 reset = Reset()
                 reset.b.command = 4
@@ -150,6 +156,8 @@ class OSControllerSource(ThreadSource):
                         self.values[self.input_ids[input_id]] = not self.values[self.input_ids[input_id]]
                         self.update_component(self.input_ids[input_id], self.values[self.input_ids[input_id]])
                     serial_command = bytearray()
+            if self.close_event.is_set():
+                return
 
 
 class OSCARContextManager(ExitStack):

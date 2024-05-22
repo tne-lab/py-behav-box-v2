@@ -153,3 +153,8 @@ class Source(Process):
         """Call to signal to other processes that the Source has lost connection to the hardware."""
         self.available = False
         self.queue.send_bytes(self.encoder.encode(UnavailableSourceEvent(self.sid)))
+
+    @staticmethod
+    def metadata_defaults(comp_type: Component.Type = None) -> Dict:
+        """Call to get the metadata names and default values required by this source."""
+        return {}

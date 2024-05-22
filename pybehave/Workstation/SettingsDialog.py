@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import multiprocessing
 import os
+import webbrowser
 from typing import TYPE_CHECKING
 
 from pybehave.Events.PybEvents import AddSourceEvent, RemoveSourceEvent
+from pybehave.Utilities.Exceptions import MissingExtraError
 from pybehave.Utilities.find_closing_paren import find_closing_paren
 import pybehave.Sources
 
@@ -37,7 +39,9 @@ class SettingsDialog(QDialog):
         chamber_box = QGroupBox('Chamber Count')
         chamber_box_layout = QHBoxLayout(self)
         chamber_box.setLayout(chamber_box_layout)
-        self.n_chamber = QLineEdit(str(workstation.n_chamber))
+        self.n_chamber = QSpinBox()
+        self.n_chamber.setMinimum(1)
+        self.n_chamber.setValue(workstation.n_chamber)
         chamber_box_layout.addWidget(self.n_chamber)
         self.layout.addWidget(chamber_box)
         refresh_box = QGroupBox('GUI Options')
@@ -83,6 +87,7 @@ class SettingsDialog(QDialog):
         self.layout.addWidget(source_box)
         self.layout.addWidget(self.control_buttons)
         self.setLayout(self.layout)
+        self.error_dialog = None
 
     def update_refresh_check(self):
         self.workstation.refresh_gui = self.refresh_gui.isChecked()
@@ -93,8 +98,8 @@ class SettingsDialog(QDialog):
     def accept(self) -> None:
         desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
         settings = QSettings(desktop + "/py-behav/pybehave.ini", QSettings.IniFormat)
-        settings.setValue("n_chamber", self.n_chamber.text())
-        self.workstation.n_chamber = int(self.n_chamber.text())
+        settings.setValue("n_chamber", self.n_chamber.value())
+        self.workstation.n_chamber = int(self.n_chamber.value())
         self.workstation.compute_chambergui()
         super(SettingsDialog, self).accept()
 
@@ -154,6 +159,7 @@ class SettingsDialog(QDialog):
 
 
 class AddSourceDialog(QDialog):
+
     def __init__(self, sd: SettingsDialog):
         super(AddSourceDialog, self).__init__()
         self.sd = sd
@@ -181,10 +187,10 @@ class AddSourceDialog(QDialog):
         self.sources = []
         self.local_sources = []
         for f in pkgutil.iter_modules(pybehave.Sources.__path__):
-            if not f.name == "Source":
+            if not f.name == "Source" and not f.name == 'ThreadSource':
                 self.sources.append(f.name)
         for f in pkgutil.iter_modules(['Local.Sources']):
-            if not f.name.endswith('Source'):
+            if f.name.endswith('Source'):
                 self.local_sources.append(f.name)
         self.source.addItems(self.sources)
         source_box_layout.addWidget(self.source)
@@ -193,18 +199,35 @@ class AddSourceDialog(QDialog):
         self.setLayout(self.layout)
         self.params = []
 
+    def event(self, event):
+        if event.type() == QEvent.EnterWhatsThisMode:
+            QWhatsThis.leaveWhatsThisMode()
+            webbrowser.open('https://py-behav-box-v2.readthedocs.io/en/latest/sources/#included-sources')
+            return True
+        else:
+            return super().event(event)
+
     def set_params(self) -> None:
-        if self.source.currentText() in self.sources:
-            source_type = getattr(importlib.import_module("pybehave.Sources." + self.source.currentText()), self.source.currentText())
-        else:
-            source_type = getattr(importlib.import_module("Local.Sources." + self.source.currentText()),
-                                  self.source.currentText())
-        all_params = inspect.getfullargspec(source_type.__init__)
-        if len(all_params.args) > 1:
-            self.spd = SourceParametersDialog(self, all_params)
-            self.spd.show()
-        else:
-            self.accept()
+        try:
+            if self.source.currentText() in self.sources:
+                source_type = getattr(importlib.import_module("pybehave.Sources." + self.source.currentText()), self.source.currentText())
+            else:
+                source_type = getattr(importlib.import_module("Local.Sources." + self.source.currentText()),
+                                      self.source.currentText())
+            all_params = inspect.getfullargspec(source_type.__init__)
+            if len(all_params.args) > 1:
+                self.spd = SourceParametersDialog(self, all_params)
+                self.spd.show()
+            else:
+                self.accept()
+        except MissingExtraError as e:
+            self.sd.error_dialog = QMessageBox(self)
+            self.sd.error_dialog.setWindowTitle('Missing extra')
+            self.sd.error_dialog.setText(f'{self.source.currentText()} requires the \'{e.extra}\' extra. This extra can be installed by running \'pip install pybehave[{e.extra}]\' (or \'pip install .[{e.extra}]\' if you\'re using a local installation) in your pybehave virtual environment.')
+            self.sd.error_dialog.setStandardButtons(QMessageBox.Ok)
+            self.sd.error_dialog.setIcon(QMessageBox.Critical)
+            self.sd.error_dialog.show()
+            self.close()
 
     def escape(self, s: str) -> str:
         s = s.replace('\'', '\\\\\\\'')
@@ -276,6 +299,14 @@ class SourceParametersDialog(QDialog):
             self.params.append(param)
         self.layout.addWidget(self.control_buttons)
         self.setLayout(self.layout)
+
+    def event(self, event):
+        if event.type() == QEvent.EnterWhatsThisMode:
+            QWhatsThis.leaveWhatsThisMode()
+            webbrowser.open('https://py-behav-box-v2.readthedocs.io/en/latest/sources/#' + self.asd.source.currentText().lower())
+            return True
+        else:
+            return super().event(event)
 
     def accept(self) -> None:
         for p in self.params:

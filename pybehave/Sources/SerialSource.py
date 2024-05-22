@@ -1,6 +1,11 @@
-import threading
+try:
+    import serial
+except ModuleNotFoundError:
+    from pybehave.Utilities.Exceptions import MissingExtraError
+    raise MissingExtraError('serial')
 
-import serial
+import threading
+from typing import Dict
 
 from pybehave.Components.Component import Component
 from pybehave.Sources.Source import Source
@@ -58,3 +63,7 @@ class SerialSource(Source):
         else:
             term = ""
         self.connections[self.components[component_id].address].write(bytes(str(msg) + term, 'utf-8'))
+
+    @staticmethod
+    def metadata_defaults(comp_type: Component.Type = None) -> Dict:
+        return {"baudrate": 9600, "terminator": ""}

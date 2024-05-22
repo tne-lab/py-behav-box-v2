@@ -192,6 +192,14 @@ class ConstantsUpdateEvent(TaskEvent):
     constants: Dict
 
 
+class ConstantUpdateEvent(Loggable):
+    name: str
+    value: Any
+
+    def format(self) -> LoggerEvent:
+        return LoggerEvent(self, self.name, self.value, self.timestamp)
+
+
 class ConstantRemoveEvent(TaskEvent):
     constant: str
 
@@ -199,7 +207,7 @@ class ConstantRemoveEvent(TaskEvent):
 class ComponentRegisterEvent(PybEvent):
     comp_type: str
     cid: str
-    address: typing.Union[str, typing.List[str]]
+    address: typing.Union[typing.Union[str, int, float], typing.List[typing.Union[str, int, float]]]
 
 
 class ComponentCloseEvent(PybEvent):

@@ -1,9 +1,14 @@
+try:
+    from hikload.hikvisionapi.classes import HikvisionServer
+    import hikload.hikvisionapi.utils as hikutils
+except ModuleNotFoundError:
+    from pybehave.Utilities.Exceptions import MissingExtraError
+    raise MissingExtraError('hikvision')
+
 import threading
 import time
 import datetime
 
-from hikload.hikvisionapi.classes import HikvisionServer
-import hikload.hikvisionapi.utils as hikutils
 import os
 
 from pybehave.Events import PybEvents

@@ -1,8 +1,15 @@
-import nidaqmx
-from nidaqmx import stream_writers
-from nidaqmx.constants import (LineGrouping)
+try:
+    import nidaqmx
+    from nidaqmx import stream_writers
+    from nidaqmx.constants import (LineGrouping)
+    import nidaqmx.system as system
+except ModuleNotFoundError:
+    from pybehave.Utilities.Exceptions import MissingExtraError
+    raise MissingExtraError('ni')
+
+from typing import Dict
+
 import numpy as np
-from nidaqmx.system import system
 
 from pybehave.Components.Component import Component
 from pybehave.Sources.Source import Source
@@ -97,3 +104,10 @@ class NIDAQSource(Source):
                                                     samps_per_chan=msg.shape[1])
             self.ao_stream.write_many_sample(output)
             self.ao_task.start()
+
+    @staticmethod
+    def metadata_defaults(comp_type: Component.Type = None) -> Dict:
+        if comp_type == Component.Type.ANALOG_OUTPUT:
+            return {"sr": 30000}
+        else:
+            return {}

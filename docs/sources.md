@@ -126,6 +126,8 @@ Communicates with digital input and output lines represented via a connection to
 
 *Required Extras:* `whisker`
 
+Run `pip install pybehave[whisker]` if the extra is missing.
+
 *Attributes:*
 
 `address` IP address for the computer running the Whisker Server. Use "localhost" if pybehave and Whisker are on the same machine.
@@ -145,6 +147,8 @@ Communicates with digital input and output lines represented via a connection to
 Communicates with touchscreen objects represented via a connection to Whisker.
 
 *Required Extras:* `whisker`
+
+Run `pip install pybehave[whisker]` if the extra is missing.
 
 *Attributes:*
 
@@ -166,6 +170,8 @@ in JSON mode.
 
 *Required Extras:* `oe`
 
+Run `pip install pybehave[oe]` if the extra is missing.
+
 *Attributes:*
 
 `address` IP address for the computer running OpenEphys. Use "localhost" if pybehave and OpenEphys are on the same machine.
@@ -183,6 +189,8 @@ Source for coordinating connections to the Open Source Controller for Animal Res
 
 *Required Extras:* `serial`
 
+Run `pip install pybehave[serial]` if the extra is missing.
+
 *Attributes:*
 
 `coms` list of serial port IDs corresponding to OSCAR interfaces.
@@ -194,6 +202,8 @@ Source for coordinating connections to the Open Source Controller for Animal Res
 Source for coordinating connections to serial devices.
 
 *Required Extras:* `serial`
+
+Run `pip install pybehave[serial]` if the extra is missing.
 
 *Required Metadata:*
 
@@ -214,7 +224,9 @@ Source for coordinating connections to serial devices.
 Source for coordinating video recording with Webcams. Generally intended for sole use with Video components. Currently supports
 standard USB webcams. 
 
-*Required Extras:* `opencv-python`
+*Required Extras:* `video`
+
+Run `pip install pybehave[video]` if the extra is missing.
 
 *Attributes:*
 
@@ -251,6 +263,8 @@ By default, the source will draw a small black rectangle in the bottom left of t
 
 *Required Extras:* `hikvision`
 
+Run `pip install pybehave[hikvision]` if the extra is missing.
+
 *Attributes:*
 
 `ip` the IP of the DVR
@@ -269,6 +283,8 @@ Input functionality is currently not implemented.
 
 *Required Extras:* `ni`
 
+Run `pip install pybehave[ni]` if the extra is missing.
+
 *Attributes:*
 
 `dev` the device ID of the DAQ
@@ -285,3 +301,5 @@ Source for coordinating selection of arbitrary parameters (like stimulation or t
 using Bayesian optimization with gaussian process regression. Typically used with the general purpose `Both` component class.
 
 *Required Extras:* `bo`
+
+Run `pip install pybehave[bo]` if the extra is missing.

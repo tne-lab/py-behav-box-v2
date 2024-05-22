@@ -1,7 +1,13 @@
 from __future__ import annotations
+
+try:
+    import zmq
+except ModuleNotFoundError:
+    from pybehave.Utilities.Exceptions import MissingExtraError
+    raise MissingExtraError('oe')
+
 from typing import TYPE_CHECKING
 
-import zmq
 import json
 from pybehave.Sources.ThreadSource import ThreadSource
 

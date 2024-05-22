@@ -1,8 +1,12 @@
+try:
+    import win32gui
+except ModuleNotFoundError:
+    from pybehave.Utilities.Exceptions import MissingExtraError
+    raise MissingExtraError('whisker')
+
 import os
 import socket
 import time
-
-import win32gui
 
 from pybehave.Components.Component import Component
 from pybehave.Sources.ThreadSource import ThreadSource

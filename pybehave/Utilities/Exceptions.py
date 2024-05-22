@@ -20,3 +20,8 @@ class SourceUnavailableError(BaseException):
 
 class AddTaskError(BaseException):
     pass
+
+
+class MissingExtraError(BaseException):
+    def __init__(self, extra: str):
+        self.extra = extra

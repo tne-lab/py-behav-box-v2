@@ -6,6 +6,9 @@ from typing import TYPE_CHECKING, List
 
 from pybehave.Events.Widget import Widget
 from pybehave.Utilities.Exceptions import AddTaskError
+from pybehave.Workstation.AddressFileCreationDialog import AddressFileCreationDialog
+from pybehave.Workstation.ProtocolCreationDialog import ProtocolCreationDialog
+from pybehave.Workstation.SelectTaskDialog import SelectTaskDialog
 
 if TYPE_CHECKING:
     from pybehave.Workstation.Workstation import Workstation
@@ -26,6 +29,9 @@ class WorkstationGUI(QWidget):
         QWidget.__init__(self)
         self.sd = None
         self.td = None
+        self.afcd = None
+        self.std = None
+        self.pcd = None
         self.emsg = None
         self.ignore_errors = False
         self.n_active = 0
@@ -33,7 +39,7 @@ class WorkstationGUI(QWidget):
         desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
         settings = QSettings(desktop + "/py-behav/pybehave.ini", QSettings.IniFormat)
 
-        self.setWindowTitle("Pybehav")
+        self.setWindowTitle("Pybehave")
         self.setGeometry(0, 0, int(settings.value("pyqt/w")), int(settings.value("pyqt/h")))  # Position GUI
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)  # Remove GUI margins so it is flush with screen
@@ -50,10 +56,20 @@ class WorkstationGUI(QWidget):
         menubar = QMenuBar()
         main_layout.addWidget(menubar)
         action_file = menubar.addMenu("File")  # File section of menu
-        add_task = action_file.addAction("Add Task")  # Action for adding a new task to a chamber
+        add_task = action_file.addAction("Add Chamber")  # Action for adding a new task to a chamber
         add_task.triggered.connect(self.task_dialog)  # Call task_dialog method when clicked
         settings = action_file.addAction("Settings")  # Action for adjusting py-behav settings
         settings.triggered.connect(self.settings_dialog)  # Call settings_dialog method when clicked
+        address_files = action_file.addMenu("AddressFiles")
+        new_address_file = address_files.addAction("New")
+        new_address_file.triggered.connect(lambda: self.select_task_dialog(True))
+        edit_address_file = address_files.addAction("Edit")
+        edit_address_file.triggered.connect(lambda: self.select_task_dialog(True, True))
+        protocols = action_file.addMenu("Protocols")
+        new_protocol = protocols.addAction("New")
+        new_protocol.triggered.connect(lambda: self.select_task_dialog(False))
+        edit_protocol = protocols.addAction("Edit")
+        edit_protocol.triggered.connect(lambda: self.select_task_dialog(False, True))
         action_file.addSeparator()
         quit_gui = action_file.addAction("Quit")  # Quits py-behav
         quit_gui.triggered.connect(self.close)
@@ -90,6 +106,21 @@ class WorkstationGUI(QWidget):
         # Opens the AddTaskDialog for adding a new task to a chamber
         self.td = AddTaskDialog(self)
         self.td.show()
+
+    def select_task_dialog(self, is_addressfile, edit: bool = False):
+        # Opens a dialog to select the task to use for creating/editing an AddressFile or Protocol
+        self.std = SelectTaskDialog(self, is_addressfile, edit)
+        self.std.show()
+
+    def address_file_dialog(self, task: str, file_path: str = None) -> None:
+        # Opens the AddressFile creator
+        self.afcd = AddressFileCreationDialog(self, task, file_path)
+        self.afcd.show()
+
+    def protocol_dialog(self, task: str, file_path: str = None) -> None:
+        # Opens the Protocol creator
+        self.pcd = ProtocolCreationDialog(self, task, file_path)
+        self.pcd.show()
 
     def add_task(self, chamber_index: str, task_index: int, subject: str = "default", afp: str = "", pfp: str = "", prompt: str = "", event_loggers: str = "", widgets: List[Widget] = None, widget_params: List[List[str]] = None) -> None:
         """

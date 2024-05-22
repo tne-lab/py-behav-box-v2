@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 import re
+import webbrowser
 from typing import TYPE_CHECKING
+
+from PyQt5.QtCore import QEvent
 
 from pybehave.Events.PybEvents import AddLoggerEvent, RemoveLoggerEvent
 import pybehave.Events
+from pybehave.Utilities.Exceptions import MissingExtraError
 
 if TYPE_CHECKING:
     from pybehave.Workstation.ChamberWidget import ChamberWidget
@@ -91,6 +95,7 @@ class ConfigurationDialog(QDialog):
 
         self.layout.addWidget(self.control_buttons)
         self.setLayout(self.layout)
+        self.error_dialog = None
     
     def accept(self) -> None:
         self.cw.prompt = self.prompt.text()  # Update the prompt from the configuration
@@ -153,6 +158,17 @@ class AddExtrasDialog(QDialog):
         self.layout.addWidget(self.control_buttons)
         self.setLayout(self.layout)
 
+    def event(self, event):
+        if event.type() == QEvent.EnterWhatsThisMode:
+            QWhatsThis.leaveWhatsThisMode()
+            if self.logger:
+                webbrowser.open('https://py-behav-box-v2.readthedocs.io/en/latest/events/#eventloggers_1')
+            else:
+                webbrowser.open('https://py-behav-box-v2.readthedocs.io/en/latest/workstation/#widget')
+            return True
+        else:
+            return super().event(event)
+
     def accept(self) -> None:
         if not self.logger:
             widget_type = getattr(importlib.import_module("pybehave.Events." + self.extra.currentText()), self.extra.currentText())
@@ -171,13 +187,22 @@ class AddExtrasDialog(QDialog):
         super(AddExtrasDialog, self).accept()
 
     def set_params(self) -> None:
-        logger_type = getattr(importlib.import_module("pybehave.Events." + self.extra.currentText()), self.extra.currentText())
-        all_params = inspect.getfullargspec(logger_type.__init__)
-        if len(all_params.args) > 1:
-            self.epd = ExtrasParametersDialog(self, all_params)
-            self.epd.show()
-        else:
-            self.accept()
+        try:
+            logger_type = getattr(importlib.import_module("pybehave.Events." + self.extra.currentText()), self.extra.currentText())
+            all_params = inspect.getfullargspec(logger_type.__init__)
+            if len(all_params.args) > 1:
+                self.epd = ExtrasParametersDialog(self, all_params)
+                self.epd.show()
+            else:
+                self.accept()
+        except MissingExtraError as e:
+            self.cd.error_dialog = QMessageBox(self)
+            self.cd.error_dialog.setWindowTitle('Missing extra')
+            self.cd.error_dialog.setText(f'{self.extra.currentText()} requires the \'{e.extra}\' extra. This extra can be installed by running \'pip install pybehave[{e.extra}]\' (or \'pip install .[{e.extra}]\' if you\'re using a local installation) in your pybehave virtual environment.')
+            self.cd.error_dialog.setStandardButtons(QMessageBox.Ok)
+            self.cd.error_dialog.setIcon(QMessageBox.Critical)
+            self.cd.error_dialog.show()
+            self.close()
 
 
 class ExtrasParametersDialog(QDialog):
@@ -208,6 +233,17 @@ class ExtrasParametersDialog(QDialog):
             self.params.append(param)
         self.layout.addWidget(self.control_buttons)
         self.setLayout(self.layout)
+
+    def event(self, event):
+        if event.type() == QEvent.EnterWhatsThisMode:
+            QWhatsThis.leaveWhatsThisMode()
+            if self.aed.logger:
+                webbrowser.open('https://py-behav-box-v2.readthedocs.io/en/latest/events/#' + self.aed.extra.currentText().lower())
+            else:
+                webbrowser.open('https://py-behav-box-v2.readthedocs.io/en/latest/workstation/#' + self.aed.extra.currentText().lower())
+            return True
+        else:
+            return super().event(event)
 
     def accept(self) -> None:
         for p in self.params:

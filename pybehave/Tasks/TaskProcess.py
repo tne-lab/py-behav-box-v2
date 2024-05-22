@@ -133,6 +133,7 @@ class TaskProcess(Process):
     def add_task(self, event: PybEvents.AddTaskEvent):
         try:
             task_module = importlib.import_module("Local.Tasks." + event.task_name)
+            task_module = importlib.reload(task_module)
             task = getattr(task_module, event.task_name)
             self.tasks[event.chamber] = task()
             self.tasks[event.chamber].initialize(self, event.metadata)  # Create the task
@@ -262,7 +263,11 @@ class TaskProcess(Process):
         for key in event.constants:
             try:
                 value = eval(event.constants[key])
-                task.initial_constants[key] = copy.deepcopy(task.__getattribute__(key))
+                if key not in task.initial_constants:
+                    task.initial_constants[key] = copy.deepcopy(task.__getattribute__(key))
+                if value != task.__getattribute__(key) and task.started:
+                    new_event = PybEvents.ConstantUpdateEvent(task.metadata["chamber"], key, value)
+                    self.tp_q.append(new_event)
                 task.__setattr__(key, value)
             except:
                 pass
@@ -270,6 +275,9 @@ class TaskProcess(Process):
     def remove_constant(self, event: PybEvents.ConstantRemoveEvent):
         task = self.tasks[event.chamber]
         if event.constant in task.initial_constants:
+            if task.initial_constants[event.constant] != task.__getattribute__(event.constant) and task.started:
+                new_event = PybEvents.ConstantUpdateEvent(task.metadata["chamber"], event.constant, task.initial_constants[event.constant])
+                self.tp_q.append(new_event)
             task.__setattr__(event.constant, task.initial_constants[event.constant])
             del task.initial_constants[event.constant]
 

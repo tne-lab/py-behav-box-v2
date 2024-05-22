@@ -1,3 +1,11 @@
+try:
+    import cv2
+    import imutils
+    import qasync
+except ModuleNotFoundError:
+    from pybehave.Utilities.Exceptions import MissingExtraError
+    raise MissingExtraError('video')
+
 import asyncio
 import concurrent.futures
 import ctypes
@@ -5,15 +13,13 @@ import threading
 from abc import ABC, abstractmethod
 from asyncio import Future
 import time
-from typing import Any
+from typing import Any, Dict
 
-import cv2
-import imutils
 import numpy as np
-import qasync
 from PyQt5.QtGui import QImage, QPixmap
 from PyQt5.QtWidgets import *
 
+from pybehave.Components.Component import Component
 from pybehave.Events import PybEvents
 from pybehave.Sources.ThreadSource import ThreadSource
 from pybehave.Sources.library.tisgrabber import tisgrabber
@@ -150,8 +156,9 @@ class VideoSource(ThreadSource):
         self.screen_width = int(self.screen_width)
         mw.setGeometry(0, 0, self.screen_width, self.screen_height)
         mw.show()
-        asyncio.set_event_loop(qasync.QEventLoop(self.app))
-        self.loop = asyncio.get_event_loop()
+        self.loop = qasync.QEventLoop(self.app)
+        asyncio.set_event_loop(self.loop)
+        asyncio.events._set_running_loop(self.loop)
         self.loop.run_forever()
 
     def register_component(self, component, metadata):
@@ -220,6 +227,10 @@ class VideoSource(ThreadSource):
         self.cameras[component_id].get_video_frame().deleteLater()
         del self.cameras[component_id]
         del self.fr[component_id]
+
+    @staticmethod
+    def metadata_defaults(comp_type: Component.Type = None) -> Dict:
+        return {"fr": 30, "row": 0, "col": 0, "row_span": 0, "col_span": 0, 'vid_type': 'webcam'}
 
 
 class WebcamProvider(VideoProvider):

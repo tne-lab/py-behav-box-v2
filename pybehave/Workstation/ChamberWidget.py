@@ -308,11 +308,25 @@ class ChamberWidget(QGroupBox):
             menu = QMenu(self)
             save_config = menu.addAction("Save Configuration")  # Saves the current configuration of the chamber
             save_config.triggered.connect(self.save_configuration)
-            clear_chamber = menu.addAction("Clear Chamber")  # Alerts the Workstation to remove the Task
+            clear_chamber = menu.addAction("Remove Chamber")  # Alerts the Workstation to remove the Task
             clear_chamber.triggered.connect(lambda: self.wsg.workstation.remove_task(int(self.chamber_id.text()) - 1))
             edit_config = menu.addAction("Edit Configuration")  # Edits the Task configuration
             edit_config.triggered.connect(self.edit_configuration)
+            remove_address_file = menu.addAction("Remove AddressFile")
+            remove_address_file.triggered.connect(self.remove_address_file)
+            remove_protocol = menu.addAction("Remove Protocol")
+            remove_protocol.triggered.connect(self.remove_protocol)
+            refresh = menu.addAction("Reload Task")
+            refresh.triggered.connect(self.refresh)
             menu.popup(QCursor.pos())
+
+    def remove_address_file(self):
+        self.address_file_path.setText("")
+        self.refresh()
+
+    def remove_protocol(self):
+        self.protocol_path.setText("")
+        self.refresh()
 
     def save_configuration(self) -> None:
         desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
@@ -324,6 +338,7 @@ class ChamberWidget(QGroupBox):
         self.fd.setFileMode(QFileDialog.AnyFile)
         self.fd.setViewMode(QFileDialog.List)
         self.fd.setAcceptMode(QFileDialog.AcceptSave)
+        self.fd.setNameFilter('CSV Files (*.csv)')
         self.fd.setDirectory("{}/py-behav/Configurations/".format(desktop))
         self.fd.selectFile(
             '{}-{}-{}.csv'.format(self.chamber_id.text(), self.subject.text(), self.task_name.currentText()))
