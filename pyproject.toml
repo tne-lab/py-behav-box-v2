@@ -8,7 +8,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name="pybehave"
-version="1.0.18"
+version="1.0.19"
 authors=[
     { name="Evan Dastin-van Rijn", email="dasti006@umn.edu"},
     { name="Joel Nielsen", email="niels641@umn.edu"},
