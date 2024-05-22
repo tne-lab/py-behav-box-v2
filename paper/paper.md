@@ -19,11 +19,14 @@ authors:
     affiliation: 1
   - name: Stefanie G. Simpson
     affiliation: 1
+  - name: Michelle C. Buccini
+    affiliation: 1
   - name: Francesca A. Iacobucci
     affiliation: 1
   - name: David J. Titus
     affiliation: 1
   - name: Alik S. Widge
+    orcid: 0000-0001-8510-341X
     affiliation: 1
 affiliations:
  - name: Department of Psychiatry and Behavioral Sciences, University of Minnesota Medical Center, Minneapolis, MN 55454, USA
