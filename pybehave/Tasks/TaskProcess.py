@@ -245,16 +245,17 @@ class TaskProcess(Process):
         del self.tasks[task.metadata["chamber"]]
 
     def update_component(self, event: PybEvents.ComponentUpdateEvent):
-        task = self.tasks[event.chamber]
-        comp = task.components[event.comp_id][0]
-        if comp.update(event.value) and task.started and not task.paused:
-            # event.value = comp.state
-            metadata = event.metadata.copy()
-            metadata["value"] = comp.state
-            new_event = PybEvents.ComponentChangedEvent(task.metadata["chamber"], comp, task.components[comp.id][1],
-                                                        metadata=metadata)
-            self.tasks[task.metadata["chamber"]].main_loop(new_event)
-            self.log_event(new_event)
+        if event.chamber in self.tasks:
+            task = self.tasks[event.chamber]
+            comp = task.components[event.comp_id][0]
+            if comp.update(event.value) and task.started and not task.paused:
+                # event.value = comp.state
+                metadata = event.metadata.copy()
+                metadata["value"] = comp.state
+                new_event = PybEvents.ComponentChangedEvent(task.metadata["chamber"], comp, task.components[comp.id][1],
+                                                            metadata=metadata)
+                self.tasks[task.metadata["chamber"]].main_loop(new_event)
+                self.log_event(new_event)
 
     def update_constants(self, event: PybEvents.ConstantsUpdateEvent):
         for q in self.source_buffers.values():
@@ -282,7 +283,7 @@ class TaskProcess(Process):
             del task.initial_constants[event.constant]
 
     def log_gui_event(self, event: PybEvents.PybEvent):
-        if isinstance(event, PybEvents.TimedEvent) and event.timestamp is None:
+        if isinstance(event, PybEvents.TimedEvent) and event.timestamp is None and event.chamber in self.tasks:
             event.acknowledge(self.tasks[event.chamber].time_elapsed())
         self.gui_out.append(event)
 

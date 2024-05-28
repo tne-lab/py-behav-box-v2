@@ -110,13 +110,20 @@ class OSControllerSource(ThreadSource):
 
     def close_component(self, component_id: str) -> None:
         if component_id in self.components:
-            if 'A' in self.components[component_id].address:
-                parts = self.components[component_id].address.split('_')
-                command = RegisterGPIO()
-                command.b.command = 3
-                command.b.address = int(parts[1][1])
-                command.b.type = 0
-                self.sps[int(parts[0])].write(command.data.to_bytes(1, 'little'))
+            if isinstance(self.components[component_id].address, list):
+                addresses = self.components[component_id].address
+            else:
+                addresses = [self.components[component_id].address]
+            for address in addresses:
+                if 'A' in address:
+                    parts = address.split('_')
+                    command = RegisterGPIO()
+                    command.b.command = 3
+                    command.b.address = int(parts[1][1])
+                    command.b.type = 0
+                    self.sps[int(parts[0])].write(command.data.to_bytes(1, 'little'))
+                if (self.components[component_id].get_type() == Component.Type.DIGITAL_INPUT or self.components[component_id].get_type() == Component.Type.ANALOG_INPUT) and address in self.input_ids:
+                    del self.input_ids[address]
             del self.components[component_id]
 
     def serial_thread(self, serial_index):

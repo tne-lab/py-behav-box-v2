@@ -105,8 +105,10 @@ class HikVisionSource(Source):
             addresses = self.components[component_id].address
         else:
             addresses = [self.components[component_id].address]
-        end_time = (datetime.datetime.now() + datetime.timedelta(seconds=10)).isoformat().split('.')[0] + 'Z'
+        start_times = []
         for addr in addresses:
+            start_times.append(self.start_times[addr])
+        for i, addr in enumerate(addresses):
             addr = str(addr)
             mask = hikutils.xml2dict(b'\
                                      <PrivacyMask version="2.0" xmlns="http://www.isapi.org/ver20/XMLSchema">\
@@ -116,7 +118,10 @@ class HikVisionSource(Source):
             hikutils.putXML(self.server, 'System/Video/inputs/channels/' + addr[0] + '/privacyMask', mask)
             hikutils.putXML(self.server, 'ContentMgmt/record/control/manual/stop/tracks/' + addr)
             hikutils.putXML(self.server, 'ContentMgmt/record/control/manual/stop/tracks/' + addr)
-            resp = self.server.ContentMgmt.search.getPastRecordingsForID(addr, self.start_times[addr], end_time)
+        end_time = (datetime.datetime.now() + datetime.timedelta(seconds=10)).isoformat().split('.')[0] + 'Z'
+        for i, addr in enumerate(addresses):
+            addr = str(addr)
+            resp = self.server.ContentMgmt.search.getPastRecordingsForID(addr, start_times[i], end_time)
             vids = resp['CMSearchResult']['matchList']['searchMatchItem']
             if not isinstance(vids, list):
                 vids = [vids]
