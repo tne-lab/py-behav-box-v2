@@ -19,13 +19,14 @@ if TYPE_CHECKING:
 import time
 
 
+class OEEvent(Loggable):
+    event_type: str
+
+    def format(self) -> LoggerEvent:
+        return LoggerEvent(self, self.event_type, 0, self.timestamp)
+
+
 class OENetworkLogger(EventLogger):
-
-    class OEEvent(Loggable):
-        event_type: str
-
-        def format(self) -> LoggerEvent:
-            return LoggerEvent(self, self.event_type, 0, self.timestamp)
 
     def __init__(self, name: str, address: str, port: str):
         super().__init__(name)
