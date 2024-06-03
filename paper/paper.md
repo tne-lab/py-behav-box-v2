@@ -12,6 +12,7 @@ authors:
   - name: Joel Nielsen
     affiliation: 1
   - name: Elizabeth M. Sachse
+    orcid: 0000-0002-1669-8752
     affiliation: 1
   - name: Christina Li
     affiliation: 1
@@ -24,6 +25,7 @@ authors:
   - name: Francesca A. Iacobucci
     affiliation: 1
   - name: David J. Titus
+    orcid: 0000-0001-7819-734X
     affiliation: 1
   - name: Alik S. Widge
     orcid: 0000-0001-8510-341X
