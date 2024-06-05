@@ -31,7 +31,7 @@ authors:
     orcid: 0000-0001-8510-341X
     affiliation: 1
 affiliations:
- - name: Department of Psychiatry and Behavioral Sciences, University of Minnesota Medical Center, Minneapolis, MN 55454, USA
+ - name: Department of Psychiatry and Behavioral Sciences, University of Minnesota Medical Center, Minneapolis, MN 55454, United States of America
    index: 1
 date: 13 August 2017
 bibliography: paper.bib
