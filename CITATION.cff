@@ -1,0 +1,74 @@
+cff-version: "1.2.0"
+authors:
+- family-names: Dastin-van Rijn
+  given-names: Evan M.
+  orcid: "https://orcid.org/0000-0002-1428-0723"
+- family-names: Nielsen
+  given-names: Joel
+- family-names: Sachse
+  given-names: Elizabeth M.
+  orcid: "https://orcid.org/0000-0002-1669-8752"
+- family-names: Li
+  given-names: Christina
+- family-names: Mensinger
+  given-names: Megan E.
+- family-names: Simpson
+  given-names: Stefanie G.
+- family-names: Buccini
+  given-names: Michelle C.
+- family-names: Iacobucci
+  given-names: Francesca A.
+- family-names: Titus
+  given-names: David J.
+  orcid: "https://orcid.org/0000-0001-7819-734X"
+- family-names: Widge
+  given-names: Alik S.
+  orcid: "https://orcid.org/0000-0001-8510-341X"
+contact:
+- family-names: Dastin-van Rijn
+  given-names: Evan M.
+  orcid: "https://orcid.org/0000-0002-1428-0723"
+doi: 10.5281/zenodo.11244351
+message: If you use this software, please cite our article in the
+  Journal of Open Source Software.
+preferred-citation:
+  authors:
+  - family-names: Dastin-van Rijn
+    given-names: Evan M.
+    orcid: "https://orcid.org/0000-0002-1428-0723"
+  - family-names: Nielsen
+    given-names: Joel
+  - family-names: Sachse
+    given-names: Elizabeth M.
+    orcid: "https://orcid.org/0000-0002-1669-8752"
+  - family-names: Li
+    given-names: Christina
+  - family-names: Mensinger
+    given-names: Megan E.
+  - family-names: Simpson
+    given-names: Stefanie G.
+  - family-names: Buccini
+    given-names: Michelle C.
+  - family-names: Iacobucci
+    given-names: Francesca A.
+  - family-names: Titus
+    given-names: David J.
+    orcid: "https://orcid.org/0000-0001-7819-734X"
+  - family-names: Widge
+    given-names: Alik S.
+    orcid: "https://orcid.org/0000-0001-8510-341X"
+  date-published: 2024-06-05
+  doi: 10.21105/joss.06515
+  issn: 2475-9066
+  issue: 98
+  journal: Journal of Open Source Software
+  publisher:
+    name: Open Journals
+  start: 6515
+  title: "Pybehave: a hardware agnostic, Python-based framework for
+    controlling behavioral neuroscience experiments"
+  type: article
+  url: "https://joss.theoj.org/papers/10.21105/joss.06515"
+  volume: 9
+title: "Pybehave: a hardware agnostic, Python-based framework for
+  controlling behavioral neuroscience experiments"
