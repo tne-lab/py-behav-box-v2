@@ -57,7 +57,7 @@ class OESource(ThreadSource):
         except:
             self.unavailable()
 
-    def register_component(self, task: Task, component: Component) -> None:
+    def register_component(self, component: Component, metadata: Dict) -> None:
         self.addresses[int(component.address) - 1] = component.id
 
     def close_source(self):
