@@ -46,6 +46,8 @@ class OEWidget(EventWidget):
         oe_text_layout = QHBoxLayout(self.oe_group)
         oe_control_layout = QVBoxLayout(self.oe_group)
 
+        icons_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'Workstation/icons'))
+
         # Widget corresponding to the path for the output folder for OpenEphys
         rec_dir_box = QGroupBox('RecDir')
         rec_dir_layout = QHBoxLayout(self.oe_group)
@@ -54,7 +56,7 @@ class OEWidget(EventWidget):
         self.rec_dir.setReadOnly(True)
         rec_dir_layout.addWidget(self.rec_dir)
         self.rec_dir_browse = QPushButton()
-        self.rec_dir_browse.setIcon(QIcon('Workstation/icons/folder.svg'))
+        self.rec_dir_browse.setIcon(QIcon(os.path.join(icons_dir, 'folder.svg')))
         self.rec_dir_browse.setFixedWidth(30)
         self.rec_dir_browse.clicked.connect(lambda: self.get_file_path())
         rec_dir_layout.addWidget(self.rec_dir_browse)
@@ -76,11 +78,11 @@ class OEWidget(EventWidget):
         oe_rec_layout.addLayout(oe_text_layout)
         oe_group_layout.addLayout(oe_rec_layout)
 
-        self.acq_button = IconButton('Workstation/icons/play.svg', 'Workstation/icons/play_hover.svg')
+        self.acq_button = IconButton(os.path.join(icons_dir, 'play.svg'), os.path.join(icons_dir, 'play_hover.svg'))
         self.acq_button.setFixedWidth(30)
         self.acq_button.clicked.connect(self.acquisition)
         oe_control_layout.addWidget(self.acq_button)
-        self.rec_button = IconButton('Workstation/icons/record.svg', 'Workstation/icons/record_hover.svg')
+        self.rec_button = IconButton(os.path.join(icons_dir, 'record.svg'), os.path.join(icons_dir, 'record_hover.svg'))
         self.rec_button.setFixedWidth(30)
         self.rec_button.clicked.connect(self.record)
         oe_control_layout.addWidget(self.rec_button)
@@ -114,20 +116,21 @@ class OEWidget(EventWidget):
                                                                      "%m-%d-%Y")))
 
     def acquisition(self) -> None:
+        icons_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'Workstation/icons'))
         if not self.acq:
-            self.acq_button.icon = 'Workstation/icons/stop_play.svg'
-            self.acq_button.hover_icon = 'Workstation/icons/stop_play_hover.svg'
+            self.acq_button.icon = os.path.join(icons_dir, 'stop_play.svg')
+            self.acq_button.hover_icon = os.path.join(icons_dir, 'stop_play_hover.svg')
             self.acq_button.setIcon(QIcon(self.acq_button.icon))
             self.send_string("startAcquisition")
             # self.queue.put_nowait(PybEvents.OEEvent(self.cw.task, "startAcquisition").format())
             self.acq = True
         elif self.acq:
-            self.acq_button.icon = 'Workstation/icons/play.svg'
-            self.acq_button.hover_icon = 'Workstation/icons/play_hover.svg'
+            self.acq_button.icon = os.path.join(icons_dir, 'play.svg')
+            self.acq_button.hover_icon = os.path.join(icons_dir, 'play_hover.svg')
             self.acq_button.setIcon(QIcon(self.acq_button.icon))
             if self.rec:
-                self.rec_button.icon = 'Workstation/icons/record.svg'
-                self.rec_button.hover_icon = 'Workstation/icons/record_hover.svg'
+                self.rec_button.icon = os.path.join(icons_dir, 'record.svg')
+                self.rec_button.hover_icon = os.path.join(icons_dir, 'record_hover.svg')
                 self.rec_button.setIcon(QIcon(self.rec_button.icon))
                 self.rec = False
             self.send_string("stopAcquisition")
@@ -135,12 +138,13 @@ class OEWidget(EventWidget):
             self.acq = False
 
     def record(self) -> None:
+        icons_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'Workstation/icons'))
         if not self.rec:
-            self.acq_button.icon = 'Workstation/icons/stop_play.svg'
-            self.acq_button.hover_icon = 'Workstation/icons/stop_play_hover.svg'
+            self.acq_button.icon = os.path.join(icons_dir, 'stop_play.svg')
+            self.acq_button.hover_icon = os.path.join(icons_dir, 'stop_play_hover.svg')
             self.acq_button.setIcon(QIcon(self.acq_button.icon))
-            self.rec_button.icon = 'Workstation/icons/stop_record.svg'
-            self.rec_button.hover_icon = 'Workstation/icons/stop_record_hover.svg'
+            self.rec_button.icon = os.path.join(icons_dir, 'stop_record.svg')
+            self.rec_button.hover_icon = os.path.join(icons_dir, 'stop_record_hover.svg')
             self.rec_button.setIcon(QIcon(self.rec_button.icon))
             self.send_string("startRecord RecDir={} prependText={} appendText={}".format(self.rec_dir.text(),
                                                                                          self.pre.text(),
@@ -149,8 +153,8 @@ class OEWidget(EventWidget):
             self.acq = True
             self.rec = True
         elif self.rec:
-            self.rec_button.icon = 'Workstation/icons/record.svg'
-            self.rec_button.hover_icon = 'Workstation/icons/record_hover.svg'
+            self.rec_button.icon = os.path.join(icons_dir, 'record.svg')
+            self.rec_button.hover_icon = os.path.join(icons_dir, 'record_hover.svg')
             self.rec_button.setIcon(QIcon(self.rec_button.icon))
             self.send_string("stopRecord")
             # self.queue.put_nowait(PybEvents.OEEvent(self.cw.task, "stopRecord").format())

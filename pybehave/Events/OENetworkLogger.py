@@ -73,7 +73,7 @@ class OENetworkLogger(EventLogger):
     def log_events(self, events: collections.deque[LoggerEvent]) -> None:
         for event in events:
             self.event_count += 1
-            if isinstance(event.event, self.OEEvent):
+            if isinstance(event.event, OEEvent):
                 if event.event.event_type == 'startAcquisition':
                     self.send_string("startAcquisition")
                 elif event.event.event_type == 'stopAcquisition':

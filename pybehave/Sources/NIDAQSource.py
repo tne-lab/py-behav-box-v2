@@ -51,7 +51,10 @@ class NIDAQSource(Source):
         self.streams = {}
         self.ao_task = None
         self.ao_stream = None
+        self.do_task = None
+        self.do_stream = None
         self.ao_inds = {}
+        self.do_inds = {}
 
     def initialize(self):
         dev_obj = system.Device(self.dev)
@@ -59,11 +62,19 @@ class NIDAQSource(Source):
 
     def register_component(self, component, metadata):
         if component.get_type() == Component.Type.DIGITAL_OUTPUT:
-            task = nidaqmx.Task()
-            task.do_channels.add_do_chan(self.dev + component.address,
-                                         line_grouping=LineGrouping.CHAN_FOR_ALL_LINES)
-            task.start()
-            self.tasks[component.id] = task
+            if component.sr is None:
+                task = nidaqmx.Task()
+                task.do_channels.add_do_chan(self.dev + component.address,
+                                             line_grouping=LineGrouping.CHAN_FOR_ALL_LINES)
+                task.start()
+                self.tasks[component.id] = task
+            else:
+                if self.do_task is None:
+                    self.do_task = nidaqmx.Task()
+                    self.do_task.auto_start = True
+                self.do_task.do_channels.add_do_chan(self.dev + component.address)
+                self.do_stream = stream_writers.DigitalMultiChannelWriter(self.do_task.out_stream, auto_start=True)
+                self.do_inds[component.id] = len(self.do_inds)
         elif component.get_type() == Component.Type.ANALOG_OUTPUT:
             if self.ao_task is None:
                 self.ao_task = nidaqmx.Task()
@@ -76,6 +87,10 @@ class NIDAQSource(Source):
             self.ao_task.close()
             self.ao_task = None
             self.ao_stream = None
+        if self.do_task is not None:
+            self.do_task.close()
+            self.do_task = None
+            self.do_stream = None
         for task in self.tasks:
             task.close()
         self.tasks = {}
@@ -88,12 +103,26 @@ class NIDAQSource(Source):
                 self.ao_task = None
                 self.ao_stream = None
         else:
+            if self.components[component_id].sr is not None:
+                if self.do_task is not None:
+                    self.do_task.stop()
+                    self.do_task.close()
+                    self.do_task = None
+                    self.do_stream = None
             self.tasks[component_id].stop()
             self.tasks[component_id].close()
 
     def write_component(self, component_id, msg):
         if self.components[component_id].get_type() == Component.Type.DIGITAL_OUTPUT:
-            self.tasks[component_id].write(msg)
+            if self.components[component_id].sr is not None:
+                output = np.zeros((len(self.do_inds), msg.shape[1]))
+                output[self.do_inds[component_id], :] = np.squeeze(msg)
+                # self.do_task.timing.cfg_samp_clk_timing(self.components[component_id].sr,
+                #                                         sample_mode=nidaqmx.constants.AcquisitionType.FINITE,
+                #                                         samps_per_chan=msg.shape[1])
+                self.do_stream.write_many_sample_port_uint32(np.uint32(output))
+            else:
+                self.tasks[component_id].write(msg)
         elif self.components[component_id].get_type() == Component.Type.ANALOG_OUTPUT:
             output = np.zeros((len(self.ao_inds), msg.shape[1]))
             output[self.ao_inds[component_id], :] = np.squeeze(msg)
@@ -109,5 +138,7 @@ class NIDAQSource(Source):
     def metadata_defaults(comp_type: Component.Type = None) -> Dict:
         if comp_type == Component.Type.ANALOG_OUTPUT:
             return {"sr": 30000}
+        elif comp_type == Component.Type.DIGITAL_OUTPUT:
+            return {"sr": None}
         else:
             return {}
