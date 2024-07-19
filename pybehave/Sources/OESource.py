@@ -6,14 +6,13 @@ except ModuleNotFoundError:
     from pybehave.Utilities.Exceptions import MissingExtraError
     raise MissingExtraError('oe')
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict
 
 import json
 from pybehave.Sources.ThreadSource import ThreadSource
 
 if TYPE_CHECKING:
     from pybehave.Components.Component import Component
-    from pybehave.Tasks.Task import Task
 
 
 class OESource(ThreadSource):

@@ -255,3 +255,17 @@ class StateExitEvent(Loggable, StatefulEvent):
 
     def format(self) -> LoggerEvent:
         return LoggerEvent(self, self.name, self.value, self.timestamp)
+
+
+class CustomEvent(Loggable):
+    event_type: str
+
+    def format(self) -> LoggerEvent:
+        return LoggerEvent(self, self.event_type, 0, self.timestamp)
+
+
+class StatefulCustomEvent(Loggable, StatefulEvent):
+    event_type: str
+
+    def format(self) -> LoggerEvent:
+        return LoggerEvent(self, self.event_type, 0, self.timestamp)

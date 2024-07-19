@@ -438,6 +438,12 @@ class Task:
     def log_event(self, event: PybEvents.TaskEvent):
         self.tp.tp_q.append(event)
 
+    def log_custom_event(self, event_type: str, metadata, stateful=False):
+        if stateful:
+            self.tp.tp_q.append(PybEvents.StatefulCustomEvent(self.metadata["chamber"], event_type, metadata=metadata))
+        else:
+            self.tp.tp_q.append(PybEvents.CustomEvent(self.metadata["chamber"], event_type, metadata=metadata))
+
     def log_timeout(self, event: PybEvents.TimeoutEvent):
         self.tp.tmq_out.send_bytes(self.tp.encoder.encode(event))
 

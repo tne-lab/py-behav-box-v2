@@ -12,20 +12,12 @@ from PyQt5.QtWidgets import QGroupBox, QHBoxLayout, QVBoxLayout, QLineEdit, QPus
 
 from pybehave.Events import PybEvents
 
-from pybehave.Events.LoggerEvent import LoggerEvent
 from pybehave.Events.EventWidget import EventWidget
 from pybehave.Workstation.ChamberWidget import ChamberWidget
 from pybehave.Workstation.IconButton import IconButton
 
 
 class OEWidget(EventWidget):
-
-    class OEEvent(PybEvents.Loggable, PybEvents.StatefulEvent):
-        name: str
-        value: int
-
-        def format(self) -> LoggerEvent:
-            return LoggerEvent(self, self.name, self.value, self.timestamp)
 
     def __init__(self, name: str, address: str, port: str):
         super().__init__(name)

@@ -1,19 +1,14 @@
-from PyQt5.QtWidgets import QGroupBox, QHBoxLayout, QVBoxLayout, QLineEdit, QPushButton, QWidget
+from PyQt5.QtWidgets import QGroupBox, QHBoxLayout, QVBoxLayout, QLineEdit, QPushButton
 
 from pybehave.Events import PybEvents
 
-from pybehave.Events.LoggerEvent import LoggerEvent
 from pybehave.Events.Widget import Widget
 
 
 class ManualWidget(Widget):
 
-    class ManualEvent(PybEvents.Loggable, PybEvents.StatefulEvent):
-        name: str
-        value: int
-
-        def format(self) -> LoggerEvent:
-            return LoggerEvent(self, self.name, self.value, self.timestamp)
+    # Can use a StatefulCustomEvent: ManualEvent
+    # ManualEvent expects a 'name' and 'value' field in the metadata
 
     def __init__(self, name: str):
         super().__init__(name)
@@ -43,4 +38,4 @@ class ManualWidget(Widget):
         manual_layout.addLayout(input_layout)
 
     def send_event(self) -> None:
-        self.cw.workstation.mainq.send_bytes(self.cw.workstation.encoder.encode(self.ManualEvent(int(self.cw.chamber_id.text()) - 1), self.manual_input.text(), int(self.code_input.text())))
+        self.cw.workstation.mainq.send_bytes(self.cw.workstation.encoder.encode(PybEvents.StatefulCustomEvent(int(self.cw.chamber_id.text()) - 1), 'ManualEvent', metadata={'name': self.manual_input.text(), 'value': int(self.code_input.text())}))

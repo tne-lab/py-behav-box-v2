@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pybehave.Events import PybEvents
+
 try:
     import zmq
 except ModuleNotFoundError:
@@ -11,7 +13,6 @@ import threading
 from typing import TYPE_CHECKING
 
 from pybehave.Events.EventLogger import EventLogger
-from pybehave.Events.PybEvents import Loggable
 
 if TYPE_CHECKING:
     from pybehave.Events.LoggerEvent import LoggerEvent
@@ -19,14 +20,10 @@ if TYPE_CHECKING:
 import time
 
 
-class OEEvent(Loggable):
-    event_type: str
-
-    def format(self) -> LoggerEvent:
-        return LoggerEvent(self, self.event_type, 0, self.timestamp)
-
-
 class OENetworkLogger(EventLogger):
+
+    # Can use a CustomEvent: OEEvent
+    # OEEvent expects a 'message_type' field in the metadata
 
     def __init__(self, name: str, address: str, port: str):
         super().__init__(name)
@@ -73,12 +70,12 @@ class OENetworkLogger(EventLogger):
     def log_events(self, events: collections.deque[LoggerEvent]) -> None:
         for event in events:
             self.event_count += 1
-            if isinstance(event.event, OEEvent):
-                if event.event.event_type == 'startAcquisition':
+            if isinstance(event.event, PybEvents.CustomEvent) and event.event.event_type == 'OEEvent':
+                if event.event.metadata['message_type'] == 'startAcquisition':
                     self.send_string("startAcquisition")
-                elif event.event.event_type == 'stopAcquisition':
+                elif event.event.metadata['message_type'] == 'stopAcquisition':
                     self.send_string("stopAcquisition")
-                elif event.event.event_type == 'startRecord':
+                elif event.event.metadata['message_type'] == 'startRecord':
                     self.send_string("startRecord RecDir={} prependText={} appendText={}".format(event.event.metadata["rec_dir"] if "rec_dir" in event.event.metadata else "",
                                                                                                  event.event.metadata["pre"] if "pre" in event.event.metadata else "",
                                                                                                  event.event.metadata["app"] if "app" in event.event.metadata else ""))
