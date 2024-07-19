@@ -76,9 +76,14 @@ class OENetworkLogger(EventLogger):
                 elif event.event.metadata['message_type'] == 'stopAcquisition':
                     self.send_string("stopAcquisition")
                 elif event.event.metadata['message_type'] == 'startRecord':
-                    self.send_string("startRecord RecDir={} prependText={} appendText={}".format(event.event.metadata["rec_dir"] if "rec_dir" in event.event.metadata else "",
-                                                                                                 event.event.metadata["pre"] if "pre" in event.event.metadata else "",
-                                                                                                 event.event.metadata["app"] if "app" in event.event.metadata else ""))
+                    send_string = 'startRecord'
+                    if "rec_dir" in event.event.metadata:
+                        send_string += " RecDir=" + event.event.metadata['rec_dir']
+                    if "prependText" in event.event.metadata:
+                        send_string += " prependText=" + event.event.metadata['prependText']
+                    if "appendText" in event.event.metadata:
+                        send_string += " appendText=" + event.event.metadata['appendText']
+                    self.send_string(send_string)
                 elif event.event.metadata['message_type'] == 'stopRecord':
                     self.send_string("stopRecord")
             else:
