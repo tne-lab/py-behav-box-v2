@@ -9,12 +9,11 @@ from pybehave.Components.BinaryInput import BinaryInput
 class TouchBinaryInput(BinaryInput):
 
     def __init__(self, task: Task, component_id: str, component_address: str):
-        self.definition = None
         super().__init__(task, component_id, component_address)
         self.pos = None
 
-    def update(self, read: Union[Tuple[bool, float], bool]) -> None:
-        if isinstance(read, tuple):
+    def update(self, read: Union[Tuple[bool, float], bool]) -> bool:
+        if isinstance(read, tuple) or isinstance(read, list):
             value = read[0]
             pos = read[1]
         else:
@@ -22,11 +21,11 @@ class TouchBinaryInput(BinaryInput):
             pos = None
 
         if value == self.state:
-            repeat = True
+            return False
         else:
-            repeat = False
-        self.state = value
-        if value and not repeat:
-            self.pos = pos
-        elif not value and not repeat:
-            self.pos = None
+            self.state = value
+            if value:
+                self.pos = pos
+            else:
+                self.pos = None
+            return True

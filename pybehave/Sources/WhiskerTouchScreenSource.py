@@ -1,3 +1,5 @@
+from typing import Dict
+
 try:
     import win32gui
 except ModuleNotFoundError:
@@ -27,32 +29,42 @@ class WhiskerTouchScreenSource(Source):
 
     def __init__(self, address='localhost', port=3233, display_num=0, whisker_path=r"C:\Program Files (x86)\WhiskerControl\WhiskerServer.exe"):
         super().__init__()
+        self.available = True
+        self.address = address
+        self.port = int(port)
+        self.display_num = display_num
+        self.whisker_path = whisker_path
+        self.client = None
+        self.running = None
+        self.vals = {}
+
+    def initialize(self):
         try:
             win32gui.EnumWindows(look_for_program, 'WhiskerServer')
             if not IsWhiskerRunning:
-                ws = whisker_path
+                ws = self.whisker_path
                 window = subprocess.Popen(ws)
                 time.sleep(2)
                 print("WHISKER server started", window)
                 win32gui.EnumWindows(look_for_program, 'WhiskerServer')
             if IsWhiskerRunning:
                 self.available = True
-                self.display_num = display_num
+                self.display_num = self.display_num
                 self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 self.client.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-                self.client.connect((address, int(port)))
+                self.client.connect((self.address, int(self.port)))
                 self.running = threading.Event()
                 rt = threading.Thread(target=lambda: self.read())
                 rt.start()
-                self.client.send('DisplayClaim {}\n'.format(display_num).encode('utf-8'))
+                self.client.send('DisplayClaim {}\n'.format(self.display_num).encode('utf-8'))
                 self.client.send(b'DisplayEventCoords on\n')
-                self.client.send('DisplayCreateDocument {}\n'.format(display_num).encode('utf-8'))
-                self.client.send('DisplayShowDocument {} {}\n'.format(display_num, display_num).encode('utf-8'))
-                self.client.send('DisplayGetSize {}\n'.format(display_num).encode('utf-8'))
-                self.vals = {}
+                self.client.send('DisplayCreateDocument {}\n'.format(self.display_num).encode('utf-8'))
+                self.client.send('DisplayShowDocument {} {}\n'.format(self.display_num, self.display_num).encode('utf-8'))
+                self.client.send('DisplayGetSize {}\n'.format(self.display_num).encode('utf-8'))
         except:
             traceback.print_exc()
             self.available = False
+
 
     def close_source(self) -> None:
         self.running.set()
@@ -66,6 +78,7 @@ class WhiskerTouchScreenSource(Source):
                 if msg.startswith('Event:'):
                     split_msg = msg.split(' ')
                     self.vals[split_msg[1]] = (not self.vals[split_msg[1]][0], [int(split_msg[2]), int(split_msg[3])])
+                    self.update_component(split_msg[1], self.vals[split_msg[1]])
                 elif msg.startswith('Info:'):
                     if 'size: ' in msg:
                         split = msg.split(': ')[2].split(' ')
@@ -79,7 +92,7 @@ class WhiskerTouchScreenSource(Source):
         self.client.send(b'DisplayRelinquishAll\n')
         self.client.close()
 
-    def register_component(self, _, component):
+    def register_component(self, component, metadata):
         self.components[component.id] = component
         if component.get_type() == Component.Type.DIGITAL_OUTPUT:
             self.client.send(
@@ -93,9 +106,6 @@ class WhiskerTouchScreenSource(Source):
                 ).encode('utf-8'))
             self.vals[component.id] = (False, None)
 
-    def read_component(self, component_id):
-        return self.vals[component_id]
-
     def write_component(self, component_id, msg):
         if msg:
             self.client.send('DisplayBringToFront {} {}\n'.format(self.display_num, component_id).encode('utf-8'))
@@ -108,3 +118,12 @@ class WhiskerTouchScreenSource(Source):
 
     def is_available(self):
         return self.available
+
+    @staticmethod
+    def metadata_defaults(comp_type: Component.Type = None) -> Dict:
+        if comp_type == Component.Type.DIGITAL_OUTPUT:
+            return {"definition": ""}
+        elif comp_type == Component.Type.DIGITAL_INPUT:
+            return {"obj": ""}
+        else:
+            return {}
