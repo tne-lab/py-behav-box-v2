@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import bisect
+from sortedcontainers import SortedList
 import importlib
 import os
 import runpy
@@ -30,7 +30,8 @@ class ProtocolCreationDialog(QDialog):
         self.task = getattr(task_module, task)
 
         self.constant_dict = self.task.get_constants()
-        self.available_constants = list(self.constant_dict.keys())
+        keys = list(self.constant_dict.keys())
+        self.available_constants = SortedList(self.constant_dict.keys(), key=lambda x: keys.index(x))
 
         if file_path is None:
             self.setWindowTitle("New " + task + " Protocol")
@@ -144,8 +145,7 @@ class ProtocolCreationDialog(QDialog):
 
     def remove_row(self):
         constant = self.constants[self.current_row][0]
-        keys = list(self.constant_dict.keys())
-        bisect.insort(self.available_constants, constant.currentText(), key=lambda x: keys.index(x))
+        self.available_constants.add(constant.currentText())
         for i in range(self.table.rowCount()):  # Should ideally be insorted
             if i != self.current_row:
                 self.constants[i][0].addItem(constant.currentText())
@@ -164,8 +164,7 @@ class ProtocolCreationDialog(QDialog):
 
         # Add the previous value back into the other combo boxes
         if constant.lastSelected is not None:
-            keys = list(self.constant_dict.keys())
-            bisect.insort(self.available_constants, constant.lastSelected, key=lambda x: keys.index(x))
+            self.available_constants.add(constant.lastSelected)
             for i in range(self.table.rowCount()):  # Should ideally be insorted
                 if i != add_ind:
                     self.constants[i][0].addItem(constant.lastSelected)

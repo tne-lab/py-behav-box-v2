@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import bisect
+from sortedcontainers import SortedList, SortedDict
 import copy
 import importlib
 import os
@@ -57,10 +57,10 @@ class AddressFileCreationDialog(QDialog):
         self.task = getattr(task_module, task)
 
         self.components = self.task.get_components()
-        self.available_components = {}
+        self.available_components = SortedDict()
         for key in self.components:
             if len(self.components[key]) > 1:
-                self.available_components[key] = [str(i) for i in range(len(self.components[key]))]
+                self.available_components[key] = SortedList([str(i) for i in range(len(self.components[key]))])
             else:
                 self.available_components[key] = None
 
@@ -231,9 +231,9 @@ class AddressFileCreationDialog(QDialog):
             if self.addresses[self.current_row][4] is None:
                 self.available_components[component.currentText()] = None
             else:
-                self.available_components[component.currentText()] = [self.addresses[self.current_row][4].currentText()]
+                self.available_components[component.currentText()] = SortedList([self.addresses[self.current_row][4].currentText()])
         else:
-            bisect.insort(self.available_components[component.currentText()], self.addresses[self.current_row][4].currentText())
+            self.available_components[component.currentText()].add(self.addresses[self.current_row][4].currentText())
         for i in range(self.table.rowCount()):
             if i != self.current_row and self.addresses[i][0].currentText() == component.currentText():
                 self.replace_indices(i, component.currentText())
@@ -267,11 +267,11 @@ class AddressFileCreationDialog(QDialog):
             index = self.addresses[add_ind][4]
             if component.lastSelected not in self.available_components:
                 if isinstance(index, ComboBox):
-                    self.available_components[component.lastSelected] = [index.currentText()]
+                    self.available_components[component.lastSelected] = SortedList([index.currentText()])
                 else:
                     self.available_components[component.lastSelected] = None
             else:
-                bisect.insort(self.available_components[component.lastSelected], index.currentText())
+                self.available_components[component.lastSelected].add(index.currentText())
 
             # Add new indices back into any corresponding combo boxes
             for i in range(self.table.rowCount()):
@@ -322,7 +322,7 @@ class AddressFileCreationDialog(QDialog):
         # Add old index back into any corresponding combo boxes
         prev_ind = self.addresses[add_ind][4].lastSelected
         if prev_ind is not None:
-            bisect.insort(self.available_components[component.currentText()], prev_ind)
+            self.available_components[component.currentText()].add(prev_ind)
             for i in range(self.table.rowCount()):
                 if i != add_ind and self.addresses[i][0].currentText() == component.lastSelected:
                     self.replace_indices(i, component.currentText())
@@ -331,8 +331,8 @@ class AddressFileCreationDialog(QDialog):
         # Replace indices in combo box with the available ones
         cur_ind = self.addresses[i][4].currentText()
         self.addresses[i][4].clear()
-        new_indices = copy.copy(self.available_components[c_name])
-        bisect.insort(new_indices, cur_ind)
+        new_indices = self.available_components[c_name].copy()
+        new_indices.add(cur_ind)
         self.addresses[i][4].addItems(new_indices)
         self.addresses[i][4].setCurrentText(cur_ind)
 
