@@ -116,7 +116,9 @@ class ProtocolCreationDialog(QDialog):
 
     def save_protocol(self, file_contents):
         if len(self.save_dialog.selectedFiles()[0]) > 0:  # If a file was selected
-            with open(self.save_dialog.selectedFiles()[0], "w", newline='') as out:
+            filename = self.save_dialog.selectedFiles()[0]
+            filename = filename if filename.endswith('.py') else filename + '.py'
+            with open(filename, "w", newline='') as out:
                 out.write(file_contents)
             super().accept()
         super(QFileDialog, self.save_dialog).accept()
