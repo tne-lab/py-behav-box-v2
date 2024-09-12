@@ -27,11 +27,13 @@ class OENetworkLogger(EventLogger):
 
     def __init__(self, name: str, address: str, port: str):
         super().__init__(name)
-        context = zmq.Context()
+        self.context = zmq.Context()
         self.fd = None
         self.event_count = 0
-        self.socket = context.socket(zmq.REQ)
+        self.socket = self.context.socket(zmq.REQ)
         self.socket.set(zmq.REQ_RELAXED, True)
+        self.socket.set(zmq.REQ_CORRELATE, True)
+        self.socket.setsockopt(zmq.LINGER, 5)
         self.socket.connect("tcp://" + address + ":" + str(port))
 
     def send_ttl_event(self, ec: int, ttl_type: str | float) -> None:

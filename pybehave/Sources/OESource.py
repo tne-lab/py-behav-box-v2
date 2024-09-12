@@ -36,6 +36,8 @@ class OESource(ThreadSource):
 
             self.out_socket = self.context.socket(zmq.REQ)
             self.out_socket.set(zmq.REQ_RELAXED, True)
+            self.out_socket.set(zmq.REQ_CORRELATE, True)
+            self.out_socket.setsockopt(zmq.LINGER, 5)
             self.out_socket.connect("tcp://" + self.address + ":" + str(self.out_port))
 
             self.available = True

@@ -26,6 +26,8 @@ class OEWidget(EventWidget):
         self.event_count = 0
         self.socket = context.socket(zmq.REQ)
         self.socket.set(zmq.REQ_RELAXED, True)
+        self.socket.set(zmq.REQ_CORRELATE, True)
+        self.socket.setsockopt(zmq.LINGER, 5)
         self.socket.connect("tcp://" + address + ":" + str(port))
 
         self.layout = QVBoxLayout(self)
