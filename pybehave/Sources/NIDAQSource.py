@@ -91,6 +91,7 @@ class NIDAQSource(Source):
             self.do_task.close()
             self.do_task = None
             self.do_stream = None
+            self.do_inds = {}
         for task in self.tasks:
             task.close()
         self.tasks = {}
@@ -102,6 +103,7 @@ class NIDAQSource(Source):
                 self.ao_task.close()
                 self.ao_task = None
                 self.ao_stream = None
+                del self.ao_inds[component_id]
         else:
             if self.components[component_id].sr is not None:
                 if self.do_task is not None:
@@ -109,8 +111,10 @@ class NIDAQSource(Source):
                     self.do_task.close()
                     self.do_task = None
                     self.do_stream = None
-            self.tasks[component_id].stop()
-            self.tasks[component_id].close()
+                    del self.do_inds[component_id]
+            else:
+                self.tasks[component_id].stop()
+                self.tasks[component_id].close()
 
     def write_component(self, component_id, msg):
         if self.components[component_id].get_type() == Component.Type.DIGITAL_OUTPUT:
