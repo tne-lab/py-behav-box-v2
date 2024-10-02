@@ -241,9 +241,8 @@ class Workstation:
                                     self.gui_updates.append(rect)
                                 elif isinstance(event, PybEvents.OutputFileChangedEvent):
                                     self.guis[event.chamber].subject_name.text = event.subject
-                                    pygame.draw.rect(self.guis[event.chamber].task_gui, Colors.darkgray, self.guis[event.chamber].subject_name.rect, 0)
-                                    self.guis[event.chamber].subject_name.draw()
-                                    self.gui_updates.append(self.guis[event.chamber].subject_name.rect.move(col * self.w, row * self.h))
+                                    self.guis[event.chamber].draw()
+                                    self.gui_updates.append(rect)
                                 elif isinstance(event, PybEvents.TaskCompleteEvent):
                                     if not isinstance(self.guis[event.chamber], SequenceGUI) or "sequence_complete" in event.metadata:
                                         self.guis[event.chamber].complete = True
@@ -298,26 +297,40 @@ class Workstation:
 
     def handle_error(self, event: PybEvents.ErrorEvent):
         print(event.traceback)
-        if "chamber" in event.metadata:
-            chamber_suffix = "in chamber " + str(event.metadata["chamber"] + 1) + "<br>"
+        if 'chamber' in event.metadata:
+            chamber = event.metadata['chamber']
+            chamber_suffix = "in chamber " + str(chamber + 1) + "<br>"
             if event.error == "ComponentRegisterError":
                 error_message = "A Component failed to register " + chamber_suffix + event.traceback
+                self.fatal_chamber_exception(chamber)
             elif event.error == "SourceUnavailableError":
-                error_message = "A requested Source is currently unavailable"
+                error_message = "A requested Source is currently unavailable following an operation in " + chamber_suffix + event.traceback
+                self.fatal_chamber_exception(chamber)
             elif event.error == "MalformedProtocolError":
                 error_message = "Error raised when parsing Protocol file " + chamber_suffix + event.traceback
+                self.fatal_chamber_exception(chamber)
             elif event.error == "MalformedAddressFileError":
                 error_message = "Error raised when parsing AddressFile " + chamber_suffix + event.traceback
+                self.fatal_chamber_exception(chamber)
             elif event.error == "InvalidComponentTypeError":
-                error_message = "A Component in the AddressFile is an invalid type" + chamber_suffix
+                error_message = "A Component in the AddressFile is an invalid type " + chamber_suffix + event.traceback
+                self.fatal_chamber_exception(chamber)
             elif "sid" in event.metadata:
                 error_message = "Unhandled exception in source '" + event.metadata["sid"] + "'\n" + event.traceback
             else:
                 error_message = "Unhandled exception " + chamber_suffix + event.traceback
-            self.wsg.remove_task(event.metadata["chamber"])
         else:
-            error_message = f"Unhandled exception in PyBehave processing code. <a href='https://github.com/tne-lab/py-behav-box-v2/issues/new?title=Unhandled%20Exception&body={event.traceback}'>Click here</a> to create a GitHub issue<br>" + event.traceback
+            error_message = f"Unhandled exception in pybehave processing code. <a href='https://github.com/tne-lab/py-behav-box-v2/issues/new?title=Unhandled%20Exception&body={event.traceback}'>Click here</a> to create a GitHub issue<br>" + event.traceback
         self.wsg.error.emit(error_message)
+
+    def fatal_chamber_exception(self, chamber):
+        col = chamber % self.n_col
+        row = math.floor(chamber / self.n_col)
+        rect = pygame.Rect((col * self.w, row * self.h, self.w, self.h))
+        self.guis[chamber].dead = True
+        self.guis[chamber].draw()
+        self.gui_updates.append(rect)
+        self.wsg.chambers[chamber].fatal_exception()
 
     def exit(self, stop_tasks=False):
         """

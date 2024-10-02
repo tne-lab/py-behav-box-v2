@@ -73,6 +73,7 @@ class Task:
         self.complete = False
         self._complete = False
         self.initial_constants = {}
+        self.dead = False
 
     @overload
     def initialize(self, tp: TaskProcess, metadata: Dict[str, Any]) -> None:
@@ -123,90 +124,105 @@ class Task:
             if isinstance(address_file, str) and len(address_file) > 0:
                 try:
                     file_globals = runpy.run_path(address_file, {"AddressFile": AddressFile})
-                except:
-                    raise pyberror.MalformedAddressFileError
-                for cid in file_globals['addresses'].addresses:
-                    if cid in component_definition:
-                        comps = file_globals['addresses'].addresses[cid]
-                        for i, comp in enumerate(comps):
-                            if comp is None:
-                                if not hasattr(self, cid):
-                                    # If the Component is part of a list
-                                    if len(comps) > 1:
-                                        # Create the list and add the Component at the specified index
-                                        component_list = [None] * int(len(comps))
-                                        setattr(self, cid, component_list)
-                            else:
-                                # Import and instantiate the indicated Component with the provided ID and address
-                                component_type = getattr(importlib.import_module("pybehave.Components." + comp.component_type),
-                                                         comp.component_type)
-                                if issubclass(component_type, component_definition[cid][i]):
-                                    component = component_type(self, "{}-{}-{}".format(cid, str(self.metadata["chamber"]),
-                                                                                 str(i)), comp.component_address)
-                                    if comp.metadata is not None:
-                                        component.initialize(comp.metadata)
-                                        metadata = comp.metadata.copy()
-                                    else:
-                                        metadata = {}
-                                    metadata.update({"chamber": self.metadata["chamber"], "subject": self.metadata["subject"],
-                                                    "task": type(self).__name__})
-                                    self.tp.source_buffers[comp.source_name].append(
-                                        PybEvents.ComponentRegisterEvent(comp.component_type, component.id, component.address,
-                                                                         metadata=metadata))
-                                    # If the ID has yet to be registered
+                    for cid in file_globals['addresses'].addresses:
+                        if cid in component_definition:
+                            comps = file_globals['addresses'].addresses[cid]
+                            for i, comp in enumerate(comps):
+                                if comp is None:
                                     if not hasattr(self, cid):
                                         # If the Component is part of a list
                                         if len(comps) > 1:
                                             # Create the list and add the Component at the specified index
                                             component_list = [None] * int(len(comps))
+                                            setattr(self, cid, component_list)
+                                else:
+                                    # Import and instantiate the indicated Component with the provided ID and address
+                                    component_type = getattr(importlib.import_module("pybehave.Components." + comp.component_type),
+                                                             comp.component_type)
+                                    if issubclass(component_type, component_definition[cid][i]):
+                                        component = component_type(self, "{}-{}-{}".format(cid, str(self.metadata["chamber"]),
+                                                                                     str(i)), comp.component_address)
+                                        if comp.metadata is not None:
+                                            component.initialize(comp.metadata)
+                                            metadata = comp.metadata.copy()
+                                        else:
+                                            metadata = {}
+                                        metadata.update({"chamber": self.metadata["chamber"], "subject": self.metadata["subject"],
+                                                        "task": type(self).__name__})
+                                        if self.tp.source_available[comp.source_name]:
+                                            self.tp.source_buffers[comp.source_name].append(
+                                                PybEvents.ComponentRegisterEvent(comp.component_type, component.id, component.address,
+                                                                                 metadata=metadata))
+                                        else:
+                                            self.fatal_exception()
+                                            raise pyberror.SourceUnavailableError(self.metadata['chamber'], comp.source_name)
+                                        # If the ID has yet to be registered
+                                        if not hasattr(self, cid):
+                                            # If the Component is part of a list
+                                            if len(comps) > 1:
+                                                # Create the list and add the Component at the specified index
+                                                component_list = [None] * int(len(comps))
+                                                component_list[i] = component
+                                                setattr(self, cid, component_list)
+                                            else:  # If the Component is unique
+                                                setattr(self, cid, component)
+                                        else:  # If the Component is part of an already registered list
+                                            # Update the list with the Component at the specified index
+                                            component_list = getattr(self, cid)
                                             component_list[i] = component
                                             setattr(self, cid, component_list)
-                                        else:  # If the Component is unique
-                                            setattr(self, cid, component)
-                                    else:  # If the Component is part of an already registered list
-                                        # Update the list with the Component at the specified index
-                                        component_list = getattr(self, cid)
-                                        component_list[i] = component
-                                        setattr(self, cid, component_list)
-                                    self.components[component.id] = (component, comp_index, comp.source_name)
-                                    comp_index += 1
-                                else:
-                                    raise pyberror.InvalidComponentTypeError
+                                        self.components[component.id] = (component, comp_index, comp.source_name)
+                                        comp_index += 1
+                                    else:
+                                        self.fatal_exception()
+                                        raise pyberror.InvalidComponentTypeError(self.metadata['chamber'])
+                except:
+                    self.fatal_exception()
+                    raise pyberror.MalformedAddressFileError(self.metadata['chamber'])
 
-            for name in component_definition:
-                for i in range(len(component_definition[name])):
-                    if not hasattr(self, name) or (
-                            type(getattr(self, name)) is list and getattr(self, name)[i] is None):
-                        component = component_definition[name][i](self,
-                                                                  name + "-" + str(
-                                                                      self.metadata["chamber"]) + "-" + str(i),
-                                                                  str(comp_index))
-                        if not hasattr(self, name):
-                            # If the Component is part of a list
-                            if len(component_definition[name]) > 1:
-                                # Create the list and add the Component at the specified index
-                                component_list = [None] * int(len(component_definition[name]))
+            try:
+                for name in component_definition:
+                    for i in range(len(component_definition[name])):
+                        if not hasattr(self, name) or (
+                                type(getattr(self, name)) is list and getattr(self, name)[i] is None):
+                            component = component_definition[name][i](self,
+                                                                      name + "-" + str(
+                                                                          self.metadata["chamber"]) + "-" + str(i),
+                                                                      str(comp_index))
+                            if not hasattr(self, name):
+                                # If the Component is part of a list
+                                if len(component_definition[name]) > 1:
+                                    # Create the list and add the Component at the specified index
+                                    component_list = [None] * int(len(component_definition[name]))
+                                    component_list[i] = component
+                                    setattr(self, name, component_list)
+                                else:  # If the Component is unique
+                                    setattr(self, name, component)
+                            else:  # If the Component is part of an already registered list
+                                # Update the list with the Component at the specified index
+                                component_list = getattr(self, name)
                                 component_list[i] = component
                                 setattr(self, name, component_list)
-                            else:  # If the Component is unique
-                                setattr(self, name, component)
-                        else:  # If the Component is part of an already registered list
-                            # Update the list with the Component at the specified index
-                            component_list = getattr(self, name)
-                            component_list[i] = component
-                            setattr(self, name, component_list)
-                        self.components[component.id] = (component, comp_index, None)
-                        comp_index += 1
+                            self.components[component.id] = (component, comp_index, None)
+                            comp_index += 1
+            except BaseException as e:
+                self.fatal_exception()
+                if isinstance(address_file, str) and len(address_file) > 0:
+                    raise pyberror.MalformedAddressFileError(self.metadata['chamber'])
+                else:
+                    raise e
+
 
         # If a Protocol is provided, replace all indicated variables with the values from the Protocol
         if isinstance(protocol, str) and len(protocol) > 0:
             try:
                 file_globals = runpy.run_path(protocol)
+                for cons in file_globals['protocol']:
+                    if hasattr(self, cons):
+                        setattr(self, cons, file_globals['protocol'][cons])
             except:
-                raise pyberror.MalformedProtocolError
-            for cons in file_globals['protocol']:
-                if hasattr(self, cons):
-                    setattr(self, cons, file_globals['protocol'][cons])
+                self.fatal_exception()
+                raise pyberror.MalformedProtocolError(self.metadata['chamber'])
 
         # Get all default values for task variables
         for key, value in self.get_variables().items():
@@ -452,8 +468,15 @@ class Task:
         e = PybEvents.ComponentUpdateEvent(self.metadata["chamber"], cid, value, metadata=metadata)
         self.tp.log_gui_event(e)
         if self.components[cid][2] is not None:
-            self.tp.source_buffers[self.components[cid][2]].append(e)
+            if self.tp.source_available[self.components[cid][2]]:
+                self.tp.source_buffers[self.components[cid][2]].append(e)
+            else:
+                self.fatal_exception()
+                raise pyberror.SourceUnavailableError(self.metadata['chamber'], self.components[cid][2])
 
     def close_component(self, cid: str):
         if self.components[cid][2] is not None:
             self.tp.source_buffers[self.components[cid][2]].append(PybEvents.ComponentCloseEvent(cid))
+
+    def fatal_exception(self):
+        self.dead = True

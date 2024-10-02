@@ -1,27 +1,34 @@
-class InvalidComponentTypeError(BaseException):
+class ChamberException(BaseException):
+    chamber: int
+
+
+class InvalidComponentTypeError(ChamberException):
     pass
 
 
-class ComponentRegisterError(BaseException):
+class ComponentRegisterError(ChamberException):
     pass
 
 
-class MalformedProtocolError(BaseException):
+class MalformedProtocolError(ChamberException):
     pass
 
 
-class MalformedAddressFileError(BaseException):
+class MalformedAddressFileError(ChamberException):
     pass
 
 
-class SourceUnavailableError(BaseException):
-    pass
+class SourceUnavailableError(ChamberException):
+    sid: str
 
 
-class AddTaskError(BaseException):
+class ComponentUnavailableError(ChamberException):
+    cid: str
+
+
+class AddTaskError(ChamberException):
     pass
 
 
 class MissingExtraError(BaseException):
-    def __init__(self, extra: str):
-        self.extra = extra
+    extra: str

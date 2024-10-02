@@ -32,7 +32,7 @@ class WorkstationGUI(QWidget):
         self.afcd = None
         self.std = None
         self.pcd = None
-        self.emsg = None
+        self.emsgs = []
         self.ignore_errors = False
         self.n_active = 0
         self.workstation = workstation
@@ -173,9 +173,9 @@ class WorkstationGUI(QWidget):
         self.n_active -= 1  # Decrement the number of active tasks
 
     def on_error(self, message):
-        if self.emsg is None and not self.ignore_errors:
-            self.emsg = ErrorMessageBox(self, message)
-            self.emsg.show()
+        if len(self.emsgs) < 10 and not self.ignore_errors:
+            self.emsgs.append(ErrorMessageBox(self, message))
+            self.emsgs[-1].show()
 
     def confirm_exit(self):
         emsg = QMessageBox(self)

@@ -59,7 +59,6 @@ class Source(Process):
                     return
         except pyberror.ComponentRegisterError as e:
             self.queue.send_bytes(self.encoder.encode(PybEvents.ErrorEvent(type(e).__name__, traceback.format_exc(), metadata={"sid": self.sid})))
-            self.unavailable()
         except BaseException as e:
             self.queue.send_bytes(self.encoder.encode(PybEvents.ErrorEvent(type(e).__name__, traceback.format_exc(), metadata={"sid": self.sid})))
             self.unavailable()

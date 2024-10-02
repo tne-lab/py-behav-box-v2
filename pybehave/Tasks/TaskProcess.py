@@ -16,6 +16,7 @@ from pybehave.Events import PybEvents
 from pybehave.Events.FileEventLogger import FileEventLogger
 from pybehave.Tasks.TaskSequence import TaskSequence
 from pybehave.Tasks.TimeoutManager import TimeoutManager
+import pybehave.Utilities.Exceptions as pyberror
 
 
 class TaskProcess(Process):
@@ -37,6 +38,7 @@ class TaskProcess(Process):
         self.logger_q = None
         self.event_responses = {}
         self.source_buffers = {}
+        self.source_available = {}
         self.connections = []
         self.should_exit = False
 
@@ -54,6 +56,7 @@ class TaskProcess(Process):
 
         for source in self.sourceq:
             self.source_buffers[source] = []
+            self.source_available[source] = True
 
         self.event_responses = {PybEvents.AddTaskEvent: self.add_task,
                                 PybEvents.AddLoggerEvent: self.add_logger,
@@ -83,6 +86,8 @@ class TaskProcess(Process):
                     for key in self.tasks.keys():
                         if self.tasks[key].started and not self.tasks[key].paused:
                             self.tasks[key].main_loop(event)
+                    while len(self.tp_q) > 0:
+                        self.handle_event(self.tp_q.popleft())
                     for source in self.source_buffers:
                         if len(self.source_buffers[source]) > 0:
                             self.sourceq[source].send_bytes(self.encoder.encode(self.source_buffers[source]))
@@ -91,9 +96,7 @@ class TaskProcess(Process):
                 else:
                     for r in ready:
                         event = self.decoder.decode(r.recv_bytes())
-                        # t = time.perf_counter()
                         self.handle_event(event)
-                        # print(time.perf_counter() - t)
                         while len(self.tp_q) > 0:
                             self.handle_event(self.tp_q.popleft())
                         for source in self.source_buffers:
@@ -105,9 +108,13 @@ class TaskProcess(Process):
                                 logger.log_events(self.logger_q)
                             self.logger_q.clear()
             except BaseException as e:
+                print(traceback.format_exc())
                 metadata = {"chamber": event.chamber} if isinstance(event, PybEvents.TaskEvent) else {}
                 self.log_gui_event(PybEvents.ErrorEvent(type(e).__name__, traceback.format_exc(),
                                    metadata=metadata))
+                if isinstance(event, PybEvents.TaskEvent) and self.tasks[event.chamber].started:
+                    self.tp_q.append(PybEvents.StopEvent(event.chamber))
+
             if len(self.gui_out) > 0:
                 self.guiq.send_bytes(self.encoder.encode(self.gui_out))
                 self.gui_out.clear()
@@ -131,31 +138,26 @@ class TaskProcess(Process):
                 self.log_event(event)
 
     def add_task(self, event: PybEvents.AddTaskEvent):
-        try:
-            task_module = importlib.import_module("Local.Tasks." + event.task_name)
-            task_module = importlib.reload(task_module)
-            task = getattr(task_module, event.task_name)
-            self.tasks[event.chamber] = task()
-            self.tasks[event.chamber].initialize(self, event.metadata)  # Create the task
+        task_module = importlib.import_module("Local.Tasks." + event.task_name)
+        task_module = importlib.reload(task_module)
+        task = getattr(task_module, event.task_name)
+        self.tasks[event.chamber] = task()
+        self.tasks[event.chamber].initialize(self, event.metadata)  # Create the task
 
-            self.task_event_loggers[event.chamber] = {}
-            types = list(
-                map(lambda x: x.split("))")[-1],
-                    event.task_event_loggers.split("((")))  # Get the type of each logger
-            params = list(
-                map(lambda x: x.split("((")[-1],
-                    event.task_event_loggers.split("))")))  # Get the parameters for each logger
-            for i in range(len(types) - 1):
-                logger_type = getattr(importlib.import_module("pybehave.Events." + types[i]), types[i])  # Import the logger
-                param_vals = re.findall("\|\|(.+?)\|\|", params[i])  # Extract the parameters
-                self.task_event_loggers[event.chamber][param_vals[0]] = logger_type(*param_vals)  # Instantiate the logger
-            for logger in self.task_event_loggers[event.chamber].values():
-                logger.set_task(self.tasks[event.chamber])
-            self.tp_q.append(PybEvents.InitEvent(event.chamber))
-        except BaseException as e:
-            tb = traceback.format_exc()
-            print(tb)
-            self.mainq.send_bytes(self.encoder.encode(PybEvents.ErrorEvent(type(e).__name__, tb)))
+        self.task_event_loggers[event.chamber] = {}
+        types = list(
+            map(lambda x: x.split("))")[-1],
+                event.task_event_loggers.split("((")))  # Get the type of each logger
+        params = list(
+            map(lambda x: x.split("((")[-1],
+                event.task_event_loggers.split("))")))  # Get the parameters for each logger
+        for i in range(len(types) - 1):
+            logger_type = getattr(importlib.import_module("pybehave.Events." + types[i]), types[i])  # Import the logger
+            param_vals = re.findall("\|\|(.+?)\|\|", params[i])  # Extract the parameters
+            self.task_event_loggers[event.chamber][param_vals[0]] = logger_type(*param_vals)  # Instantiate the logger
+        for logger in self.task_event_loggers[event.chamber].values():
+            logger.set_task(self.tasks[event.chamber])
+        self.tp_q.append(PybEvents.InitEvent(event.chamber))
 
     def add_logger(self, event: PybEvents.AddLoggerEvent):
         segs = event.logger_code.split('((')
@@ -234,7 +236,13 @@ class TaskProcess(Process):
 
     def clear_task(self, event: PybEvents.ClearEvent):
         task = self.tasks[event.chamber]
-        task.clear()
+        if task.dead:
+            try:
+                task.clear()
+            except:
+                print(traceback.format_exc())
+        else:
+            task.clear()
         del_loggers = event.del_loggers
         if del_loggers:
             for logger in self.task_event_loggers[task.metadata["chamber"]].values():
@@ -294,22 +302,25 @@ class TaskProcess(Process):
 
     def source_unavailable(self, event: PybEvents.UnavailableSourceEvent):
         self.mainq.send_bytes(self.encoder.encode(event))
+        self.source_available[event.sid] = False
 
     def add_source(self, event: PybEvents.AddSourceEvent):
         self.sourceq[event.sid] = event.conn
         self.source_buffers[event.sid] = []
+        self.source_available[event.sid] = True
         self.connections = [self.mainq, self.tmq_in, *self.sourceq.values()]
 
     def remove_source(self, event: PybEvents.RemoveSourceEvent):
         self.sourceq[event.sid].send_bytes(self.encoder.encode([event]))
         del self.sourceq[event.sid]
         del self.source_buffers[event.sid]
+        del self.source_available[event.sid]
         self.connections = [self.mainq, self.tmq_in, *self.sourceq.values()]
 
     def error(self, event: PybEvents.ErrorEvent):
-        if "sid" in event.metadata and event.metadata["sid"] in self.sourceq:
-            del self.sourceq[event.metadata["sid"]]
-            del self.source_buffers[event.metadata["sid"]]
+        # if "sid" in event.metadata and event.metadata["sid"] in self.sourceq:
+        #     del self.sourceq[event.metadata["sid"]]
+        #     del self.source_buffers[event.metadata["sid"]]
         self.mainq.send_bytes(self.encoder.encode(event))
 
     def prepare_exit(self, event: PybEvents.ExitEvent):

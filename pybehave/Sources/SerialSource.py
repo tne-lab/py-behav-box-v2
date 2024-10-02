@@ -1,3 +1,5 @@
+from serial.serialutil import SerialException
+
 try:
     import serial
 except ModuleNotFoundError:
@@ -9,6 +11,7 @@ from typing import Dict
 
 from pybehave.Components.Component import Component
 from pybehave.Sources.Source import Source
+import pybehave.Utilities.Exceptions as pyberror
 
 
 class SerialSource(Source):
@@ -21,10 +24,13 @@ class SerialSource(Source):
 
     def register_component(self, component, metadata):
         if component.address not in self.connections:
-            self.connections[component.address] = serial.Serial(port=component.address, baudrate=component.baudrate, timeout=1)
-            self.closing[component.address] = False
-            self.com_tasks[component.address] = threading.Thread(target=self.read, args=[component.address])
-            self.com_tasks[component.address].start()
+            try:
+                self.connections[component.address] = serial.Serial(port=component.address, baudrate=component.baudrate, timeout=1)
+                self.closing[component.address] = False
+                self.com_tasks[component.address] = threading.Thread(target=self.read, args=[component.address])
+                self.com_tasks[component.address].start()
+            except (SerialException, ValueError):
+                raise pyberror.ComponentRegisterError(self.component_chambers[component.id])
 
     def read(self, com):
         while not self.closing[com]:

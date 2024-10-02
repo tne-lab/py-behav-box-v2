@@ -25,7 +25,7 @@ class ErrorMessageBox(QMessageBox):
         self.setCheckBox(self.ignore_cb)
 
     def on_error_close(self):
-        self.wsg.emsg = None
+        self.wsg.emsgs.remove(self)
 
     def on_ignore_errors_changed(self, state):
         self.wsg.ignore_errors = (state == Qt.Checked)

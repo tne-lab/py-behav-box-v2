@@ -124,7 +124,8 @@ class ChamberWidget(QGroupBox):
         session_box = QGroupBox('Session')
         session_layout = QHBoxLayout(self)
         session_box.setLayout(session_layout)
-        self.play_button = IconButton(os.path.join(os.path.dirname(__file__), 'icons/play.svg'), os.path.join(os.path.dirname(__file__), 'icons/play_hover.svg'))
+        self.play_button = IconButton(os.path.join(os.path.dirname(__file__), 'icons/play.svg'), os.path.join(os.path.dirname(__file__), 'icons/play_hover.svg'),
+                                      os.path.join(os.path.dirname(__file__), 'icons/play_disabled.svg'))
         self.play_button.setFixedWidth(30)
         self.play_button.clicked.connect(self.play_pause)
         session_layout.addWidget(self.play_button)
@@ -168,6 +169,8 @@ class ChamberWidget(QGroupBox):
                                       self.subject.text(), self.address_file_path.text(),
                                       self.protocol_path.text(), self.event_loggers)
             self.output_file_changed()
+            self.play_button.setDisabled(False)
+            self.play_button.setEnabled(True)
         except AddTaskError:
             self.wsg.remove_task(int(self.chamber_id.text()))
 
@@ -275,6 +278,12 @@ class ChamberWidget(QGroupBox):
         self.address_file_browse.setEnabled(True)
         self.protocol_file_browse.setEnabled(True)
         self.output_file_path.setEnabled(True)
+
+    def fatal_exception(self):
+        self.stop_button.setDisabled(True)
+        self.stop_button.setEnabled(False)
+        self.play_button.setDisabled(True)
+        self.play_button.setEnabled(False)
 
     def subject_changed(self) -> None:
         """

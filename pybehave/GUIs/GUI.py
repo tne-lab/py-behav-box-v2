@@ -39,6 +39,7 @@ class GUI:
         self.chamber = event.chamber
         self.started = False
         self.paused = False
+        self.dead = False
         self.state = None
         self.last_event = None
         self.time_offset = 0
@@ -58,39 +59,39 @@ class GUI:
         if isinstance(address_file, str) and len(address_file) > 0:
             try:
                 file_globals = runpy.run_path(address_file, {"AddressFile": AddressFile})
-            except:
-                raise MalformedAddressFileError
-            for cid in file_globals['addresses'].addresses:
-                if cid in component_definition:
-                    comps = file_globals['addresses'].addresses[cid]
-                    for i, comp in enumerate(comps):
-                        # Import and instantiate the indicated Component with the provided ID and address
-                        component_type = getattr(importlib.import_module("pybehave.Components." + comp.component_type),
-                                                 comp.component_type)
-                        if issubclass(component_type, component_definition[cid][i]):
-                            component = component_type(None, "{}-{}-{}".format(cid, str(self.chamber),
-                                                                               str(i)), comp.component_address)
-                            if comp.metadata is not None:
-                                component.initialize(comp.metadata)
-                            # If the ID has yet to be registered
-                            if not hasattr(self, cid):
-                                # If the Component is part of a list
-                                if len(comps) > 1:
-                                    # Create the list and add the Component at the specified index
-                                    component_list = [None] * int(len(comps))
+                for cid in file_globals['addresses'].addresses:
+                    if cid in component_definition:
+                        comps = file_globals['addresses'].addresses[cid]
+                        for i, comp in enumerate(comps):
+                            # Import and instantiate the indicated Component with the provided ID and address
+                            component_type = getattr(importlib.import_module("pybehave.Components." + comp.component_type),
+                                                     comp.component_type)
+                            if issubclass(component_type, component_definition[cid][i]):
+                                component = component_type(None, "{}-{}-{}".format(cid, str(self.chamber),
+                                                                                   str(i)), comp.component_address)
+                                if comp.metadata is not None:
+                                    component.initialize(comp.metadata)
+                                # If the ID has yet to be registered
+                                if not hasattr(self, cid):
+                                    # If the Component is part of a list
+                                    if len(comps) > 1:
+                                        # Create the list and add the Component at the specified index
+                                        component_list = [None] * int(len(comps))
+                                        component_list[i] = component
+                                        setattr(self, cid, component_list)
+                                    else:  # If the Component is unique
+                                        setattr(self, cid, component)
+                                else:  # If the Component is part of an already registered list
+                                    # Update the list with the Component at the specified index
+                                    component_list = getattr(self, cid)
                                     component_list[i] = component
                                     setattr(self, cid, component_list)
-                                else:  # If the Component is unique
-                                    setattr(self, cid, component)
-                            else:  # If the Component is part of an already registered list
-                                # Update the list with the Component at the specified index
-                                component_list = getattr(self, cid)
-                                component_list[i] = component
-                                setattr(self, cid, component_list)
-                            self.components[component.id] = (component, comp_index, comp.source_name)
-                            comp_index += 1
-                        else:
-                            raise InvalidComponentTypeError
+                                self.components[component.id] = (component, comp_index, comp.source_name)
+                                comp_index += 1
+                            else:
+                                raise InvalidComponentTypeError(self.chamber)
+            except:
+                raise MalformedAddressFileError(self.chamber)
 
         for name in component_definition:
             for i in range(len(component_definition[name])):
@@ -119,11 +120,11 @@ class GUI:
         if isinstance(protocol, str) and len(protocol) > 0:
             try:
                 file_globals = runpy.run_path(protocol)
+                for cons in file_globals['protocol']:
+                    if hasattr(self, cons):
+                        setattr(self, cons, file_globals['protocol'][cons])
             except:
-                raise MalformedProtocolError
-            for cons in file_globals['protocol']:
-                if hasattr(self, cons):
-                    setattr(self, cons, file_globals['protocol'][cons])
+                raise MalformedProtocolError(self.chamber)
 
         # Get all default values for task variables
         self.variable_defaults = task.get_variables()
@@ -139,6 +140,8 @@ class GUI:
         """By default, the draw method will clear the GUI canvas with a gray color and call each GUI Element's draw method. This functionality can be altered by overriding the method."""
         if self.complete:
             self.task_gui.fill(Colors.green)
+        elif self.dead:
+            self.task_gui.fill(Colors.red)
         else:
             self.task_gui.fill(Colors.darkgray)
         for el in self.elements:
