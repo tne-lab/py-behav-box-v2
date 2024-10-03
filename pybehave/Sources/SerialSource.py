@@ -34,14 +34,18 @@ class SerialSource(Source):
 
     def read(self, com):
         while not self.closing[com]:
-            data = self.connections[com].read_until(expected='\n', size=None)
-            if len(data) > 0:
+            try:
+                data = self.connections[com].read_until(expected='\n', size=None)
+                if len(data) > 0:
+                    for comp in self.components.values():
+                        if comp.address == com and (comp.get_type() == Component.Type.DIGITAL_INPUT or
+                                                    comp.get_type() == Component.Type.INPUT or
+                                                    comp.get_type() == Component.Type.ANALOG_INPUT or
+                                                    comp.get_type() == Component.Type.BOTH):
+                            self.update_component(comp.id, data)
+            except SerialException:
                 for comp in self.components.values():
-                    if comp.address == com and (comp.get_type() == Component.Type.DIGITAL_INPUT or
-                                                comp.get_type() == Component.Type.INPUT or
-                                                comp.get_type() == Component.Type.ANALOG_INPUT or
-                                                comp.get_type() == Component.Type.BOTH):
-                        self.update_component(comp.id, data)
+                    self.component_unavailable(comp)
         del self.com_tasks[com]
         del self.closing[com]
         self.connections[com].close()

@@ -277,7 +277,7 @@ class Workstation:
                                         element.draw()
                                         self.gui_updates.append(element.rect.move(col * self.w, row * self.h))
                         elif isinstance(event, PybEvents.ErrorEvent):
-                            self.handle_error(event)
+                            self.handle_error(event, error_type=event.metadata['error_type'])
                         elif isinstance(event, PybEvents.UnavailableSourceEvent):
                             self.sources[event.sid].available = False
                             if self.wsg.sd is not None and self.wsg.sd.isVisible():
@@ -293,9 +293,9 @@ class Workstation:
                     except BaseException as e:
                         metadata = {"chamber": event.chamber} if isinstance(event, PybEvents.TaskEvent) else {}
                         tb = traceback.format_exc()
-                        self.handle_error(PybEvents.ErrorEvent(type(e).__name__, tb, metadata=metadata))
+                        self.handle_error(PybEvents.ErrorEvent(type(e).__name__, tb, metadata=metadata), error_type="GUI")
 
-    def handle_error(self, event: PybEvents.ErrorEvent):
+    def handle_error(self, event: PybEvents.ErrorEvent, error_type: str = "Task"):
         print(event.traceback)
         if 'chamber' in event.metadata:
             chamber = event.metadata['chamber']
@@ -321,7 +321,7 @@ class Workstation:
                 error_message = "Unhandled exception " + chamber_suffix + event.traceback
         else:
             error_message = f"Unhandled exception in pybehave processing code. <a href='https://github.com/tne-lab/py-behav-box-v2/issues/new?title=Unhandled%20Exception&body={event.traceback}'>Click here</a> to create a GitHub issue<br>" + event.traceback
-        self.wsg.error.emit(error_message)
+        self.wsg.error.emit(error_message, error_type)
 
     def fatal_chamber_exception(self, chamber):
         col = chamber % self.n_col

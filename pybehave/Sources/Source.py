@@ -58,9 +58,9 @@ class Source(Process):
                 if not self.handle_events(events):
                     return
         except pyberror.ComponentRegisterError as e:
-            self.queue.send_bytes(self.encoder.encode(PybEvents.ErrorEvent(type(e).__name__, traceback.format_exc(), metadata={"sid": self.sid})))
+            self.queue.send_bytes(self.encoder.encode(PybEvents.ErrorEvent(type(e).__name__, traceback.format_exc(), metadata={"error_type": "Source Non-Fatal", "chamber": e.chamber, "sid": self.sid})))
         except BaseException as e:
-            self.queue.send_bytes(self.encoder.encode(PybEvents.ErrorEvent(type(e).__name__, traceback.format_exc(), metadata={"sid": self.sid})))
+            self.queue.send_bytes(self.encoder.encode(PybEvents.ErrorEvent(type(e).__name__, traceback.format_exc(), metadata={"error_type": "Source Fatal", "sid": self.sid})))
             self.unavailable()
             raise
 
@@ -152,6 +152,11 @@ class Source(Process):
         """Call to signal to other processes that the Source has lost connection to the hardware."""
         self.available = False
         self.queue.send_bytes(self.encoder.encode(UnavailableSourceEvent(self.sid)))
+
+    def component_unavailable(self, comp):
+        self.queue.send_bytes(self.encoder.encode(
+            PybEvents.ErrorEvent(pyberror.ComponentUnavailableError.__name__, traceback.format_exc(),
+                                 metadata={"error_type": "Source Non-Fatal", "chamber": comp.metadata['chamber'], "cid": comp.id, "sid": self.sid})))
 
     @staticmethod
     def metadata_defaults(comp_type: Component.Type = None) -> Dict:

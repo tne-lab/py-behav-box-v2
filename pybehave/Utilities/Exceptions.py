@@ -1,5 +1,6 @@
 class ChamberException(BaseException):
-    chamber: int
+    def __init__(self, chamber: int):
+        self.chamber = chamber
 
 
 class InvalidComponentTypeError(ChamberException):
@@ -19,11 +20,15 @@ class MalformedAddressFileError(ChamberException):
 
 
 class SourceUnavailableError(ChamberException):
-    sid: str
+    def __init__(self, chamber: int, sid: str):
+        super().__init__(chamber)
+        self.sid = sid
 
 
 class ComponentUnavailableError(ChamberException):
-    cid: str
+    def __init__(self, chamber: int, cid: str):
+        super().__init__(chamber)
+        self.cid = cid
 
 
 class AddTaskError(ChamberException):
@@ -31,4 +36,5 @@ class AddTaskError(ChamberException):
 
 
 class MissingExtraError(BaseException):
-    extra: str
+    def __init__(self, extra: str):
+        self.extra = extra

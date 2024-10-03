@@ -23,7 +23,7 @@ from pybehave.Workstation.ErrorMessageBox import ErrorMessageBox
 
 
 class WorkstationGUI(QWidget):
-    error = pyqtSignal(str, name="error_signal")
+    error = pyqtSignal(str, str, name="error_signal")
 
     def __init__(self, workstation: Workstation):
         QWidget.__init__(self)
@@ -172,9 +172,9 @@ class WorkstationGUI(QWidget):
             del self.chambers[chamber_index - 1]
         self.n_active -= 1  # Decrement the number of active tasks
 
-    def on_error(self, message):
+    def on_error(self, message, error_type):
         if len(self.emsgs) < 10 and not self.ignore_errors:
-            self.emsgs.append(ErrorMessageBox(self, message))
+            self.emsgs.append(ErrorMessageBox(self, message, error_type))
             self.emsgs[-1].show()
 
     def confirm_exit(self):

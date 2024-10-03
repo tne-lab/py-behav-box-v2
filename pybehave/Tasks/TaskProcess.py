@@ -108,12 +108,18 @@ class TaskProcess(Process):
                                 logger.log_events(self.logger_q)
                             self.logger_q.clear()
             except BaseException as e:
-                print(traceback.format_exc())
                 metadata = {"chamber": event.chamber} if isinstance(event, PybEvents.TaskEvent) else {}
+                if isinstance(event, PybEvents.StopEvent):
+                    metadata["error_type"] = "Stop"
+                elif isinstance(event, PybEvents.ClearEvent):
+                    metadata["error_type"] = "Clear"
+                else:
+                    metadata["error_type"] = "Task"
+                    if isinstance(event, PybEvents.TaskEvent) and self.tasks[event.chamber].started:
+                        self.tp_q.clear()
+                        self.tp_q.append(PybEvents.StopEvent(event.chamber))
                 self.log_gui_event(PybEvents.ErrorEvent(type(e).__name__, traceback.format_exc(),
-                                   metadata=metadata))
-                if isinstance(event, PybEvents.TaskEvent) and self.tasks[event.chamber].started:
-                    self.tp_q.append(PybEvents.StopEvent(event.chamber))
+                                                        metadata=metadata))
 
             if len(self.gui_out) > 0:
                 self.guiq.send_bytes(self.encoder.encode(self.gui_out))
@@ -236,13 +242,7 @@ class TaskProcess(Process):
 
     def clear_task(self, event: PybEvents.ClearEvent):
         task = self.tasks[event.chamber]
-        if task.dead:
-            try:
-                task.clear()
-            except:
-                print(traceback.format_exc())
-        else:
-            task.clear()
+        task.clear()
         del_loggers = event.del_loggers
         if del_loggers:
             for logger in self.task_event_loggers[task.metadata["chamber"]].values():
@@ -321,6 +321,9 @@ class TaskProcess(Process):
         # if "sid" in event.metadata and event.metadata["sid"] in self.sourceq:
         #     del self.sourceq[event.metadata["sid"]]
         #     del self.source_buffers[event.metadata["sid"]]
+        if "chamber" in event.metadata and self.tasks[event.metadata["chamber"]].started:
+            self.tp_q.clear()
+            self.tp_q.append(PybEvents.StopEvent(event.metadata["chamber"]))
         self.mainq.send_bytes(self.encoder.encode(event))
 
     def prepare_exit(self, event: PybEvents.ExitEvent):
