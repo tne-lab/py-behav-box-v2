@@ -65,6 +65,13 @@ class Workstation:
         # Load information from settings or set defaults
         desktop = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop')
         settings = QSettings(desktop + "/py-behav/pybehave.ini", QSettings.IniFormat)
+        # Set GUI refresh mode
+        if settings.contains("pygame/alwaysRefresh"):
+            self.always_refresh = settings.value("pygame/alwaysRefresh")
+        else:
+            settings.setValue("pygame/alwaysRefresh", False)
+            self.always_refresh = False
+
         # Store the position of the pygame window
         if settings.contains("pygame/offset"):
             offset = ast.literal_eval(settings.value("pygame/offset"))
@@ -279,10 +286,12 @@ class Workstation:
                                 # Refresh GUI if a screen wipe is detected
                                 if self.guis[key].task_gui.get_at((0, 0)) == pygame.Color == 'black' or self.guis[key].task_gui.get_at((0, 0)) == 'white':
                                     self.guis[key].draw()
-                                    col = key % self.n_col
-                                    row = math.floor(key / self.n_col)
                                     rect = pygame.Rect((col * self.w, row * self.h, self.w, self.h))
                                     self.gui_updates.append(rect)
+                            if self.always_refresh:
+                                for key in self.guis.keys():
+                                    self.guis[key].draw()
+                                pygame.display.flip()
 
                         elif isinstance(event, PybEvents.ErrorEvent):
                             self.handle_error(event, error_type=event.metadata['error_type'])
