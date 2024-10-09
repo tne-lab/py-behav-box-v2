@@ -276,6 +276,14 @@ class Workstation:
                                     if element.has_updated():
                                         element.draw()
                                         self.gui_updates.append(element.rect.move(col * self.w, row * self.h))
+                                # Refresh GUI if a screen wipe is detected
+                                if self.guis[key].get_at((0, 0)) == pygame.Color == 'black' or self.guis[key].get_at((0, 0)) == 'white':
+                                    self.guis[key].draw()
+                                    col = key % self.n_col
+                                    row = math.floor(key / self.n_col)
+                                    rect = pygame.Rect((col * self.w, row * self.h, self.w, self.h))
+                                    self.gui_updates.append(rect)
+
                         elif isinstance(event, PybEvents.ErrorEvent):
                             self.handle_error(event, error_type=event.metadata['error_type'])
                         elif isinstance(event, PybEvents.UnavailableSourceEvent):
