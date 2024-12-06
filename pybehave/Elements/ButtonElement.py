@@ -15,6 +15,7 @@ class ButtonElement(Element):
         self.w = int(self.SF * w)
         self.h = int(self.SF * h)
         self.text = text
+        self.buffer_text = text
         self.f_size = int(self.SF * f_size)
         self.face = pygame.Rect(self.x, self.y, self.w, self.h)
         self.pt1 = self.x, self.y
@@ -30,7 +31,14 @@ class ButtonElement(Element):
         self.mouse_down = lambda _: None
 
     def has_updated(self) -> bool:
+        if self.text != self.buffer_text:
+            self.text = self.buffer_text
+            return True
         return self.clicked != self.draw_state
+
+    def set_text(self, text: str):
+        self.buffer_text = text
+        self._msg = self.font.render(self.buffer_text, True, Colors.white)
 
     def draw(self) -> None:
         self.draw_state = self.clicked

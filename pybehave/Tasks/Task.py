@@ -319,6 +319,9 @@ class Task:
         self.started = False
         for name in self.timeouts.keys():
             self.cancel_timeout(name)
+        for state in self.state_timeouts:
+            for tm in self.state_timeouts[state].values():
+                self.cancel_timeout(tm[0].name)
         self.timeouts = {}
         self.stop()
 
