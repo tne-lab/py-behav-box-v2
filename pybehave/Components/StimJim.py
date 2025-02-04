@@ -103,9 +103,9 @@ class StimJim(Stimmer):
                         elif self.cur_command is not None and self.cur_command["command"] == "C" and "Stage" in line:
                             l_segs = re.split(" +", line)
                             if "stages" in self.cur_command:
-                                self.cur_command["stages"].append([l_segs[2][:-1], l_segs[3][:-1]])
+                                self.cur_command["stages"].append(list(s[:-1] for s in l_segs[2:-1]))
                             else:
-                                self.cur_command["stages"] = [[l_segs[2][:-1], l_segs[3][:-1]]]
+                                self.cur_command["stages"] = [list(s[:-1] for s in l_segs[2:-1])]
                             if len(self.cur_command["stages"]) == len(self.configs[self.cur_command["id"]]["stages"]):
                                 self.commands.append(self.cur_command)
                                 self.cur_command = None
