@@ -75,7 +75,9 @@ rootdir: C:\Users\YourName\Project
 collected 3 items
 
 test_task_logic.py::test_task_initialization PASSED                  [ 33%]
+
 test_task_logic.py::test_taskprocess_ipc_path PASSED                 [ 66%]
-test_integration.py::test_tpq_event_handling PASSED              [100%]
+
+test_integration.py::test_tpq_event_handling PASSED                  [100%]
 
 ============================ 3 passed in 4.52s =============================
